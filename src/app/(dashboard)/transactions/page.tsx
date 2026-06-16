@@ -4,8 +4,8 @@ import { getTransactionsPageData } from "@/app/actions";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Transactions Ledger - Tallymate",
-  description: "Record, search, and filter personal income and expenses, and upload receipt files.",
+  title: "Transactions - Tallymate",
+  description: "View, add, search, and filter your income and expenses.",
 };
 
 export const dynamic = "force-dynamic";

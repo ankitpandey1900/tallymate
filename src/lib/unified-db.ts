@@ -108,6 +108,31 @@ export interface UnifiedSettlement {
   notes?: string;
 }
 
+export interface UnifiedPersonalDebt {
+  id: string;
+  userId: string;
+  title: string;
+  counterpartyName: string;
+  direction: "I_OWE" | "OWED_TO_ME";
+  category: string;
+  totalAmount: number;
+  remainingAmount: number;
+  interestRate?: number;
+  dueDate?: string;
+  notes?: string;
+  status: "ACTIVE" | "SETTLED";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UnifiedPersonalDebtPayment {
+  id: string;
+  personalDebtId: string;
+  amount: number;
+  date: string;
+  notes?: string;
+}
+
 export interface UnifiedNotification {
   id: string;
   userId: string;
@@ -656,6 +681,25 @@ export class UnifiedDB {
     return users.map((u) => ({ id: u.id, email: u.email, name: u.name, image: u.image }));
   }
 
+  static async getUsersByIds(ids: string[]): Promise<UnifiedUser[]> {
+    if (ids.length === 0) return [];
+    const users = await prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, email: true, name: true, image: true },
+    });
+    return users.map((u) => ({ id: u.id, email: u.email, name: u.name, image: u.image }));
+  }
+
+  static async getUsersByEmails(emails: string[]): Promise<UnifiedUser[]> {
+    const normalized = [...new Set(emails.filter(Boolean).map((e) => e.toLowerCase()))];
+    if (normalized.length === 0) return [];
+    const users = await prisma.user.findMany({
+      where: { email: { in: normalized } },
+      select: { id: true, email: true, name: true, image: true },
+    });
+    return users.map((u) => ({ id: u.id, email: u.email, name: u.name, image: u.image }));
+  }
+
   static async joinGroupByCode(userId: string, code: string): Promise<UnifiedGroup> {
     const group = await prisma.group.findUnique({
       where: { inviteCode: code },
@@ -721,6 +765,32 @@ export class UnifiedDB {
     return mapTransaction(tx);
   }
 
+  static async leaveGroup(userId: string, groupId: string): Promise<void> {
+    const membership = await prisma.groupMember.findFirst({
+      where: { groupId, userId },
+      include: { group: { include: { members: true } } },
+    });
+    if (!membership) throw new Error("You are not a member of this group.");
+
+    const { group } = membership;
+    const memberCount = group.members.length;
+
+    if (membership.role === "OWNER") {
+      if (memberCount > 1) {
+        throw new Error(
+          "You manage this group. Delete the group or ask another member to take over before leaving."
+        );
+      }
+      await prisma.groupExpense.deleteMany({ where: { groupId } });
+      await prisma.settlement.deleteMany({ where: { groupId } });
+      await prisma.groupMember.deleteMany({ where: { groupId } });
+      await prisma.group.delete({ where: { id: groupId } });
+      return;
+    }
+
+    await prisma.groupMember.delete({ where: { id: membership.id } });
+  }
+
   static async deleteGroup(userId: string, groupId: string): Promise<void> {
     const membership = await prisma.groupMember.findFirst({
       where: { groupId, userId, role: "OWNER" },
@@ -732,4 +802,159 @@ export class UnifiedDB {
     await prisma.groupMember.deleteMany({ where: { groupId } });
     await prisma.group.delete({ where: { id: groupId } });
   }
+
+  static async getPersonalDebts(userId: string): Promise<UnifiedPersonalDebt[]> {
+    const debts = await prisma.personalDebt.findMany({
+      where: { userId },
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+    });
+    return debts.map(mapPersonalDebt);
+  }
+
+  static async createPersonalDebt(
+    userId: string,
+    data: {
+      title: string;
+      counterpartyName: string;
+      direction: "I_OWE" | "OWED_TO_ME";
+      category: string;
+      totalAmount: number;
+      remainingAmount?: number;
+      interestRate?: number;
+      dueDate?: string;
+      notes?: string;
+    }
+  ): Promise<UnifiedPersonalDebt> {
+    const debt = await prisma.personalDebt.create({
+      data: {
+        userId,
+        title: data.title,
+        counterpartyName: data.counterpartyName,
+        direction: data.direction,
+        category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "OTHER",
+        totalAmount: data.totalAmount,
+        remainingAmount: data.remainingAmount ?? data.totalAmount,
+        interestRate: data.interestRate,
+        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+        notes: data.notes,
+      },
+    });
+    return mapPersonalDebt(debt);
+  }
+
+  static async updatePersonalDebt(
+    userId: string,
+    debtId: string,
+    data: Partial<{
+      title: string;
+      counterpartyName: string;
+      category: string;
+      totalAmount: number;
+      remainingAmount: number;
+      interestRate: number | null;
+      dueDate: string | null;
+      notes: string | null;
+      status: "ACTIVE" | "SETTLED";
+    }>
+  ): Promise<UnifiedPersonalDebt> {
+    const existing = await prisma.personalDebt.findFirst({ where: { id: debtId, userId } });
+    if (!existing) throw new Error("Debt not found.");
+
+    const debt = await prisma.personalDebt.update({
+      where: { id: debtId },
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.counterpartyName !== undefined && { counterpartyName: data.counterpartyName }),
+        ...(data.category !== undefined && {
+          category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "OTHER",
+        }),
+        ...(data.totalAmount !== undefined && { totalAmount: data.totalAmount }),
+        ...(data.remainingAmount !== undefined && { remainingAmount: data.remainingAmount }),
+        ...(data.interestRate !== undefined && { interestRate: data.interestRate }),
+        ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.status !== undefined && { status: data.status }),
+      },
+    });
+    return mapPersonalDebt(debt);
+  }
+
+  static async recordPersonalDebtPayment(
+    userId: string,
+    debtId: string,
+    data: { amount: number; notes?: string; date?: string }
+  ): Promise<UnifiedPersonalDebt> {
+    const debt = await prisma.personalDebt.findFirst({ where: { id: debtId, userId } });
+    if (!debt) throw new Error("Debt not found.");
+    if (debt.status === "SETTLED") throw new Error("This debt is already settled.");
+
+    const paymentAmount = data.amount;
+    if (paymentAmount <= 0) throw new Error("Payment amount must be greater than zero.");
+
+    const remaining = Number(debt.remainingAmount);
+    if (paymentAmount > remaining + 0.01) {
+      throw new Error(`Payment cannot exceed remaining balance of ₹${remaining}.`);
+    }
+
+    const newRemaining = Math.round((remaining - paymentAmount) * 100) / 100;
+
+    await prisma.personalDebtPayment.create({
+      data: {
+        personalDebtId: debtId,
+        amount: paymentAmount,
+        date: data.date ? new Date(data.date) : new Date(),
+        notes: data.notes,
+      },
+    });
+
+    return mapPersonalDebt(
+      await prisma.personalDebt.update({
+        where: { id: debtId },
+        data: {
+          remainingAmount: newRemaining,
+          status: newRemaining <= 0.01 ? "SETTLED" : "ACTIVE",
+        },
+      })
+    );
+  }
+
+  static async deletePersonalDebt(userId: string, debtId: string): Promise<void> {
+    const debt = await prisma.personalDebt.findFirst({ where: { id: debtId, userId } });
+    if (!debt) throw new Error("Debt not found.");
+    await prisma.personalDebt.delete({ where: { id: debtId } });
+  }
+}
+
+function mapPersonalDebt(debt: {
+  id: string;
+  userId: string;
+  title: string;
+  counterpartyName: string;
+  direction: string;
+  category: string;
+  totalAmount: unknown;
+  remainingAmount: unknown;
+  interestRate: unknown | null;
+  dueDate: Date | null;
+  notes: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): UnifiedPersonalDebt {
+  return {
+    id: debt.id,
+    userId: debt.userId,
+    title: debt.title,
+    counterpartyName: debt.counterpartyName,
+    direction: debt.direction as "I_OWE" | "OWED_TO_ME",
+    category: debt.category,
+    totalAmount: Number(debt.totalAmount),
+    remainingAmount: Number(debt.remainingAmount),
+    interestRate: debt.interestRate != null ? Number(debt.interestRate) : undefined,
+    dueDate: debt.dueDate?.toISOString(),
+    notes: debt.notes ?? undefined,
+    status: debt.status as "ACTIVE" | "SETTLED",
+    createdAt: debt.createdAt.toISOString(),
+    updatedAt: debt.updatedAt.toISOString(),
+  };
 }

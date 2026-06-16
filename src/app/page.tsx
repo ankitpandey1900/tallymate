@@ -99,7 +99,7 @@ export default function Home() {
         <p className="text-lg md:text-[22px] text-neutral-600 dark:text-neutral-400 max-w-2xl text-center leading-[1.6] font-medium z-10 text-balance" style={{ perspective: "1000px" }}>
           <span className="inline-block" style={{ transformStyle: "preserve-3d" }}>
             <AnimatedLetters
-              text="The ultimate financial operating system. Unifying personal wealth tracking, shared group expenses, budgeting, and proactive alerts in one relentlessly optimized workspace."
+              text="Track spending, split bills with friends, and stay on budget — all in one simple app."
               delayOffset={1.2}
             />
           </span>
@@ -249,7 +249,7 @@ export default function Home() {
             </span>
           </h2>
           <p className="text-neutral-600 dark:text-neutral-400 text-lg md:text-xl leading-relaxed text-balance">
-            Stop switching between banking apps, budgeting spreadsheets, and Splitwise. Bring your entire financial life into focus.
+            Stop switching between banking apps, spreadsheets, and bill-splitting apps. Keep your money in one clear view.
           </p>
         </div>
 
@@ -260,9 +260,9 @@ export default function Home() {
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mb-8 border border-emerald-100 dark:border-emerald-500/20">
                 <TrendingUp size={22} className="text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h3 className="font-bold text-2xl mb-3 tracking-tight">Omni-Account Tracking</h3>
+              <h3 className="font-bold text-2xl mb-3 tracking-tight">All your accounts</h3>
               <p className="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed text-balance">
-                Track Cash, Bank Accounts, Credit Cards, and UPI Wallets simultaneously. Get a precise real-time view of your net worth across all your holdings.
+                Track cash, bank accounts, cards, and UPI wallets together. See your real balance at a glance.
               </p>
             </div>
           </div>
@@ -273,9 +273,9 @@ export default function Home() {
               <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mb-8 border border-blue-100 dark:border-blue-500/20">
                 <Users size={22} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="font-bold text-2xl mb-3 tracking-tight">Splitwise-grade Groups</h3>
+              <h3 className="font-bold text-2xl mb-3 tracking-tight">Shared groups</h3>
               <p className="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed text-balance">
-                Create workspaces for trips, roommates, or couples. Split bills equally, by percentage, or exact amounts. Our engine optimizes debt settlements instantly.
+                Create groups for trips, roommates, or couples. Split bills equally, by percentage, or exact amounts — then settle up with the fewest payments.
               </p>
             </div>
           </div>
@@ -320,7 +320,7 @@ export default function Home() {
             </div>
             <h3 className="font-semibold text-lg mb-2">Enterprise Security</h3>
             <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed text-balance">
-              Bank-level encryption and a unified audit log of every financial action.
+              Bank-level encryption and a clear history of every change you make.
             </p>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Financial Reports - Tallymate",
-  description: "Generate and review income vs expense audits, burn rate averages, daily spending category trends, and download standard CSV logs.",
+  description: "Charts, trends, and CSV exports to review your income, spending, and habits.",
 };
 
 export const dynamic = "force-dynamic";

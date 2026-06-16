@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -18,35 +18,29 @@ import {
   Menu,
   X,
   CheckCircle,
+  HandCoins,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser, getNotifications, markNotificationAsRead } from "@/app/actions";
+import { getLayoutData, markNotificationAsRead } from "@/app/actions";
 import { signOut, useSession } from "@/lib/auth-client";
 import { UnifiedUser, UnifiedNotification } from "@/lib/unified-db";
 import TallymateLogo from "@/components/TallymateLogo";
-import type { getLayoutData } from "@/app/actions";
-
-type LayoutInitialData = Awaited<ReturnType<typeof getLayoutData>>;
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  initialData?: LayoutInitialData;
 }
 
-export default function DashboardLayout({ children, initialData }: DashboardLayoutProps) {
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isNavPending, startNavTransition] = useTransition();
   const { data: session, isPending: sessionLoading } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [currentUser, setCurrentUser] = useState<UnifiedUser | null>(
-    initialData?.user ?? null
-  );
-  const [notifications, setNotifications] = useState<UnifiedNotification[]>(
-    initialData?.notifications ?? []
-  );
+  const [currentUser, setCurrentUser] = useState<UnifiedUser | null>(null);
+  const [notifications, setNotifications] = useState<UnifiedNotification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -80,21 +74,35 @@ export default function DashboardLayout({ children, initialData }: DashboardLayo
       return;
     }
 
-    if (initialData) return;
-
     const loadUserData = async () => {
       try {
-        const u = await getCurrentUser();
-        setCurrentUser(u);
-        const notifs = await getNotifications();
-        setNotifications(notifs);
+        const data = await getLayoutData();
+        setCurrentUser(data.user);
+        setNotifications(data.notifications);
       } catch {
         router.replace("/login");
       }
     };
 
     loadUserData();
-  }, [sessionLoading, session, router, initialData]);
+  }, [sessionLoading, session, router]);
+
+  // Prefetch all dashboard routes so clicks feel instant
+  useEffect(() => {
+    if (!session) return;
+    const routes = [
+      "/dashboard",
+      "/transactions",
+      "/budgets",
+      "/goals",
+      "/groups",
+      "/debts",
+      "/reports",
+      "/notifications",
+      "/settings",
+    ];
+    routes.forEach((route) => router.prefetch(route));
+  }, [session, router]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -139,6 +147,7 @@ export default function DashboardLayout({ children, initialData }: DashboardLayo
     { name: "Budgets", href: "/budgets", icon: PieChart },
     { name: "Goals", href: "/goals", icon: Target },
     { name: "Groups", href: "/groups", icon: Users },
+    { name: "Debts", href: "/debts", icon: HandCoins },
     { name: "Reports", href: "/reports", icon: TrendingUp },
     { name: "Notifications", href: "/notifications", icon: Bell },
     { name: "Settings", href: "/settings", icon: Settings },
@@ -194,7 +203,13 @@ export default function DashboardLayout({ children, initialData }: DashboardLayo
               <Link
                 key={item.name}
                 href={item.href}
-                onClick={() => setIsSidebarOpen(false)}
+                prefetch
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  if (pathname !== item.href) {
+                    startNavTransition(() => {});
+                  }
+                }}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors relative group",
                   isActive
@@ -254,6 +269,11 @@ export default function DashboardLayout({ children, initialData }: DashboardLayo
 
       {/* ─── Main Content ─── */}
       <div className="flex-1 flex flex-col min-w-0">
+        {isNavPending && (
+          <div className="h-0.5 w-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden shrink-0">
+            <div className="h-full w-1/3 bg-neutral-900 dark:bg-white animate-[pulse_0.8s_ease-in-out_infinite]" />
+          </div>
+        )}
         {/* Top Header */}
         <header className="h-14 border-b border-black/[0.04] dark:border-[#27272a] bg-white/70 backdrop-blur-xl dark:bg-[#0f0f11] flex items-center justify-between px-5 sticky top-0 z-30">
           <div className="flex items-center gap-4">

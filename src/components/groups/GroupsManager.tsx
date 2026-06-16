@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Users,
@@ -8,12 +9,14 @@ import {
   ArrowRight,
   Settings as SettingsIcon,
   DollarSign,
+  HandCoins,
   UserPlus,
   ArrowDownRight,
   ArrowUpRight,
   Check,
   AlertCircle,
   Trash2,
+  LogOut,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +25,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { FieldLabel } from "@/components/ui/field-label";
+import { formatGroupType } from "@/lib/group-labels";
+import { SectionHeading } from "@/components/ui/section-heading";
 import { AppDialog } from "@/components/ui/app-dialog";
 import {
   createGroup,
@@ -31,6 +36,7 @@ import {
   createSettlement,
   updateGroupSettings,
   deleteGroup,
+  leaveGroup,
   type getGroupsPageData,
 } from "@/app/actions";
 import {
@@ -65,6 +71,8 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
   const [currentUserId, setCurrentUserId] = useState<string>(initialData.userId);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<string | null>(null);
+  const [leavingGroupId, setLeavingGroupId] = useState<string | null>(null);
+  const [confirmLeaveGroupId, setConfirmLeaveGroupId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Create Group Form
@@ -163,6 +171,25 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       router.refresh();
     } catch (err: unknown) {
       toastError(err, "Failed to join group");
+    }
+  };
+
+  const handleLeaveGroup = async (groupId: string) => {
+    if (confirmLeaveGroupId !== groupId) {
+      setConfirmLeaveGroupId(groupId);
+      return;
+    }
+    setLeavingGroupId(groupId);
+    setConfirmLeaveGroupId(null);
+    try {
+      await leaveGroup(groupId);
+      if (selectedGroupId === groupId) setSelectedGroupId(null);
+      toast.success("You left the group");
+      router.refresh();
+    } catch (err: unknown) {
+      toastError(err, "Failed to leave group");
+    } finally {
+      setLeavingGroupId(null);
     }
   };
 
@@ -286,13 +313,28 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         receiveAccountId: "",
       });
       loadGroupDetails(groupDetails.group.id);
-      toast.success("Settlement recorded");
+      toast.success("Payment recorded");
     } catch (err) {
-      toastError(err, "Failed to record settlement");
+      toastError(err, "Failed to record payment");
     }
   };
 
   return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">Groups</h2>
+          <p className="text-sm text-neutral-500">Split bills with friends, roommates, or family.</p>
+        </div>
+        <Link
+          href="/debts"
+          className="inline-flex items-center gap-1.5 px-3 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold self-start"
+        >
+          <HandCoins size={14} />
+          Debt Tracker
+        </Link>
+      </div>
+
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
       {/* Left panel: Group list */}
       <div className="md:col-span-1 space-y-4">
@@ -332,34 +374,41 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
           <div className="space-y-2">
             {groups.map((g) => {
               const isOwner = g.members.find((m) => m.userId === currentUserId)?.role === "OWNER";
-              const isConfirming = confirmDeleteGroupId === g.id;
+              const isConfirmingDelete = confirmDeleteGroupId === g.id;
+              const isConfirmingLeave = confirmLeaveGroupId === g.id;
               const isDeleting = deletingGroupId === g.id;
+              const isLeaving = leavingGroupId === g.id;
               return (
                 <div key={g.id} className="relative group/card">
                   <Button
                     type="button"
                     variant="unstyled"
-                    onClick={() => setSelectedGroupId(g.id)}
+                    onClick={() => {
+                      setConfirmDeleteGroupId(null);
+                      setConfirmLeaveGroupId(null);
+                      setSelectedGroupId(g.id);
+                    }}
                     className={cn(
-                      "w-full text-left p-4 rounded-lg border transition-all duration-150 flex items-center justify-between pr-12 text-sm font-normal",
+                      "w-full h-auto min-h-0 text-left py-3.5 px-4 rounded-lg border transition-all duration-150 flex items-center justify-between gap-3 pr-12 text-sm font-normal",
                       selectedGroupId === g.id
-                        ? "border-neutral-900 bg-neutral-50 dark:border-black/[0.04] dark:bg-neutral-900"
+                        ? "border-neutral-900 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-900"
                         : "border-black/[0.04] bg-white dark:border-neutral-800 dark:bg-[#18181b] hover:bg-neutral-50 dark:hover:bg-neutral-900/50"
                     )}
                   >
-                    <div>
-                      <h4 className="text-sm font-semibold">{g.name}</h4>
-                      <p className="text-[10px] uppercase tracking-wider text-neutral-400 font-mono mt-1">
-                        {g.type} • {g.members.length} members {isOwner && "• Owner"}
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold leading-snug truncate">{g.name}</h4>
+                      <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                        {formatGroupType(g.type)} · {g.members.length} member{g.members.length !== 1 ? "s" : ""}
+                        {isOwner ? " · You manage this group" : ""}
                       </p>
                     </div>
-                    <ArrowRight size={14} className="text-neutral-400" />
+                    <ArrowRight size={14} className="text-neutral-400 shrink-0" />
                   </Button>
 
-                  {/* Delete button — visible on hover, owner only */}
-                  {isOwner && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity">
-                      {isConfirming ? (
+                  {/* Owner: delete — Member: leave */}
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity">
+                    {isOwner ? (
+                      isConfirmingDelete ? (
                         <>
                           <Button
                             type="button"
@@ -382,16 +431,57 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                         <Button
                           type="button"
                           variant="unstyled"
-                          onClick={(e) => { e.stopPropagation(); handleDeleteGroup(g.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmLeaveGroupId(null);
+                            handleDeleteGroup(g.id);
+                          }}
                           disabled={isDeleting}
                           className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500 transition-colors disabled:opacity-50"
                           title="Delete group"
                         >
                           {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                         </Button>
-                      )}
-                    </div>
-                  )}
+                      )
+                    ) : isConfirmingLeave ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="destructive-sm"
+                          onClick={() => handleLeaveGroup(g.id)}
+                          title="Confirm leave group"
+                        >
+                          {isLeaving ? <Loader2 size={11} className="animate-spin" /> : "Leave?"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="unstyled"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmLeaveGroupId(null);
+                          }}
+                          className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-[10px] font-bold"
+                        >
+                          No
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="unstyled"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteGroupId(null);
+                          handleLeaveGroup(g.id);
+                        }}
+                        disabled={isLeaving}
+                        className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors disabled:opacity-50"
+                        title="Leave group"
+                      >
+                        {isLeaving ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -404,7 +494,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         {!groupDetails ? (
           <div className="panel-card p-12 text-center text-xs text-neutral-400 flex flex-col items-center justify-center h-80">
             <Users size={32} className="text-neutral-300 dark:text-neutral-700 mb-2" />
-            Select a group from the sidebar to view details, balances, and settle split bills.
+            Select a group on the left to see balances, who should pay whom, and shared expenses.
           </div>
         ) : (
           <>
@@ -423,11 +513,27 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                       </span>
                     )}
                   </h2>
-                  <p className="text-xs text-neutral-400 font-mono uppercase tracking-wider mt-0.5">
-                    {groupDetails.group.type} Workspace
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    {formatGroupType(groupDetails.group.type)} group · {groupDetails.members.length} members
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {groupDetails.members.find((m) => m.userId === currentUserId)?.role !== "OWNER" && (
+                    <Button
+                      type="button"
+                      variant="outline-app"
+                      onClick={() => handleLeaveGroup(groupDetails.group.id)}
+                      disabled={leavingGroupId === groupDetails.group.id}
+                      className="gap-1 px-3 py-2 text-xs"
+                    >
+                      {leavingGroupId === groupDetails.group.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <LogOut size={14} />
+                      )}
+                      {confirmLeaveGroupId === groupDetails.group.id ? "Confirm leave" : "Leave group"}
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="cta"
@@ -452,25 +558,42 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               {/* Toggles settings toolbar */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                 {[
-                  { label: "Shared Finance", key: "enableSharedFinance" as const },
-                  { label: "Shared Budgets", key: "enableSharedBudgets" as const },
-                  { label: "Recurring Bills", key: "enableRecurringExpenses" as const },
-                  { label: "Settlement Log", key: "enableSettlementTracking" as const },
+                  {
+                    label: "Link Accounts",
+                    hint: "Connect group spending to your personal accounts",
+                    key: "enableSharedFinance" as const,
+                  },
+                  {
+                    label: "Group Budgets",
+                    hint: "Set spending limits for this group",
+                    key: "enableSharedBudgets" as const,
+                  },
+                  {
+                    label: "Repeat Bills",
+                    hint: "Track rent, subscriptions, and other recurring costs",
+                    key: "enableRecurringExpenses" as const,
+                  },
+                  {
+                    label: "Payment History",
+                    hint: "Keep a record of who paid whom",
+                    key: "enableSettlementTracking" as const,
+                  },
                 ].map((s) => (
                   <Button
                     key={s.key}
                     type="button"
                     variant="unstyled"
+                    title={s.hint}
                     onClick={() => handleToggleSetting(s.key)}
                     className={cn(
-                      "flex items-center justify-between px-3 py-1.5 rounded-md border text-[10px] font-bold uppercase tracking-wider transition-colors",
+                      "flex items-center justify-between px-3 py-2 rounded-md border text-[11px] font-semibold transition-colors",
                       groupDetails.group[s.key]
-                        ? "border-neutral-900 bg-neutral-50 dark:border-black/[0.04] dark:bg-neutral-900/60"
-                        : "border-black/[0.04] text-neutral-400 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                        ? "border-neutral-900 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-900/60 text-neutral-900 dark:text-neutral-100"
+                        : "border-black/[0.04] text-neutral-500 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900"
                     )}
                   >
                     <span>{s.label}</span>
-                    {groupDetails.group[s.key] && <Check size={12} className="ml-1" />}
+                    {groupDetails.group[s.key] && <Check size={12} className="ml-1 shrink-0" />}
                   </Button>
                 ))}
               </div>
@@ -480,25 +603,31 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Balances list */}
               <div className="panel-card p-5 space-y-4">
-                <h3 className="text-xs uppercase font-bold tracking-wider text-neutral-400">Net Balances</h3>
+                <SectionHeading
+                  title="Who owes what"
+                  description="Each member's balance after splitting all shared expenses."
+                />
                 <div className="space-y-2">
                   {groupDetails.balances.map((b) => {
                     const isOwed = b.netBalance > 0.01;
                     const isDebtor = b.netBalance < -0.01;
                     return (
-                      <div key={b.userId} className="flex items-center justify-between py-1.5 border-b border-neutral-50 dark:border-neutral-800/40 last:border-none">
+                      <div key={b.userId} className="flex items-center justify-between py-2 border-b border-neutral-50 dark:border-neutral-800/40 last:border-none">
                         <div>
-                          <p className="text-xs font-semibold">{b.userName}</p>
-                          <p className="text-[9px] text-neutral-400 font-mono mt-0.5">{b.userEmail}</p>
+                          <p className="text-sm font-semibold">{b.userName}</p>
+                          <p className="text-[11px] text-neutral-400 mt-0.5">{b.userEmail}</p>
                         </div>
                         <span
                           className={cn(
-                            "text-xs font-bold font-mono",
-                            isOwed ? "text-emerald-500" : isDebtor ? "text-red-500" : "text-neutral-400"
+                            "text-xs font-semibold font-mono text-right",
+                            isOwed ? "text-emerald-600" : isDebtor ? "text-rose-600" : "text-neutral-400"
                           )}
                         >
-                          {isOwed ? "Gets back: " : isDebtor ? "Owes: " : "Settled"}
-                          {b.netBalance !== 0 && `₹${Math.abs(b.netBalance).toLocaleString()}`}
+                          {isOwed
+                            ? `Gets back ₹${Math.abs(b.netBalance).toLocaleString()}`
+                            : isDebtor
+                              ? `Owes ₹${Math.abs(b.netBalance).toLocaleString()}`
+                              : "All settled"}
                         </span>
                       </div>
                     );
@@ -506,28 +635,55 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                 </div>
               </div>
 
-              {/* Simplified Debt Settlements */}
               <div className="panel-card p-5 space-y-4">
-                <h3 className="text-xs uppercase font-bold tracking-wider text-neutral-400">Simplified Settlements</h3>
+                <SectionHeading
+                  title="Easiest way to settle"
+                  description="Fewest payments needed to clear everyone's balance."
+                />
                 <div className="space-y-3">
                   {groupDetails.optimizedSettlements.length === 0 ? (
                     <div className="py-8 text-center text-xs text-neutral-400 flex flex-col items-center justify-center">
                       <Check size={20} className="text-emerald-500 mb-1" />
-                      All balances are fully settled!
+                      Everyone is settled up in this group.
                     </div>
                   ) : (
-                    groupDetails.optimizedSettlements.map((s, idx) => (
-                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1">
-                        <div className="text-xs">
-                          <span className="font-semibold">{s.fromUserName}</span>
-                          <span className="text-neutral-400 mx-1">pays</span>
-                          <span className="font-semibold">{s.toUserName}</span>
+                    groupDetails.optimizedSettlements.map((s, idx) => {
+                      const isInvolved =
+                        currentUserId === s.fromUserId || currentUserId === s.toUserId;
+                      const youPay = currentUserId === s.fromUserId;
+                      const youReceive = currentUserId === s.toUserId;
+
+                      return (
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 border-b border-neutral-50 dark:border-neutral-800/40 last:border-none">
+                        <div className="text-sm">
+                          {youPay ? (
+                            <>
+                              <span className="text-neutral-500">You pay </span>
+                              <span className="font-semibold">{s.toUserName}</span>
+                            </>
+                          ) : youReceive ? (
+                            <>
+                              <span className="font-semibold">{s.fromUserName}</span>
+                              <span className="text-neutral-500"> pays you</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-semibold">{s.fromUserName}</span>
+                              <span className="text-neutral-400 mx-1.5">pays</span>
+                              <span className="font-semibold">{s.toUserName}</span>
+                            </>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold font-mono text-xs text-red-500">
+                          <span
+                            className={cn(
+                              "font-bold font-mono text-sm",
+                              youPay ? "text-rose-600" : youReceive ? "text-emerald-600" : "text-neutral-500"
+                            )}
+                          >
                             ₹{s.amount.toLocaleString()}
                           </span>
-                          {/* Record settlement trigger */}
+                          {isInvolved ? (
                           <Button
                             type="button"
                             variant="outline-app"
@@ -536,19 +692,25 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                 payerId: s.fromUserId,
                                 receiverId: s.toUserId,
                                 amount: String(s.amount),
-                                notes: `Settling debt in ${groupDetails.group.name}`,
+                                notes: `Payment for ${groupDetails.group.name}`,
                                 accountId: personalAccounts[0]?.id || "",
                                 receiveAccountId: "",
                               });
                               setShowSettleModal(true);
                             }}
-                            className="px-2 py-1 border-neutral-300 dark:border-neutral-700 text-[10px]"
+                            className="px-2.5 py-1 text-[11px]"
                           >
-                            Record Pay
+                            {youPay ? "Mark as paid" : "Confirm received"}
                           </Button>
+                          ) : (
+                            <span className="text-[10px] text-neutral-400 italic px-1">
+                              Between other members
+                            </span>
+                          )}
                         </div>
                       </div>
-                    ))
+                    );
+                    })
                   )}
                 </div>
               </div>
@@ -556,24 +718,36 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
 
             {/* Expenses List */}
             <div className="panel-card p-5 space-y-4">
-              <h3 className="text-xs uppercase font-bold tracking-wider text-neutral-400">Expenses Log</h3>
-              <div className="space-y-3">
+              <SectionHeading
+                title="Shared expenses"
+                description="Everything the group has spent together, and who paid."
+              />
+              <div className="space-y-1">
                 {groupDetails.expenses.length === 0 ? (
                   <div className="py-12 text-center text-xs text-neutral-400">
-                    No group expenses have been recorded yet.
+                    No expenses yet. Tap &quot;Add Expense&quot; to split a bill.
                   </div>
                 ) : (
                   groupDetails.expenses.map((e) => {
                     const payer = groupDetails.members.find((m) => m.userId === e.paidByUserId);
+                    const splitSummary = e.splits
+                      .map((s) => {
+                        const member = groupDetails.members.find((m) => m.userId === s.userId);
+                        return `${member?.name?.split(" ")[0] ?? "Member"}: ₹${s.amount}`;
+                      })
+                      .join(" · ");
                     return (
-                      <div key={e.id} className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-none">
-                        <div>
-                          <p className="text-xs font-semibold">{e.description}</p>
-                          <p className="text-[10px] text-neutral-400 font-mono mt-0.5">
-                            Paid by {payer?.name || "Unknown"} on {new Date(e.date).toLocaleDateString()}
+                      <div key={e.id} className="flex items-start justify-between gap-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-none">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold capitalize">{e.description}</p>
+                          <p className="text-[11px] text-neutral-500 mt-0.5">
+                            Paid by {payer?.name ?? "someone"} · {new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 mt-1 truncate" title={splitSummary}>
+                            Split: {splitSummary}
                           </p>
                         </div>
-                        <span className="text-xs font-bold font-mono">
+                        <span className="text-sm font-bold font-mono shrink-0">
                           ₹{e.amount.toLocaleString()}
                         </span>
                       </div>
@@ -587,7 +761,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       </div>
 
       {/* Create Group Modal */}
-      <AppDialog open={showCreateGroup} onOpenChange={setShowCreateGroup} title="Create Group Workspace">
+      <AppDialog open={showCreateGroup} onOpenChange={setShowCreateGroup} title="Create a group">
         <form onSubmit={handleCreateGroup} className="space-y-3">
           <div className="space-y-1.5">
             <FieldLabel>Group Name</FieldLabel>
@@ -660,7 +834,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       </AppDialog>
 
       {/* Join Group Modal */}
-      <AppDialog open={showJoinGroup} onOpenChange={setShowJoinGroup} title="Join Group">
+      <AppDialog open={showJoinGroup} onOpenChange={setShowJoinGroup} title="Join a group">
         <form onSubmit={handleJoinGroup} className="space-y-3">
           <div className="space-y-1.5">
             <FieldLabel>Invite Code</FieldLabel>
@@ -689,7 +863,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       <AppDialog
         open={showAddExpense && !!groupDetails}
         onOpenChange={setShowAddExpense}
-        title="Add Group Expense"
+        title="Add shared expense"
         maxWidth="max-w-lg"
         className="max-h-[90vh] overflow-y-auto"
       >
@@ -741,7 +915,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   value={expenseForm.accountId}
                   onChange={(e) => setExpenseForm((prev) => ({ ...prev, accountId: e.target.value }))}
                 >
-                  <option value="">Do Not Sync to Personal Ledgers</option>
+                  <option value="">Skip — don&apos;t update my personal account</option>
                   {personalAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} (₹{a.balance})
@@ -833,17 +1007,30 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       <AppDialog
         open={showSettleModal && !!groupDetails}
         onOpenChange={setShowSettleModal}
-        title="Record Settlement"
+        title="Mark payment as done"
       >
         {groupDetails && (
           <form onSubmit={handleSettleSubmit} className="space-y-3">
-            <div className="text-xs border-b border-neutral-100 dark:border-neutral-800 pb-3 flex items-center justify-between text-neutral-400">
-              <span>Payer: {groupDetails.members.find((m) => m.userId === settlementForm.payerId)?.name}</span>
-              <span>Receiver: {groupDetails.members.find((m) => m.userId === settlementForm.receiverId)?.name}</span>
+            <div className="text-sm border-b border-neutral-100 dark:border-neutral-800 pb-3 text-neutral-600 dark:text-neutral-400">
+              {settlementForm.payerId === currentUserId ? (
+                <p>
+                  You are paying{" "}
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                    {groupDetails.members.find((m) => m.userId === settlementForm.receiverId)?.name}
+                  </span>
+                </p>
+              ) : (
+                <p>
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                    {groupDetails.members.find((m) => m.userId === settlementForm.payerId)?.name}
+                  </span>{" "}
+                  is paying you
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <FieldLabel>Settled Amount (INR)</FieldLabel>
+              <FieldLabel>Amount (₹)</FieldLabel>
               <Input
                 type="number"
                 required
@@ -862,7 +1049,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   value={settlementForm.accountId}
                   onChange={(e) => setSettlementForm((prev) => ({ ...prev, accountId: e.target.value }))}
                 >
-                  <option value="">Select Account (No personal ledger link)</option>
+                  <option value="">Skip — don&apos;t update my account</option>
                   {personalAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} (₹{a.balance})
@@ -880,7 +1067,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   value={settlementForm.receiveAccountId}
                   onChange={(e) => setSettlementForm((prev) => ({ ...prev, receiveAccountId: e.target.value }))}
                 >
-                  <option value="">Select Account (No personal ledger link)</option>
+                  <option value="">Skip — don&apos;t update my account</option>
                   {personalAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} (₹{a.balance})
@@ -905,12 +1092,13 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                 Cancel
               </Button>
               <Button type="submit" variant="submit">
-                Confirm Settlement
+                Confirm payment
               </Button>
             </div>
           </form>
         )}
       </AppDialog>
+    </div>
     </div>
   );
 }

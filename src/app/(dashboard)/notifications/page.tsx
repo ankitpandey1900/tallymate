@@ -5,7 +5,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Notifications Center - Tallymate",
-  description: "Review your notification logs, budget alerts, and bill split settlement requests.",
+  description: "Budget alerts, group updates, and payment reminders in one place.",
 };
 
 export const dynamic = "force-dynamic";

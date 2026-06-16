@@ -32,6 +32,7 @@ model User {
   groupMembers       GroupMember[]
   settlementsPaid    Settlement[]    @relation("SettlementsPaid")
   settlementsRecv    Settlement[]    @relation("SettlementsReceived")
+  personalDebts      PersonalDebt[]
   notifications      Notification[]
   auditLogs          AuditLog[]
   expenseSplits      ExpenseSplit[]
@@ -316,6 +317,56 @@ model Settlement {
   date         DateTime @default(now())
   notes        String?
   createdAt    DateTime @default(now())
+}
+
+enum PersonalDebtDirection {
+  I_OWE
+  OWED_TO_ME
+}
+
+enum PersonalDebtCategory {
+  LOAN
+  CREDIT_CARD
+  EMI
+  PERSONAL
+  OTHER
+}
+
+enum PersonalDebtStatus {
+  ACTIVE
+  SETTLED
+}
+
+model PersonalDebt {
+  id               String               @id @default(uuid())
+  userId           String
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  counterpartyName String
+  direction        PersonalDebtDirection
+  category         PersonalDebtCategory @default(OTHER)
+  totalAmount      Decimal
+  remainingAmount  Decimal
+  interestRate     Decimal?
+  dueDate          DateTime?
+  notes            String?
+  status           PersonalDebtStatus   @default(ACTIVE)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  payments         PersonalDebtPayment[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model PersonalDebtPayment {
+  id             String       @id @default(uuid())
+  personalDebtId String
+  personalDebt   PersonalDebt @relation(fields: [personalDebtId], references: [id], onDelete: Cascade)
+  amount         Decimal
+  date           DateTime     @default(now())
+  notes          String?
+  createdAt      DateTime     @default(now())
 }
 
 model Notification {

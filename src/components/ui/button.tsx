@@ -31,7 +31,7 @@ const buttonVariants = cva(
           "rounded-md border border-black/[0.04] py-2 text-xs font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900",
         "destructive-sm":
           "gap-1 rounded-md bg-red-500 p-1.5 text-[10px] font-bold text-white hover:bg-red-600",
-        unstyled: "border-transparent bg-transparent p-0 shadow-none ring-0 hover:bg-transparent",
+        unstyled: "h-auto min-h-0 border-transparent bg-transparent p-0 shadow-none ring-0 hover:bg-transparent",
         "auth-submit":
           "mt-2 w-full gap-1.5 rounded-md bg-[#09090b] py-2 text-xs font-semibold text-white shadow-xs hover:bg-neutral-800 disabled:opacity-55 dark:bg-[#fafafa] dark:text-[#09090b] dark:hover:bg-neutral-200",
         "auth-tab-active":
@@ -69,7 +69,7 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />
   )

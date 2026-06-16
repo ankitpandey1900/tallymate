@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ArrowUpDown, PieChart, Target, Users, TrendingUp,
   Bell, Settings, ChevronRight, Menu, X, ArrowLeft, Sun, Moon,
   Sparkles, Shield, Zap, CreditCard, UserPlus, LogIn,
-  BarChart2, AlertTriangle, CheckCircle2, Hash, BookOpen,
+  BarChart2, AlertTriangle, CheckCircle2, Hash, BookOpen, HandCoins,
 } from "lucide-react";
 import TallymateLogo from "@/components/TallymateLogo";
 
@@ -17,6 +17,7 @@ const sections = [
   { id: "budgets", label: "Budgets", icon: PieChart },
   { id: "goals", label: "Financial Goals", icon: Target },
   { id: "groups", label: "Groups & Bill Splitting", icon: Users },
+  { id: "debts", label: "Debt Tracker", icon: HandCoins },
   { id: "reports", label: "Reports", icon: TrendingUp },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "settings", label: "Settings", icon: Settings },
@@ -238,7 +239,7 @@ export default function DocsPage() {
 
           {/* ── TRANSACTIONS ── */}
           <div className="mt-14">
-            <SectionHeading id="transactions" icon={ArrowUpDown} title="Transactions" subtitle="Record every rupee that comes in or goes out. Your complete financial ledger." />
+            <SectionHeading id="transactions" icon={ArrowUpDown} title="Transactions" subtitle="Record every rupee that comes in or goes out — income and expenses in one list." />
             <h3 className="font-semibold text-base mb-3 text-neutral-800 dark:text-neutral-200">Adding a Transaction</h3>
             <Step n={1} title='Click "Add Transaction"'>The button is always visible at the top of the Transactions page.</Step>
             <Step n={2} title="Fill in the details">
@@ -312,7 +313,19 @@ export default function DocsPage() {
             <Step n={3} title="Record who paid">Select the member who paid upfront. Tallymate automatically calculates who owes who.</Step>
 
             <h3 className="font-semibold text-base mb-3 mt-8 text-neutral-800 dark:text-neutral-200">Settling Up</h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">Tallymate&apos;s debt minimization engine automatically calculates the fewest possible transactions needed for everyone to be even. Instead of 10 individual payments, it might condense to just 3. Go to the group&apos;s <strong>Balances</strong> tab and record a Settlement when someone pays you back.</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">Tallymate figures out the fewest payments needed so everyone is even. For example, 10 small debts might become just 3 payments. Open <strong>Who owes what</strong> in your group and tap <strong>Mark as paid</strong> when you send or receive money — only the people involved can record a payment.</p>
+          </div>
+
+          {/* ── DEBTS ── */}
+          <div className="mt-14">
+            <SectionHeading id="debts" icon={HandCoins} title="Debt Tracker" subtitle="See what you owe and what others owe you across all your groups." />
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">The <strong>Debts</strong> page in the sidebar adds up balances from every group you belong to. You get a single view of money you owe, money owed to you, and suggested payments — without opening each group one by one.</p>
+            <Step n={1} title="Open Debts from the sidebar">See your total position at the top: you owe, you&apos;re owed, and net balance.</Step>
+            <Step n={2} title="Review suggested payments">Payments you can make or confirm appear under <strong>Payments you can make</strong>. Tap <strong>Settle</strong> to jump to the right group.</Step>
+            <Step n={3} title="Check balances by person or group">Use <strong>By person</strong> and <strong>By group</strong> to understand who you share debts with and where they come from.</Step>
+
+            <h3 className="font-semibold text-base mb-3 mt-8 text-neutral-800 dark:text-neutral-200">Loans &amp; other debts</h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4">Not everything is a group split. Use <strong>Add loan / debt</strong> on the Debts page to track bank loans, credit cards, EMIs, or money you lent to or borrowed from friends. Record payments as you go — totals update automatically and combine with your group balances.</p>
           </div>
 
           {/* ── REPORTS ── */}

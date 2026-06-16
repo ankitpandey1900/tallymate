@@ -31,12 +31,14 @@ function AppDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className={cn(modalContentClass, maxWidth, className)}
+        className={cn(modalContentClass, maxWidth, "max-h-[90vh] overflow-y-auto")}
       >
-        {title ? (
-          <DialogTitle className="text-base font-bold tracking-tight">{title}</DialogTitle>
-        ) : null}
-        {children}
+        <div className={cn("relative space-y-4", className)}>
+          {title ? (
+            <DialogTitle className="text-base font-bold tracking-tight pr-8">{title}</DialogTitle>
+          ) : null}
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );

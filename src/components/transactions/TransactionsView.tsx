@@ -229,8 +229,8 @@ export default function TransactionsView({ initialData }: { initialData: Transac
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Ledger Books</h2>
-          <p className="text-sm text-neutral-500">View, edit, and audit all transaction logs.</p>
+          <h2 className="text-xl font-bold tracking-tight">Transactions</h2>
+          <p className="text-sm text-neutral-500">All your income and spending in one place.</p>
         </div>
         <Button onClick={openAddModal} variant="cta" className="self-start">
           <Plus size={14} />
@@ -453,13 +453,12 @@ export default function TransactionsView({ initialData }: { initialData: Transac
         open={showModal}
         onOpenChange={(open) => { if (open) setShowModal(true); else closeModal(); }}
         title={editingTx ? "Edit Transaction" : "Record Transaction"}
-        className="relative max-h-[90vh] overflow-y-auto"
       >
         <Button
           type="button"
           variant="unstyled"
           onClick={closeModal}
-          className="absolute right-6 top-6 p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"
+          className="absolute right-0 top-0 p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"
         >
           <X size={16} />
         </Button>

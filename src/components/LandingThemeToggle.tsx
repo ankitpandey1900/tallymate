@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 
 export default function LandingThemeToggle() {
-  const [dark, setDark] = useState(() => {
-    if (typeof document === "undefined") return false;
-    return document.documentElement.classList.contains("dark");
-  });
+  const [dark, setDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+    setMounted(true);
+  }, []);
 
   const toggle = () => {
     const next = !dark;
@@ -27,7 +30,13 @@ export default function LandingThemeToggle() {
       aria-label="Toggle dark mode"
       className="p-2 rounded-full border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 transition-colors"
     >
-      {dark ? <Sun size={15} /> : <Moon size={15} />}
+      {!mounted ? (
+        <span className="block w-[15px] h-[15px]" aria-hidden />
+      ) : dark ? (
+        <Sun size={15} />
+      ) : (
+        <Moon size={15} />
+      )}
     </button>
   );
 }

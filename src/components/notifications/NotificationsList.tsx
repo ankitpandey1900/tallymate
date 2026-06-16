@@ -45,7 +45,7 @@ export default function NotificationsList({ initialData }: { initialData: Notifi
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Notification Center</h2>
-          <p className="text-sm text-neutral-500">Monitor budget warnings, goal milestones, and settlements.</p>
+          <p className="text-sm text-neutral-500">Budget alerts, group activity, and payment updates.</p>
         </div>
         {unreadCount > 0 && (
           <button
