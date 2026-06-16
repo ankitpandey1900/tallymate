@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Users,
   Plus,
@@ -17,8 +18,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { FieldLabel } from "@/components/ui/field-label";
+import { AppDialog } from "@/components/ui/app-dialog";
 import {
-  getGroups,
   createGroup,
   joinGroup,
   getGroupDetails,
@@ -26,8 +31,7 @@ import {
   createSettlement,
   updateGroupSettings,
   deleteGroup,
-  getAccounts,
-  getCurrentUser,
+  type getGroupsPageData,
 } from "@/app/actions";
 import {
   UnifiedGroup,
@@ -36,8 +40,11 @@ import {
   UnifiedAccount,
 } from "@/lib/unified-db";
 
-export default function GroupsManager() {
-  const [groups, setGroups] = useState<UnifiedGroup[]>([]);
+type GroupsInitialData = Awaited<ReturnType<typeof getGroupsPageData>>;
+
+export default function GroupsManager({ initialData }: { initialData: GroupsInitialData }) {
+  const router = useRouter();
+  const [groups, setGroups] = useState<UnifiedGroup[]>(initialData.groups);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [groupDetails, setGroupDetails] = useState<{
     group: UnifiedGroup;
@@ -54,11 +61,11 @@ export default function GroupsManager() {
     }[];
   } | null>(null);
 
-  const [personalAccounts, setPersonalAccounts] = useState<UnifiedAccount[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>("demo-user-id");
+  const [personalAccounts, setPersonalAccounts] = useState<UnifiedAccount[]>(initialData.accounts);
+  const [currentUserId, setCurrentUserId] = useState<string>(initialData.userId);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Create Group Form
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -95,23 +102,11 @@ export default function GroupsManager() {
   });
 
   useEffect(() => {
-    async function init() {
-      await Promise.all([loadUser(), loadGroups(), loadPersonalAccounts()]);
-      setIsLoading(false);
-    }
-    init();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const user = await getCurrentUser();
-      if (user) {
-        setCurrentUserId(user.id);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    setGroups(initialData.groups);
+    setPersonalAccounts(initialData.accounts);
+    setCurrentUserId(initialData.userId);
+    setIsLoading(false);
+  }, [initialData]);
 
   useEffect(() => {
     if (selectedGroupId) {
@@ -121,23 +116,6 @@ export default function GroupsManager() {
     }
   }, [selectedGroupId]);
 
-  const loadGroups = async () => {
-    try {
-      const grps = await getGroups();
-      setGroups(grps);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const loadPersonalAccounts = async () => {
-    try {
-      const accs = await getAccounts();
-      setPersonalAccounts(accs);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const loadGroupDetails = async (id: string) => {
     try {
@@ -167,7 +145,7 @@ export default function GroupsManager() {
       setShowCreateGroup(false);
       setNewGroupForm({ name: "", type: "TRIP", memberEmails: ["", ""] });
       toast.success("Group created successfully");
-      loadGroups();
+      router.refresh();
     } catch (err) {
       toastError(err, "Failed to create group");
     }
@@ -182,7 +160,7 @@ export default function GroupsManager() {
       setShowJoinGroup(false);
       setInviteCode("");
       toast.success("Joined group successfully");
-      loadGroups();
+      router.refresh();
     } catch (err: unknown) {
       toastError(err, "Failed to join group");
     }
@@ -199,7 +177,7 @@ export default function GroupsManager() {
       await deleteGroup(groupId);
       if (selectedGroupId === groupId) setSelectedGroupId(null);
       toast.success("Group deleted");
-      await loadGroups();
+      router.refresh();
     } catch (err: unknown) {
       toastError(err, "Failed to delete group");
     } finally {
@@ -321,20 +299,24 @@ export default function GroupsManager() {
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold tracking-tight">Your Groups</h3>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              type="button"
+              variant="outline-app"
               onClick={() => setShowJoinGroup(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 border border-black/[0.04] dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
+              className="gap-1 px-2.5 py-1.5 border-black/[0.04] dark:border-neutral-800"
             >
               <UserPlus size={14} />
               Join
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="cta"
               onClick={() => setShowCreateGroup(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-[#09090b] dark:bg-[#fafafa] text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-md text-xs font-semibold"
+              className="gap-1 px-2.5 py-1.5 shadow-none"
             >
               <Plus size={14} />
               Create
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -354,10 +336,12 @@ export default function GroupsManager() {
               const isDeleting = deletingGroupId === g.id;
               return (
                 <div key={g.id} className="relative group/card">
-                  <button
+                  <Button
+                    type="button"
+                    variant="unstyled"
                     onClick={() => setSelectedGroupId(g.id)}
                     className={cn(
-                      "w-full text-left p-4 rounded-lg border transition-all duration-150 flex items-center justify-between pr-12",
+                      "w-full text-left p-4 rounded-lg border transition-all duration-150 flex items-center justify-between pr-12 text-sm font-normal",
                       selectedGroupId === g.id
                         ? "border-neutral-900 bg-neutral-50 dark:border-black/[0.04] dark:bg-neutral-900"
                         : "border-black/[0.04] bg-white dark:border-neutral-800 dark:bg-[#18181b] hover:bg-neutral-50 dark:hover:bg-neutral-900/50"
@@ -370,36 +354,41 @@ export default function GroupsManager() {
                       </p>
                     </div>
                     <ArrowRight size={14} className="text-neutral-400" />
-                  </button>
+                  </Button>
 
                   {/* Delete button — visible on hover, owner only */}
                   {isOwner && (
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity">
                       {isConfirming ? (
                         <>
-                          <button
+                          <Button
+                            type="button"
+                            variant="destructive-sm"
                             onClick={() => handleDeleteGroup(g.id)}
-                            className="p-1.5 rounded-md bg-red-500 text-white hover:bg-red-600 text-[10px] font-bold flex items-center gap-1"
                             title="Confirm delete group"
                           >
                             {isDeleting ? <Loader2 size={11} className="animate-spin" /> : "Delete?"}
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="unstyled"
                             onClick={() => setConfirmDeleteGroupId(null)}
                             className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-[10px] font-bold"
                           >
                             No
-                          </button>
+                          </Button>
                         </>
                       ) : (
-                        <button
+                        <Button
+                          type="button"
+                          variant="unstyled"
                           onClick={(e) => { e.stopPropagation(); handleDeleteGroup(g.id); }}
                           disabled={isDeleting}
                           className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500 transition-colors disabled:opacity-50"
                           title="Delete group"
                         >
                           {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}
@@ -439,7 +428,9 @@ export default function GroupsManager() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button
+                  <Button
+                    type="button"
+                    variant="cta"
                     onClick={() => {
                       setExpenseForm((prev) => ({
                         ...prev,
@@ -450,11 +441,11 @@ export default function GroupsManager() {
                       }));
                       setShowAddExpense(true);
                     }}
-                    className="flex items-center gap-1 px-3 py-2 bg-[#09090b] dark:bg-[#fafafa] text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-md text-xs font-semibold"
+                    className="gap-1 px-3 py-2 shadow-none"
                   >
                     <Plus size={14} />
                     Add Expense
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -466,8 +457,10 @@ export default function GroupsManager() {
                   { label: "Recurring Bills", key: "enableRecurringExpenses" as const },
                   { label: "Settlement Log", key: "enableSettlementTracking" as const },
                 ].map((s) => (
-                  <button
+                  <Button
                     key={s.key}
+                    type="button"
+                    variant="unstyled"
                     onClick={() => handleToggleSetting(s.key)}
                     className={cn(
                       "flex items-center justify-between px-3 py-1.5 rounded-md border text-[10px] font-bold uppercase tracking-wider transition-colors",
@@ -478,7 +471,7 @@ export default function GroupsManager() {
                   >
                     <span>{s.label}</span>
                     {groupDetails.group[s.key] && <Check size={12} className="ml-1" />}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -535,7 +528,9 @@ export default function GroupsManager() {
                             ₹{s.amount.toLocaleString()}
                           </span>
                           {/* Record settlement trigger */}
-                          <button
+                          <Button
+                            type="button"
+                            variant="outline-app"
                             onClick={() => {
                               setSettlementForm({
                                 payerId: s.fromUserId,
@@ -547,10 +542,10 @@ export default function GroupsManager() {
                               });
                               setShowSettleModal(true);
                             }}
-                            className="px-2 py-1 border border-neutral-300 dark:border-neutral-700 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 text-[10px] font-semibold"
+                            className="px-2 py-1 border-neutral-300 dark:border-neutral-700 text-[10px]"
                           >
                             Record Pay
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))
@@ -592,386 +587,330 @@ export default function GroupsManager() {
       </div>
 
       {/* Create Group Modal */}
-      {showCreateGroup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowCreateGroup(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-md p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Create Group Workspace</h3>
-            <form onSubmit={handleCreateGroup} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Group Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Goa Trip 2026, Flatmates 4B"
-                  value={newGroupForm.name}
-                  onChange={(e) => setNewGroupForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Group Type</label>
-                <select
-                  value={newGroupForm.type}
-                  onChange={(e) => setNewGroupForm((prev) => ({ ...prev, type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                >
-                  <option value="TRIP">Trip / Vacation</option>
-                  <option value="FAMILY">Family</option>
-                  <option value="FLATMATES">Roommates / Flatmates</option>
-                  <option value="COUPLE">Couple / Partners</option>
-                  <option value="FRIENDS">Friends</option>
-                  <option value="CUSTOM">Custom / Others</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Invite Members (by Email)</label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setNewGroupForm((prev) => ({
-                        ...prev,
-                        memberEmails: [...prev.memberEmails, ""],
-                      }))
-                    }
-                    className="text-[10px] text-neutral-500 hover:text-neutral-900 font-semibold"
-                  >
-                    + Add Field
-                  </button>
-                </div>
-                {newGroupForm.memberEmails.map((email, index) => (
-                  <input
-                    key={index}
-                    type="email"
-                    placeholder={`friend-${index + 1}@email.com`}
-                    value={email}
-                    onChange={(e) => {
-                      const updated = [...newGroupForm.memberEmails];
-                      updated[index] = e.target.value;
-                      setNewGroupForm((prev) => ({ ...prev, memberEmails: updated }));
-                    }}
-                    className="w-full px-3 py-1.5 border border-black/[0.04] dark:border-neutral-800 rounded-md text-xs bg-transparent mt-1"
-                  />
-                ))}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateGroup(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-                >
-                  Create Group
-                </button>
-              </div>
-            </form>
+      <AppDialog open={showCreateGroup} onOpenChange={setShowCreateGroup} title="Create Group Workspace">
+        <form onSubmit={handleCreateGroup} className="space-y-3">
+          <div className="space-y-1.5">
+            <FieldLabel>Group Name</FieldLabel>
+            <Input
+              type="text"
+              required
+              placeholder="e.g. Goa Trip 2026, Flatmates 4B"
+              value={newGroupForm.name}
+              onChange={(e) => setNewGroupForm((prev) => ({ ...prev, name: e.target.value }))}
+            />
           </div>
-        </div>
-      )}
+
+          <div className="space-y-1.5">
+            <FieldLabel>Group Type</FieldLabel>
+            <NativeSelect
+              value={newGroupForm.type}
+              onChange={(e) => setNewGroupForm((prev) => ({ ...prev, type: e.target.value }))}
+            >
+              <option value="TRIP">Trip / Vacation</option>
+              <option value="FAMILY">Family</option>
+              <option value="FLATMATES">Roommates / Flatmates</option>
+              <option value="COUPLE">Couple / Partners</option>
+              <option value="FRIENDS">Friends</option>
+              <option value="CUSTOM">Custom / Others</option>
+            </NativeSelect>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <FieldLabel>Invite Members (by Email)</FieldLabel>
+              <Button
+                type="button"
+                variant="unstyled"
+                onClick={() =>
+                  setNewGroupForm((prev) => ({
+                    ...prev,
+                    memberEmails: [...prev.memberEmails, ""],
+                  }))
+                }
+                className="text-[10px] text-neutral-500 hover:text-neutral-900 font-semibold"
+              >
+                + Add Field
+              </Button>
+            </div>
+            {newGroupForm.memberEmails.map((email, index) => (
+              <Input
+                key={index}
+                type="email"
+                placeholder={`friend-${index + 1}@email.com`}
+                value={email}
+                onChange={(e) => {
+                  const updated = [...newGroupForm.memberEmails];
+                  updated[index] = e.target.value;
+                  setNewGroupForm((prev) => ({ ...prev, memberEmails: updated }));
+                }}
+                className="py-1.5 text-xs mt-1"
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="cancel" onClick={() => setShowCreateGroup(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="submit">
+              Create Group
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
 
       {/* Join Group Modal */}
-      {showJoinGroup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowJoinGroup(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-md p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Join Group</h3>
-            <form onSubmit={handleJoinGroup} className="space-y-3">
+      <AppDialog open={showJoinGroup} onOpenChange={setShowJoinGroup} title="Join Group">
+        <form onSubmit={handleJoinGroup} className="space-y-3">
+          <div className="space-y-1.5">
+            <FieldLabel>Invite Code</FieldLabel>
+            <Input
+              type="text"
+              required
+              placeholder="Enter the code provided by the owner"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              className="font-mono"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="cancel" onClick={() => setShowJoinGroup(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="submit">
+              Join Group
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
+
+      {/* Add Expense Modal */}
+      <AppDialog
+        open={showAddExpense && !!groupDetails}
+        onOpenChange={setShowAddExpense}
+        title="Add Group Expense"
+        maxWidth="max-w-lg"
+        className="max-h-[90vh] overflow-y-auto"
+      >
+        {groupDetails && (
+          <form onSubmit={handleAddExpense} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Invite Code</label>
-                <input
+                <FieldLabel>Description</FieldLabel>
+                <Input
                   type="text"
                   required
-                  placeholder="Enter the code provided by the owner"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
+                  placeholder="e.g. Dinner, Cab Fare, Hotel Booking"
+                  value={expenseForm.description}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, description: e.target.value }))}
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowJoinGroup(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
+              <div className="space-y-1.5">
+                <FieldLabel>Total Amount (INR)</FieldLabel>
+                <Input
+                  type="number"
+                  required
+                  placeholder="0.00"
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <FieldLabel>Paid By</FieldLabel>
+                <NativeSelect
+                  value={expenseForm.paidByUserId}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, paidByUserId: e.target.value }))}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-                >
-                  Join Group
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Expense Modal */}
-      {showAddExpense && groupDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowAddExpense(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-lg p-6 relative z-10 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold">Add Group Expense</h3>
-            <form onSubmit={handleAddExpense} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Description</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Dinner, Cab Fare, Hotel Booking"
-                    value={expenseForm.description}
-                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Total Amount (INR)</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="0.00"
-                    value={expenseForm.amount}
-                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Paid By</label>
-                  <select
-                    value={expenseForm.paidByUserId}
-                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, paidByUserId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  >
-                    {groupDetails.members.map((m) => (
-                      <option key={m.userId} value={m.userId}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Link Personal Account (Payer Only)</label>
-                  <select
-                    value={expenseForm.accountId}
-                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, accountId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  >
-                    <option value="">Do Not Sync to Personal Ledgers</option>
-                    {personalAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} (₹{a.balance})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Split options tabs */}
-              <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Split Method</label>
-                  <div className="flex items-center gap-1.5">
-                    {(["EQUAL", "PERCENTAGE", "UNEQUAL"] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setSplitType(m)}
-                        className={cn(
-                          "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-colors border",
-                          splitType === m
-                            ? "bg-neutral-900 dark:bg-white text-white dark:text-black border-black dark:border-white"
-                            : "border-black/[0.04] dark:border-neutral-800 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                        )}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Splits grid values inputs */}
-                <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
                   {groupDetails.members.map((m) => (
-                    <div key={m.userId} className="flex items-center justify-between py-1 text-xs">
-                      <span>{m.name}</span>
-                      <div className="flex items-center gap-2">
-                        {splitType === "EQUAL" ? (
-                          <span className="text-neutral-400 font-mono">
-                            ₹
-                            {expenseForm.amount
-                              ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
-                              : "0.00"}
-                          </span>
-                        ) : (
-                          <div className="relative flex items-center">
-                            <input
-                              type="number"
-                              placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
-                              value={expenseForm.customShares[m.userId] || ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setExpenseForm((prev) => ({
-                                  ...prev,
-                                  customShares: {
-                                    ...prev.customShares,
-                                    [m.userId]: val,
-                                  },
-                                }));
-                              }}
-                              className="w-24 px-2 py-1 border border-black/[0.04] dark:border-neutral-800 rounded-md text-xs font-mono text-right"
-                            />
-                            <span className="absolute right-2.5 text-[10px] text-neutral-400 select-none">
-                              {splitType === "PERCENTAGE" ? "%" : "₹"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <option key={m.userId} value={m.userId}>
+                      {m.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <FieldLabel>Link Personal Account (Payer Only)</FieldLabel>
+                <NativeSelect
+                  value={expenseForm.accountId}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, accountId: e.target.value }))}
+                >
+                  <option value="">Do Not Sync to Personal Ledgers</option>
+                  {personalAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} (₹{a.balance})
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            </div>
+
+            {/* Split options tabs */}
+            <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center justify-between">
+                <FieldLabel>Split Method</FieldLabel>
+                <div className="flex items-center gap-1.5">
+                  {(["EQUAL", "PERCENTAGE", "UNEQUAL"] as const).map((m) => (
+                    <Button
+                      key={m}
+                      type="button"
+                      variant="unstyled"
+                      onClick={() => setSplitType(m)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-colors border",
+                        splitType === m
+                          ? "bg-neutral-900 dark:bg-white text-white dark:text-black border-black dark:border-white"
+                          : "border-black/[0.04] dark:border-neutral-800 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                      )}
+                    >
+                      {m}
+                    </Button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setShowAddExpense(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-                >
-                  Save Expense
-                </button>
+              {/* Splits grid values inputs */}
+              <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
+                {groupDetails.members.map((m) => (
+                  <div key={m.userId} className="flex items-center justify-between py-1 text-xs">
+                    <span>{m.name}</span>
+                    <div className="flex items-center gap-2">
+                      {splitType === "EQUAL" ? (
+                        <span className="text-neutral-400 font-mono">
+                          ₹
+                          {expenseForm.amount
+                            ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
+                            : "0.00"}
+                        </span>
+                      ) : (
+                        <div className="relative flex items-center">
+                          <Input
+                            type="number"
+                            placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
+                            value={expenseForm.customShares[m.userId] || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setExpenseForm((prev) => ({
+                                ...prev,
+                                customShares: {
+                                  ...prev.customShares,
+                                  [m.userId]: val,
+                                },
+                              }));
+                            }}
+                            className="w-24 px-2 py-1 text-xs font-mono text-right"
+                          />
+                          <span className="absolute right-2.5 text-[10px] text-neutral-400 select-none">
+                            {splitType === "PERCENTAGE" ? "%" : "₹"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <Button type="button" variant="cancel" onClick={() => setShowAddExpense(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="submit">
+                Save Expense
+              </Button>
+            </div>
+          </form>
+        )}
+      </AppDialog>
 
       {/* Record Settlement Modal */}
-      {showSettleModal && groupDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowSettleModal(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-md p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Record Settlement</h3>
-            <form onSubmit={handleSettleSubmit} className="space-y-3">
-              <div className="text-xs border-b border-neutral-100 dark:border-neutral-800 pb-3 flex items-center justify-between text-neutral-400">
-                <span>Payer: {groupDetails.members.find((m) => m.userId === settlementForm.payerId)?.name}</span>
-                <span>Receiver: {groupDetails.members.find((m) => m.userId === settlementForm.receiverId)?.name}</span>
-              </div>
+      <AppDialog
+        open={showSettleModal && !!groupDetails}
+        onOpenChange={setShowSettleModal}
+        title="Record Settlement"
+      >
+        {groupDetails && (
+          <form onSubmit={handleSettleSubmit} className="space-y-3">
+            <div className="text-xs border-b border-neutral-100 dark:border-neutral-800 pb-3 flex items-center justify-between text-neutral-400">
+              <span>Payer: {groupDetails.members.find((m) => m.userId === settlementForm.payerId)?.name}</span>
+              <span>Receiver: {groupDetails.members.find((m) => m.userId === settlementForm.receiverId)?.name}</span>
+            </div>
 
+            <div className="space-y-1.5">
+              <FieldLabel>Settled Amount (INR)</FieldLabel>
+              <Input
+                type="number"
+                required
+                placeholder="0.00"
+                value={settlementForm.amount}
+                onChange={(e) => setSettlementForm((prev) => ({ ...prev, amount: e.target.value }))}
+                className="font-mono"
+              />
+            </div>
+
+            {/* Sync settings to payer's accounts */}
+            {settlementForm.payerId === currentUserId && (
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Settled Amount (INR)</label>
-                <input
-                  type="number"
-                  required
-                  placeholder="0.00"
-                  value={settlementForm.amount}
-                  onChange={(e) => setSettlementForm((prev) => ({ ...prev, amount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                />
+                <FieldLabel>Deduct From Personal Account</FieldLabel>
+                <NativeSelect
+                  value={settlementForm.accountId}
+                  onChange={(e) => setSettlementForm((prev) => ({ ...prev, accountId: e.target.value }))}
+                >
+                  <option value="">Select Account (No personal ledger link)</option>
+                  {personalAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} (₹{a.balance})
+                    </option>
+                  ))}
+                </NativeSelect>
               </div>
+            )}
 
-              {/* Sync settings to payer's accounts */}
-              {settlementForm.payerId === currentUserId && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Deduct From Personal Account</label>
-                  <select
-                    value={settlementForm.accountId}
-                    onChange={(e) => setSettlementForm((prev) => ({ ...prev, accountId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  >
-                    <option value="">Select Account (No personal ledger link)</option>
-                    {personalAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} (₹{a.balance})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Sync settings to receiver's accounts */}
-              {settlementForm.receiverId === currentUserId && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Deposit Into Personal Account</label>
-                  <select
-                    value={settlementForm.receiveAccountId}
-                    onChange={(e) => setSettlementForm((prev) => ({ ...prev, receiveAccountId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  >
-                    <option value="">Select Account (No personal ledger link)</option>
-                    {personalAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} (₹{a.balance})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
+            {/* Sync settings to receiver's accounts */}
+            {settlementForm.receiverId === currentUserId && (
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Notes</label>
-                <input
-                  type="text"
-                  placeholder="e.g. UPI, cash, gpay"
-                  value={settlementForm.notes}
-                  onChange={(e) => setSettlementForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                />
+                <FieldLabel>Deposit Into Personal Account</FieldLabel>
+                <NativeSelect
+                  value={settlementForm.receiveAccountId}
+                  onChange={(e) => setSettlementForm((prev) => ({ ...prev, receiveAccountId: e.target.value }))}
+                >
+                  <option value="">Select Account (No personal ledger link)</option>
+                  {personalAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} (₹{a.balance})
+                    </option>
+                  ))}
+                </NativeSelect>
               </div>
+            )}
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowSettleModal(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-                >
-                  Confirm Settlement
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="space-y-1.5">
+              <FieldLabel>Notes</FieldLabel>
+              <Input
+                type="text"
+                placeholder="e.g. UPI, cash, gpay"
+                value={settlementForm.notes}
+                onChange={(e) => setSettlementForm((prev) => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button type="button" variant="cancel" onClick={() => setShowSettleModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="submit">
+                Confirm Settlement
+              </Button>
+            </div>
+          </form>
+        )}
+      </AppDialog>
     </div>
   );
 }

@@ -21,23 +21,32 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { getCurrentUser, getNotifications, markNotificationAsRead } from "@/app/actions";
 import { signOut, useSession } from "@/lib/auth-client";
 import { UnifiedUser, UnifiedNotification } from "@/lib/unified-db";
 import TallymateLogo from "@/components/TallymateLogo";
+import type { getLayoutData } from "@/app/actions";
+
+type LayoutInitialData = Awaited<ReturnType<typeof getLayoutData>>;
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  initialData?: LayoutInitialData;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, initialData }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isPending: sessionLoading } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [currentUser, setCurrentUser] = useState<UnifiedUser | null>(null);
-  const [notifications, setNotifications] = useState<UnifiedNotification[]>([]);
+  const [currentUser, setCurrentUser] = useState<UnifiedUser | null>(
+    initialData?.user ?? null
+  );
+  const [notifications, setNotifications] = useState<UnifiedNotification[]>(
+    initialData?.notifications ?? []
+  );
   const [showNotifications, setShowNotifications] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -62,16 +71,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, []);
 
-  // Load user + notifications after session is ready
+  // Load user + notifications only when not provided by server layout
   useEffect(() => {
     if (sessionLoading) return;
 
-    // If Better Auth session is done loading and there's no session, redirect immediately
-    // This prevents child pages from firing their server actions before the redirect
     if (!session) {
       router.replace("/login");
       return;
     }
+
+    if (initialData) return;
 
     const loadUserData = async () => {
       try {
@@ -80,13 +89,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         const notifs = await getNotifications();
         setNotifications(notifs);
       } catch {
-        // Not authenticated — redirect to login
         router.replace("/login");
       }
     };
 
     loadUserData();
-  }, [sessionLoading, session, router]);
+  }, [sessionLoading, session, router, initialData]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -167,12 +175,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <TallymateLogo size={24} className="text-neutral-900 dark:text-white shrink-0" />
             <span className="font-bold text-sm tracking-tight">Tallymate</span>
           </Link>
-          <button
+          <Button
+            type="button"
+            variant="unstyled"
             onClick={() => setIsSidebarOpen(false)}
             className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden"
           >
             <X size={16} />
-          </button>
+          </Button>
         </div>
 
         {/* Nav Links */}
@@ -219,7 +229,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   {currentUser.email}
                 </p>
               </div>
-              <button
+              <Button
+                type="button"
+                variant="unstyled"
                 title="Sign Out"
                 onClick={handleLogout}
                 disabled={loggingOut}
@@ -230,7 +242,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 ) : (
                   <LogOut size={14} />
                 )}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="h-10 flex items-center justify-center">
@@ -245,12 +257,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Top Header */}
         <header className="h-14 border-b border-black/[0.04] dark:border-[#27272a] bg-white/70 backdrop-blur-xl dark:bg-[#0f0f11] flex items-center justify-between px-5 sticky top-0 z-30">
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              type="button"
+              variant="unstyled"
               onClick={() => setIsSidebarOpen(true)}
               className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 md:hidden"
             >
               <Menu size={18} />
-            </button>
+            </Button>
             <p className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300 hidden sm:block">
               {navItems.find((n) => n.href === pathname)?.name || "Finance Manager"}
             </p>
@@ -258,17 +272,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div className="flex items-center gap-2">
             {/* Theme Toggle */}
-            <button
+            <Button
+              type="button"
+              variant="unstyled"
               onClick={toggleTheme}
               className="p-2 rounded-md border border-black/[0.04] dark:border-[#27272a] hover:bg-black/[0.02] dark:hover:bg-neutral-900 transition-colors text-neutral-500 dark:text-neutral-400"
               title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
             >
               {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
-            </button>
+            </Button>
 
             {/* Notifications */}
             <div className="relative">
-              <button
+              <Button
+                type="button"
+                variant="unstyled"
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="p-2 rounded-md border border-black/[0.04] dark:border-[#27272a] hover:bg-black/[0.02] dark:hover:bg-neutral-900 transition-colors relative text-neutral-500 dark:text-neutral-400"
                 title="Notifications"
@@ -277,7 +295,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-1 flex h-1.5 w-1.5 rounded-full bg-red-500" />
                 )}
-              </button>
+              </Button>
 
               {showNotifications && (
                 <>

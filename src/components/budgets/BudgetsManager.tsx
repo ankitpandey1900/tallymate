@@ -1,26 +1,26 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, AlertTriangle, AlertCircle, PieChart, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getBudgets, getCategories, createBudget, deleteBudget, getTransactions, getGroups } from "@/app/actions";
-import { UnifiedBudget, UnifiedCategory, UnifiedTransaction, UnifiedGroup } from "@/lib/unified-db";
+import { createBudget, deleteBudget, type getBudgetsPageData } from "@/app/actions";
+import { UnifiedBudget, UnifiedCategory, UnifiedGroup } from "@/lib/unified-db";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { FieldLabel } from "@/components/ui/field-label";
+import { AppDialog } from "@/components/ui/app-dialog";
 
-interface BudgetProgress {
-  budget: UnifiedBudget;
-  categoryName: string;
-  groupName: string | null;
-  spent: number;
-  remaining: number;
-  percentage: number;
-}
+type BudgetsInitialData = Awaited<ReturnType<typeof getBudgetsPageData>>;
+type BudgetProgress = BudgetsInitialData["budgetProgressList"][number];
 
-export default function BudgetsManager() {
-  const [budgets, setBudgets] = useState<UnifiedBudget[]>([]);
-  const [categories, setCategories] = useState<UnifiedCategory[]>([]);
-  const [groups, setGroups] = useState<UnifiedGroup[]>([]);
-  const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
-  const [budgetProgressList, setBudgetProgressList] = useState<BudgetProgress[]>([]);
+export default function BudgetsManager({ initialData }: { initialData: BudgetsInitialData }) {
+  const router = useRouter();
+  const [budgets, setBudgets] = useState<UnifiedBudget[]>(initialData.budgets);
+  const [categories, setCategories] = useState<UnifiedCategory[]>(initialData.categories);
+  const [groups, setGroups] = useState<UnifiedGroup[]>(initialData.groups);
+  const [budgetProgressList, setBudgetProgressList] = useState<BudgetProgress[]>(initialData.budgetProgressList);
 
   // Form states
   const [showAddBudget, setShowAddBudget] = useState(false);
@@ -37,59 +37,12 @@ export default function BudgetsManager() {
       .split("T")[0],
   });
 
-  const loadData = async () => {
-    try {
-      const b = await getBudgets();
-      setBudgets(b);
-      const c = await getCategories();
-      setCategories(c);
-      const grps = await getGroups();
-      setGroups(grps);
-      const txs = await getTransactions();
-      setTransactions(txs);
-
-      // Map budget progress
-      const progress = b.map((budget) => {
-        const cat = c.find((catItem) => catItem.id === budget.categoryId);
-        const grp = grps.find((g) => g.id === budget.groupId);
-
-        // Calculate total spent in budget date range
-        const spent = txs
-          .filter((t) => {
-            const isMatchCategory = !budget.categoryId || t.categoryId === budget.categoryId;
-            const isMatchGroup = !budget.groupId || t.groupId === budget.groupId;
-            const isExpense = t.type === "EXPENSE";
-            const isDateInRange =
-              new Date(t.date) >= new Date(budget.startDate) &&
-              new Date(t.date) <= new Date(budget.endDate);
-
-            return isMatchCategory && isMatchGroup && isExpense && isDateInRange;
-          })
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const limit = Number(budget.amount);
-        const percentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
-        const remaining = Math.max(limit - spent, 0);
-
-        return {
-          budget,
-          categoryName: cat?.name || "Overall Monthly",
-          groupName: grp?.name || null,
-          spent,
-          remaining,
-          percentage,
-        };
-      });
-
-      setBudgetProgressList(progress);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
-    void loadData();
-  }, []);
+    setBudgets(initialData.budgets);
+    setCategories(initialData.categories);
+    setGroups(initialData.groups);
+    setBudgetProgressList(initialData.budgetProgressList);
+  }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +69,7 @@ export default function BudgetsManager() {
           .toISOString()
           .split("T")[0],
       });
-      loadData();
+      router.refresh();
     } catch (err) {
       console.error(err);
     }
@@ -128,7 +81,7 @@ export default function BudgetsManager() {
     setConfirmDeleteBudgetId(null);
     try {
       await deleteBudget(budgetId);
-      await loadData();
+      router.refresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to delete budget";
       alert(message);
@@ -145,13 +98,10 @@ export default function BudgetsManager() {
           <h2 className="text-xl font-bold tracking-tight">Budgets</h2>
           <p className="text-sm text-neutral-500">Plan limits to avoid overspending.</p>
         </div>
-        <button
-          onClick={() => setShowAddBudget(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-[#09090b] dark:bg-[#fafafa] text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-md text-xs font-semibold self-start"
-        >
+        <Button type="button" variant="cta" className="self-start" onClick={() => setShowAddBudget(true)}>
           <Plus size={14} />
           Create Budget
-        </button>
+        </Button>
       </div>
 
       {/* Budgets Grid */}
@@ -202,18 +152,34 @@ export default function BudgetsManager() {
                     {/* Delete button */}
                     {confirmDeleteBudgetId === bp.budget.id ? (
                       <>
-                        <button onClick={() => handleDeleteBudget(bp.budget.id)} className="p-1 rounded bg-red-500 text-white text-[9px] font-bold">Delete?</button>
-                        <button onClick={() => setConfirmDeleteBudgetId(null)} className="p-1 rounded bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold">No</button>
+                        <Button
+                          type="button"
+                          variant="destructive-sm"
+                          onClick={() => handleDeleteBudget(bp.budget.id)}
+                          className="p-1 text-[9px] font-bold"
+                        >
+                          Delete?
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="unstyled"
+                          onClick={() => setConfirmDeleteBudgetId(null)}
+                          className="p-1 rounded bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold"
+                        >
+                          No
+                        </Button>
                       </>
                     ) : (
-                      <button
+                      <Button
+                        type="button"
+                        variant="unstyled"
                         onClick={() => handleDeleteBudget(bp.budget.id)}
                         disabled={deletingBudgetId === bp.budget.id}
                         className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-300 dark:text-neutral-600 hover:text-red-500 transition-colors"
                         title="Delete budget"
                       >
                         {deletingBudgetId === bp.budget.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -249,103 +215,84 @@ export default function BudgetsManager() {
         </div>
       )}
 
-      {/* Add Budget Dialog */}
-      {showAddBudget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowAddBudget(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-md p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Create Spending Budget</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Target Amount (INR)</label>
-                <input
-                  type="number"
-                  required
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Budget Category</label>
-                <select
-                  value={form.categoryId}
-                  onChange={(e) => setForm((prev) => ({ ...prev, categoryId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                >
-                  <option value="">Overall Monthly Budget (No Category)</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Link to Group (Optional)</label>
-                <select
-                  value={form.groupId}
-                  onChange={(e) => setForm((prev) => ({ ...prev, groupId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                >
-                  <option value="">Personal Budget (No Group Link)</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Start Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={form.startDate}
-                    onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">End Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={form.endDate}
-                    onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddBudget(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-                >
-                  Create
-                </button>
-              </div>
-            </form>
+      <AppDialog open={showAddBudget} onOpenChange={setShowAddBudget} title="Create Spending Budget">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <FieldLabel>Target Amount (INR)</FieldLabel>
+            <Input
+              type="number"
+              required
+              placeholder="0.00"
+              value={form.amount}
+              onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
+              className="font-mono"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="space-y-1.5">
+            <FieldLabel>Budget Category</FieldLabel>
+            <NativeSelect
+              value={form.categoryId}
+              onChange={(e) => setForm((prev) => ({ ...prev, categoryId: e.target.value }))}
+            >
+              <option value="">Overall Monthly Budget (No Category)</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldLabel>Link to Group (Optional)</FieldLabel>
+            <NativeSelect
+              value={form.groupId}
+              onChange={(e) => setForm((prev) => ({ ...prev, groupId: e.target.value }))}
+            >
+              <option value="">Personal Budget (No Group Link)</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <FieldLabel>Start Date</FieldLabel>
+              <Input
+                type="date"
+                required
+                value={form.startDate}
+                onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                className="font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel>End Date</FieldLabel>
+              <Input
+                type="date"
+                required
+                value={form.endDate}
+                onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                className="font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="cancel" onClick={() => setShowAddBudget(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="submit">
+              Create
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
     </div>
   );
 }

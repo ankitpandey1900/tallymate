@@ -1,26 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Bell, Check, Trash2, CheckCircle2, ShieldAlert } from "lucide-react";
+import { Bell, Check, CheckCircle2, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNotifications, markNotificationAsRead } from "@/app/actions";
+import { markNotificationAsRead, type getNotificationsPageData } from "@/app/actions";
 import { UnifiedNotification } from "@/lib/unified-db";
 
-export default function NotificationsList() {
-  const [notifications, setNotifications] = useState<UnifiedNotification[]>([]);
+type NotificationsInitialData = Awaited<ReturnType<typeof getNotificationsPageData>>;
+
+export default function NotificationsList({ initialData }: { initialData: NotificationsInitialData }) {
+  const [notifications, setNotifications] = useState<UnifiedNotification[]>(initialData.notifications);
 
   useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  const loadNotifications = async () => {
-    try {
-      const notifs = await getNotifications();
-      setNotifications(notifs);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    setNotifications(initialData.notifications);
+  }, [initialData]);
 
   const handleMarkRead = async (id: string) => {
     try {

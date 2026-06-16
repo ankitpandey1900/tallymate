@@ -1,5 +1,6 @@
 import React from "react";
 import ReportsView from "@/components/reports/ReportsView";
+import { getReportsPageData } from "@/app/actions";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,6 +8,9 @@ export const metadata: Metadata = {
   description: "Generate and review income vs expense audits, burn rate averages, daily spending category trends, and download standard CSV logs.",
 };
 
-export default function ReportsPage() {
-  return <ReportsView />;
+export const dynamic = "force-dynamic";
+
+export default async function ReportsPage() {
+  const initialData = await getReportsPageData("monthly");
+  return <ReportsView initialData={initialData} />;
 }

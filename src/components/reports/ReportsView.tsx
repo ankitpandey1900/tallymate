@@ -1,57 +1,73 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { TrendingUp, Download, Calendar, BarChart3, Activity, Landmark } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { Download, BarChart3, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getReports, getTransactions } from "@/app/actions";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell,
-  PieChart,
-  Pie,
-} from "recharts";
+import { Button } from "@/components/ui/button";
+import { getReports, getTransactions, type getReportsPageData } from "@/app/actions";
 
-const COLORS = ["#000000", "#4b5563", "#9ca3af", "#d1d5db", "#e5e7eb"];
-const COLORS_DARK = ["#ffffff", "#a1a1aa", "#71717a", "#52525b", "#3f3f46"];
+const ExpenseCategoryChart = dynamic(
+  () => import("./ReportsCharts").then((m) => m.ExpenseCategoryChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 flex items-center justify-center text-xs text-neutral-400">Loading chart…</div>
+    ),
+  }
+);
 
-export default function ReportsView() {
+const IncomeSourcesChart = dynamic(
+  () => import("./ReportsCharts").then((m) => m.IncomeSourcesChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 flex items-center justify-center text-xs text-neutral-400">Loading chart…</div>
+    ),
+  }
+);
+
+type ReportsInitialData = Awaited<ReturnType<typeof getReportsPageData>>;
+
+export default function ReportsView({ initialData }: { initialData: ReportsInitialData }) {
   const [mounted, setMounted] = useState(false);
-  const [timeframe, setTimeframe] = useState<"weekly" | "monthly" | "quarterly" | "yearly">("monthly");
-  const [metrics, setMetrics] = useState({
-    totalIncome: 0,
-    totalExpenses: 0,
-    savings: 0,
-    savingsRate: 0,
-    averageDailySpending: 0,
-    burnRate: 0,
-    categoryTrends: [] as { name: string; value: number }[],
-    incomeBreakdown: [] as { name: string; value: number }[],
-  });
-
-  const loadReports = useCallback(async () => {
-    try {
-      const rep = await getReports(timeframe);
-      setMetrics(rep);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [timeframe]);
+  const [timeframe, setTimeframe] = useState<"weekly" | "monthly" | "quarterly" | "yearly">(initialData.timeframe);
+  const [metrics, setMetrics] = useState(initialData.reports);
 
   useEffect(() => {
     setMounted(true);
-    loadReports();
-  }, [loadReports]);
+  }, []);
+
+  useEffect(() => {
+    setTimeframe(initialData.timeframe);
+    setMetrics(initialData.reports);
+  }, [initialData]);
+
+  useEffect(() => {
+    if (timeframe === initialData.timeframe) {
+      setMetrics(initialData.reports);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const rep = await getReports(timeframe);
+        if (!cancelled) setMetrics(rep);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [timeframe, initialData]);
 
   const handleExportCSV = async () => {
     try {
       const txs = await getTransactions();
-      
-      // Filter based on selected timeframe date range
+
       const now = new Date();
       const limitDate = new Date();
       if (timeframe === "weekly") limitDate.setDate(now.getDate() - 7);
@@ -61,7 +77,6 @@ export default function ReportsView() {
 
       const targetTxs = txs.filter((t) => new Date(t.date) >= limitDate);
 
-      // Construct CSV content
       const headers = ["Date", "Description", "Type", "Scope", "Amount", "Notes", "Tags"];
       const rows = targetTxs.map((t) => [
         new Date(t.date).toLocaleDateString(),
@@ -89,7 +104,8 @@ export default function ReportsView() {
     }
   };
 
-  const chartColors = (mounted && typeof window !== "undefined" && document.documentElement.classList.contains("dark")) ? COLORS_DARK : COLORS;
+  const isDark =
+    mounted && typeof window !== "undefined" && document.documentElement.classList.contains("dark");
 
   return (
     <div className="space-y-6">
@@ -103,8 +119,10 @@ export default function ReportsView() {
           {/* Timeframe selector */}
           <div className="flex items-center gap-1 bg-neutral-50 dark:bg-neutral-900 border border-black/[0.04] dark:border-neutral-800 p-1 rounded-lg">
             {(["weekly", "monthly", "quarterly", "yearly"] as const).map((t) => (
-              <button
+              <Button
                 key={t}
+                type="button"
+                variant="unstyled"
                 onClick={() => setTimeframe(t)}
                 className={cn(
                   "px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded-md transition-colors",
@@ -114,17 +132,14 @@ export default function ReportsView() {
                 )}
               >
                 {t}
-              </button>
+              </Button>
             ))}
           </div>
 
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-          >
+          <Button type="button" variant="outline-app" onClick={handleExportCSV}>
             <Download size={14} />
             Export CSV
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -161,38 +176,8 @@ export default function ReportsView() {
               Expense Category Breakdown
             </h3>
           </div>
-          {metrics.categoryTrends.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-xs text-neutral-400">
-              No expense transactions logged in this range.
-            </div>
-          ) : (
-            <div className="h-64 w-full">
-              {mounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metrics.categoryTrends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--card)",
-                        borderColor: "var(--border)",
-                        color: "var(--foreground)",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {metrics.categoryTrends.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={chartColors[index % chartColors.length]}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+          {mounted && (
+            <ExpenseCategoryChart data={metrics.categoryTrends} isDark={isDark} />
           )}
         </div>
 
@@ -204,38 +189,8 @@ export default function ReportsView() {
               Income Sources Breakdown
             </h3>
           </div>
-          {metrics.incomeBreakdown.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-xs text-neutral-400">
-              No income transactions logged in this range.
-            </div>
-          ) : (
-            <div className="h-64 w-full">
-              {mounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metrics.incomeBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--card)",
-                        borderColor: "var(--border)",
-                        color: "var(--foreground)",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {metrics.incomeBreakdown.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={chartColors[index % chartColors.length]}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+          {mounted && (
+            <IncomeSourcesChart data={metrics.incomeBreakdown} isDark={isDark} />
           )}
         </div>
       </div>

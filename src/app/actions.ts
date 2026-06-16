@@ -26,17 +26,76 @@ async function ensureUserDefaults(userId: string) {
     UnifiedDB.getIncomeSources(userId),
   ]);
 
+  const tasks: Promise<unknown>[] = [];
   if (categories.length === 0) {
-    await Promise.all(
-      DEFAULT_CATEGORIES.map((c) => UnifiedDB.createCategory(userId, c.name, c.color))
+    tasks.push(
+      ...DEFAULT_CATEGORIES.map((c) => UnifiedDB.createCategory(userId, c.name, c.color))
     );
+  }
+  if (incomeSources.length === 0) {
+    tasks.push(
+      ...DEFAULT_INCOME_SOURCES.map((name) => UnifiedDB.createIncomeSource(userId, name))
+    );
+  }
+  if (tasks.length > 0) {
+    await Promise.all(tasks);
+  }
+}
+
+/** Seed defaults only when catalog is empty — avoids extra writes on every load. */
+const ensureCatalogDefaults = cache(async (userId: string) => {
+  const [categories, incomeSources] = await Promise.all([
+    UnifiedDB.getCategories(userId),
+    UnifiedDB.getIncomeSources(userId),
+  ]);
+
+  if (categories.length === 0 || incomeSources.length === 0) {
+    await ensureUserDefaults(userId);
+    return {
+      categories: categories.length === 0 ? await UnifiedDB.getCategories(userId) : categories,
+      incomeSources:
+        incomeSources.length === 0 ? await UnifiedDB.getIncomeSources(userId) : incomeSources,
+    };
   }
 
-  if (incomeSources.length === 0) {
-    await Promise.all(
-      DEFAULT_INCOME_SOURCES.map((name) => UnifiedDB.createIncomeSource(userId, name))
-    );
-  }
+  return { categories, incomeSources };
+});
+
+function computeBudgetProgress(
+  budgets: Awaited<ReturnType<typeof UnifiedDB.getBudgets>>,
+  categories: Awaited<ReturnType<typeof UnifiedDB.getCategories>>,
+  groups: Awaited<ReturnType<typeof UnifiedDB.getGroups>>,
+  transactions: UnifiedTransaction[]
+) {
+  return budgets.map((budget) => {
+    const cat = categories.find((catItem) => catItem.id === budget.categoryId);
+    const grp = groups.find((g) => g.id === budget.groupId);
+
+    const spent = transactions
+      .filter((t) => {
+        const isMatchCategory = !budget.categoryId || t.categoryId === budget.categoryId;
+        const isMatchGroup = !budget.groupId || t.groupId === budget.groupId;
+        const isExpense = t.type === "EXPENSE";
+        const isDateInRange =
+          new Date(t.date) >= new Date(budget.startDate) &&
+          new Date(t.date) <= new Date(budget.endDate);
+        return isMatchCategory && isMatchGroup && isExpense && isDateInRange;
+      })
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const limit = Number(budget.amount);
+    const percentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+    const remaining = Math.max(limit - spent, 0);
+
+    return {
+      budget,
+      categoryName: cat?.name || "Overall Monthly",
+      groupName: grp?.name || null,
+      spent,
+      remaining,
+      percentage,
+    };
+  });
 }
 
 async function getReportsForUser(
@@ -83,9 +142,8 @@ export async function getAccounts() {
 // Dashboard (single fetch to reduce round-trips)
 export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarterly" | "yearly" = "monthly") {
   const user = await getCurrentUser();
-  await ensureUserDefaults(user.id);
 
-  const [accounts, transactions, budgets, goals, groups, reports, categories, incomeSources] =
+  const [accounts, transactions, budgets, goals, groups, reports, catalog] =
     await Promise.all([
       UnifiedDB.getAccounts(user.id),
       UnifiedDB.getTransactions(user.id, { limit: 5 }),
@@ -93,8 +151,7 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
       UnifiedDB.getGoals(user.id),
       UnifiedDB.getGroups(user.id),
       getReportsForUser(user.id, timeframe),
-      UnifiedDB.getCategories(user.id),
-      UnifiedDB.getIncomeSources(user.id),
+      ensureCatalogDefaults(user.id),
     ]);
 
   return {
@@ -104,9 +161,100 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
     goals,
     groups,
     reports,
-    categories,
-    incomeSources,
+    categories: catalog.categories,
+    incomeSources: catalog.incomeSources,
   };
+}
+
+// Shell layout — one round-trip for sidebar user + notification badge
+export async function getLayoutData() {
+  const user = await getCurrentUser();
+  const notifications = await UnifiedDB.getNotifications(user.id, { limit: 20 });
+  return {
+    user: { id: user.id, name: user.name, email: user.email, image: user.image },
+    notifications,
+  };
+}
+
+export async function getTransactionsPageData() {
+  const user = await getCurrentUser();
+  const [catalog, accounts, transactions] = await Promise.all([
+    ensureCatalogDefaults(user.id),
+    UnifiedDB.getAccounts(user.id),
+    UnifiedDB.getTransactions(user.id, { limit: 200 }),
+  ]);
+  return {
+    accounts,
+    transactions,
+    categories: catalog.categories,
+    incomeSources: catalog.incomeSources,
+  };
+}
+
+export async function getBudgetsPageData() {
+  const user = await getCurrentUser();
+  const [budgets, categories, groups] = await Promise.all([
+    UnifiedDB.getBudgets(user.id),
+    UnifiedDB.getCategories(user.id),
+    UnifiedDB.getGroups(user.id),
+  ]);
+
+  let transactions: UnifiedTransaction[] = [];
+  if (budgets.length > 0) {
+    const startMs = Math.min(...budgets.map((b) => new Date(b.startDate).getTime()));
+    const endMs = Math.max(...budgets.map((b) => new Date(b.endDate).getTime()));
+    transactions = await UnifiedDB.getTransactions(user.id, {
+      type: "EXPENSE",
+      startDate: new Date(startMs).toISOString(),
+      endDate: new Date(endMs).toISOString(),
+    });
+  }
+
+  return {
+    budgets,
+    categories,
+    groups,
+    budgetProgressList: computeBudgetProgress(budgets, categories, groups, transactions),
+  };
+}
+
+export async function getGroupsPageData() {
+  const user = await getCurrentUser();
+  const [groups, accounts] = await Promise.all([
+    UnifiedDB.getGroups(user.id),
+    UnifiedDB.getAccounts(user.id),
+  ]);
+  return { groups, accounts, userId: user.id };
+}
+
+export async function getGoalsPageData() {
+  const user = await getCurrentUser();
+  const goals = await UnifiedDB.getGoals(user.id);
+  return { goals };
+}
+
+export async function getSettingsPageData() {
+  const user = await getCurrentUser();
+  const catalog = await ensureCatalogDefaults(user.id);
+  return {
+    user: { id: user.id, name: user.name, email: user.email, image: user.image },
+    categories: catalog.categories,
+    incomeSources: catalog.incomeSources,
+  };
+}
+
+export async function getReportsPageData(
+  timeframe: "weekly" | "monthly" | "quarterly" | "yearly" = "monthly"
+) {
+  const user = await getCurrentUser();
+  const reports = await getReportsForUser(user.id, timeframe);
+  return { reports, timeframe };
+}
+
+export async function getNotificationsPageData() {
+  const user = await getCurrentUser();
+  const notifications = await UnifiedDB.getNotifications(user.id, { limit: 100 });
+  return { notifications };
 }
 
 export async function createAccount(data: { name: string; type: string; balance: number }) {
@@ -514,7 +662,7 @@ export async function createSettlement(
 // Notifications actions
 export async function getNotifications() {
   const user = await getCurrentUser();
-  return await UnifiedDB.getNotifications(user.id, { limit: 100 });
+  return await UnifiedDB.getNotifications(user.id, { limit: 20 });
 }
 
 export async function markNotificationAsRead(id: string) {

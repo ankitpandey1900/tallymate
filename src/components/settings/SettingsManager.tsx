@@ -1,44 +1,38 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { User, Tag, Landmark, Plus, Check, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  getCurrentUser,
-  getCategories,
-  getIncomeSources,
   createCategory,
   createIncomeSource,
+  type getSettingsPageData,
 } from "@/app/actions";
 import { UnifiedUser, UnifiedCategory, UnifiedIncomeSource } from "@/lib/unified-db";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FieldLabel } from "@/components/ui/field-label";
 
-export default function SettingsManager() {
+type SettingsInitialData = Awaited<ReturnType<typeof getSettingsPageData>>;
+
+export default function SettingsManager({ initialData }: { initialData: SettingsInitialData }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"profile" | "categories" | "sources">("categories");
-  const [currentUser, setCurrentUser] = useState<UnifiedUser | null>(null);
-  const [categories, setCategories] = useState<UnifiedCategory[]>([]);
-  const [incomeSources, setIncomeSources] = useState<UnifiedIncomeSource[]>([]);
+  const [currentUser, setCurrentUser] = useState<UnifiedUser | null>(initialData.user);
+  const [categories, setCategories] = useState<UnifiedCategory[]>(initialData.categories);
+  const [incomeSources, setIncomeSources] = useState<UnifiedIncomeSource[]>(initialData.incomeSources);
 
   // Forms
   const [catName, setCatName] = useState("");
   const [catColor, setCatColor] = useState("#3B82F6");
   const [sourceName, setSourceName] = useState("");
 
-  const loadData = useCallback(async () => {
-    try {
-      const u = await getCurrentUser();
-      setCurrentUser(u);
-      const cats = await getCategories();
-      setCategories(cats);
-      const srcs = await getIncomeSources();
-      setIncomeSources(srcs);
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    setCurrentUser(initialData.user);
+    setCategories(initialData.categories);
+    setIncomeSources(initialData.incomeSources);
+  }, [initialData]);
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +41,7 @@ export default function SettingsManager() {
     try {
       await createCategory({ name: catName, color: catColor });
       setCatName("");
-      loadData();
+      router.refresh();
     } catch (err) {
       console.error(err);
     }
@@ -60,7 +54,7 @@ export default function SettingsManager() {
     try {
       await createIncomeSource({ name: sourceName });
       setSourceName("");
-      loadData();
+      router.refresh();
     } catch (err) {
       console.error(err);
     }
@@ -87,19 +81,21 @@ export default function SettingsManager() {
         ].map((tab) => {
           const Icon = tab.icon;
           return (
-            <button
+            <Button
               key={tab.id}
+              type="button"
+              variant={activeTab === tab.id ? "toggle-active" : "toggle-inactive"}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md text-xs font-semibold uppercase tracking-wider text-left transition-all duration-150",
+                "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md text-xs font-semibold uppercase tracking-wider text-left transition-all duration-150 justify-start h-auto",
                 activeTab === tab.id
-                  ? "bg-neutral-100 dark:bg-[#222226] text-neutral-900 dark:text-neutral-50"
-                  : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-[#1c1c20] hover:text-neutral-800 dark:hover:text-neutral-200"
+                  ? "bg-neutral-100 dark:bg-[#222226] text-neutral-900 dark:text-neutral-50 border-transparent dark:border-transparent"
+                  : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-[#1c1c20] hover:text-neutral-800 dark:hover:text-neutral-200 border-transparent dark:border-transparent"
               )}
             >
               <Icon size={14} />
               <span>{tab.label}</span>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -113,31 +109,31 @@ export default function SettingsManager() {
               <h3 className="text-sm font-semibold">Add Custom Expense Category</h3>
               <form onSubmit={handleAddCategory} className="space-y-4 max-w-md">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Category Name</label>
-                  <input
+                  <FieldLabel>Category Name</FieldLabel>
+                  <Input
                     type="text"
                     required
                     placeholder="e.g. Groceries, SaaS Subscriptions"
                     value={catName}
                     onChange={(e) => setCatName(e.target.value)}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
                   />
                 </div>
 
                 {/* Color swatches selector */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Category Tag Color</label>
+                  <FieldLabel>Category Tag Color</FieldLabel>
                   <div className="flex items-center gap-2 flex-wrap">
                     {colorPresets.map((color) => (
-                      <button
+                      <Button
                         key={color}
                         type="button"
+                        variant="unstyled"
                         onClick={() => setCatColor(color)}
                         className="w-7 h-7 rounded-full flex items-center justify-center border border-black/10 transition-transform hover:scale-105"
                         style={{ backgroundColor: color }}
                       >
                         {catColor === color && <Check size={12} className="text-white" />}
-                      </button>
+                      </Button>
                     ))}
                     {/* Custom input color tag */}
                     <div className="relative w-7 h-7 rounded-full border border-black/10 overflow-hidden">
@@ -151,13 +147,10 @@ export default function SettingsManager() {
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="flex items-center gap-1 px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-md text-xs font-semibold shadow-xs"
-                >
+                <Button type="submit" variant="submit">
                   <Plus size={14} />
                   Create Category
-                </button>
+                </Button>
               </form>
             </div>
 
@@ -186,24 +179,20 @@ export default function SettingsManager() {
               <h3 className="text-sm font-semibold">Add Custom Income Source</h3>
               <form onSubmit={handleAddSource} className="space-y-3 max-w-md">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Source Name</label>
-                  <input
+                  <FieldLabel>Source Name</FieldLabel>
+                  <Input
                     type="text"
                     required
                     placeholder="e.g. Consulting, Royalties, Business Dividends"
                     value={sourceName}
                     onChange={(e) => setSourceName(e.target.value)}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="flex items-center gap-1 px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-md text-xs font-semibold shadow-xs"
-                >
+                <Button type="submit" variant="submit">
                   <Plus size={14} />
                   Create Source
-                </button>
+                </Button>
               </form>
             </div>
 

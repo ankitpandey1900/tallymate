@@ -1,12 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Target, Calendar, Trash2, Loader2 } from "lucide-react";
-import { getGoals, createGoal, updateGoalProgress, deleteGoal } from "@/app/actions";
+import { createGoal, updateGoalProgress, deleteGoal, type getGoalsPageData } from "@/app/actions";
 import { UnifiedGoal } from "@/lib/unified-db";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FieldLabel } from "@/components/ui/field-label";
+import { AppDialog } from "@/components/ui/app-dialog";
 
-export default function GoalsManager() {
-  const [goals, setGoals] = useState<UnifiedGoal[]>([]);
+type GoalsInitialData = Awaited<ReturnType<typeof getGoalsPageData>>;
+
+export default function GoalsManager({ initialData }: { initialData: GoalsInitialData }) {
+  const router = useRouter();
+  const [goals, setGoals] = useState<UnifiedGoal[]>(initialData.goals);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<UnifiedGoal | null>(null);
@@ -23,18 +31,9 @@ export default function GoalsManager() {
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
   const [confirmDeleteGoalId, setConfirmDeleteGoalId] = useState<string | null>(null);
 
-  const loadGoals = async () => {
-    try {
-      const g = await getGoals();
-      setGoals(g);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
-    void loadGoals();
-  }, []);
+    setGoals(initialData.goals);
+  }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +49,7 @@ export default function GoalsManager() {
 
       setShowAddGoal(false);
       setForm({ name: "", targetAmount: "", currentAmount: "", deadline: "" });
-      loadGoals();
+      router.refresh();
     } catch (err) {
       console.error(err);
     }
@@ -64,7 +63,7 @@ export default function GoalsManager() {
       await updateGoalProgress(selectedGoal.id, Number(updateAmount));
       setShowUpdateModal(false);
       setUpdateAmount("");
-      loadGoals();
+      router.refresh();
     } catch (err) {
       console.error(err);
     }
@@ -76,7 +75,7 @@ export default function GoalsManager() {
     setConfirmDeleteGoalId(null);
     try {
       await deleteGoal(goalId);
-      await loadGoals();
+      router.refresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to delete goal";
       alert(message);
@@ -93,13 +92,10 @@ export default function GoalsManager() {
           <h2 className="text-xl font-bold tracking-tight">Savings Goals</h2>
           <p className="text-sm text-neutral-500">Track targets for laptops, trips, or emergency funds.</p>
         </div>
-        <button
-          onClick={() => setShowAddGoal(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-[#09090b] dark:bg-[#fafafa] text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-md text-xs font-semibold self-start"
-        >
+        <Button type="button" variant="cta" className="self-start" onClick={() => setShowAddGoal(true)}>
           <Plus size={14} />
           Create Goal
-        </button>
+        </Button>
       </div>
 
       {/* Goals cards grid */}
@@ -125,17 +121,33 @@ export default function GoalsManager() {
                       )}
                       {confirmDeleteGoalId === g.id ? (
                         <>
-                          <button onClick={() => handleDeleteGoal(g.id)} className="p-1 rounded bg-red-500 text-white text-[9px] font-bold">Delete?</button>
-                          <button onClick={() => setConfirmDeleteGoalId(null)} className="p-1 rounded bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold">No</button>
+                          <Button
+                            type="button"
+                            variant="destructive-sm"
+                            onClick={() => handleDeleteGoal(g.id)}
+                            className="p-1 text-[9px] font-bold"
+                          >
+                            Delete?
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="unstyled"
+                            onClick={() => setConfirmDeleteGoalId(null)}
+                            className="p-1 rounded bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold"
+                          >
+                            No
+                          </Button>
                         </>
                       ) : (
-                        <button
+                        <Button
+                          type="button"
+                          variant="unstyled"
                           onClick={() => handleDeleteGoal(g.id)}
                           disabled={deletingGoalId === g.id}
                           className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500 transition-all"
                         >
                           {deletingGoalId === g.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -156,7 +168,9 @@ export default function GoalsManager() {
                     <Calendar size={12} />
                     {g.deadline ? new Date(g.deadline).toLocaleDateString() : "No deadline"}
                   </span>
-                  <button
+                  <Button
+                    type="button"
+                    variant="unstyled"
                     onClick={() => {
                       setSelectedGoal(g);
                       setUpdateAmount(String(g.currentAmount));
@@ -165,7 +179,7 @@ export default function GoalsManager() {
                     className="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 font-semibold"
                   >
                     Adjust Progress
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
@@ -173,125 +187,99 @@ export default function GoalsManager() {
         </div>
       )}
 
-      {/* Create Goal Dialog */}
-      {showAddGoal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowAddGoal(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-md p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Create Financial Goal</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Goal Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. MacBook Pro, Emergency Fund"
-                  value={form.name}
-                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Target Amount</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="0.00"
-                    value={form.targetAmount}
-                    onChange={(e) => setForm((prev) => ({ ...prev, targetAmount: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Initial Saved</label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    value={form.currentAmount}
-                    onChange={(e) => setForm((prev) => ({ ...prev, currentAmount: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Target Deadline</label>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => setForm((prev) => ({ ...prev, deadline: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddGoal(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+      <AppDialog open={showAddGoal} onOpenChange={setShowAddGoal} title="Create Financial Goal">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <FieldLabel>Goal Name</FieldLabel>
+            <Input
+              type="text"
+              required
+              placeholder="e.g. MacBook Pro, Emergency Fund"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+            />
           </div>
-        </div>
-      )}
 
-      {/* Adjust Progress Dialog */}
-      {showUpdateModal && selectedGoal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowUpdateModal(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-sm p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Adjust Savings Progress</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <FieldLabel>Target Amount</FieldLabel>
+              <Input
+                type="number"
+                required
+                placeholder="0.00"
+                value={form.targetAmount}
+                onChange={(e) => setForm((prev) => ({ ...prev, targetAmount: e.target.value }))}
+                className="font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel>Initial Saved</FieldLabel>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={form.currentAmount}
+                onChange={(e) => setForm((prev) => ({ ...prev, currentAmount: e.target.value }))}
+                className="font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldLabel>Target Deadline</FieldLabel>
+            <Input
+              type="date"
+              value={form.deadline}
+              onChange={(e) => setForm((prev) => ({ ...prev, deadline: e.target.value }))}
+              className="font-mono"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="cancel" onClick={() => setShowAddGoal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="submit">
+              Save
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
+
+      <AppDialog
+        open={showUpdateModal}
+        onOpenChange={setShowUpdateModal}
+        title="Adjust Savings Progress"
+        maxWidth="max-w-sm"
+      >
+        {selectedGoal && (
+          <>
             <p className="text-xs text-neutral-500">Update the current saved amount for &quot;{selectedGoal.name}&quot;.</p>
             <form onSubmit={handleUpdateProgress} className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Current Saved (INR)</label>
-                <input
+                <FieldLabel>Current Saved (INR)</FieldLabel>
+                <Input
                   type="number"
                   required
                   placeholder="0.00"
                   value={updateAmount}
                   onChange={(e) => setUpdateAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
+                  className="font-mono"
                 />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowUpdateModal(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
+                <Button type="button" variant="cancel" onClick={() => setShowUpdateModal(false)}>
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-                >
+                </Button>
+                <Button type="submit" variant="submit">
                   Update
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </AppDialog>
     </div>
   );
 }

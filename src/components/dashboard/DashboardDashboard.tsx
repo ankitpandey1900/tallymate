@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   ArrowUpRight,
@@ -15,61 +17,54 @@ import {
   TrendingUp,
   Loader2,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { FieldLabel } from "@/components/ui/field-label";
+import { AppDialog } from "@/components/ui/app-dialog";
 import {
-  getDashboardData,
   createTransaction,
   createAccount,
+  type getDashboardData,
 } from "@/app/actions";
-import {
-  UnifiedAccount,
-  UnifiedTransaction,
-  UnifiedBudget,
-  UnifiedGoal,
-  UnifiedGroup,
-  UnifiedCategory,
-  UnifiedIncomeSource,
-} from "@/lib/unified-db";
 
-const COLORS = ["#000000", "#4b5563", "#9ca3af", "#d1d5db", "#e5e7eb"];
-const COLORS_DARK = ["#ffffff", "#a1a1aa", "#71717a", "#52525b", "#3f3f46"];
+const DashboardTrendChart = dynamic(
+  () => import("./DashboardCharts").then((m) => m.DashboardTrendChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 flex items-center justify-center text-xs text-neutral-400">Loading chart…</div>
+    ),
+  }
+);
+
+const DashboardCategoryChart = dynamic(
+  () => import("./DashboardCharts").then((m) => m.DashboardCategoryChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 flex items-center justify-center text-xs text-neutral-400">Loading chart…</div>
+    ),
+  }
+);
 
 type DashboardInitialData = Awaited<ReturnType<typeof getDashboardData>>;
 
-export default function DashboardDashboard({ initialData }: { initialData?: DashboardInitialData }) {
+export default function DashboardDashboard({ initialData }: { initialData: DashboardInitialData }) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [accounts, setAccounts] = useState<UnifiedAccount[]>(initialData?.accounts ?? []);
-  const [transactions, setTransactions] = useState<UnifiedTransaction[]>(initialData?.transactions ?? []);
-  const [budgets, setBudgets] = useState<UnifiedBudget[]>(initialData?.budgets ?? []);
-  const [goals, setGoals] = useState<UnifiedGoal[]>(initialData?.goals ?? []);
-  const [groups, setGroups] = useState<UnifiedGroup[]>(initialData?.groups ?? []);
-  const [categories, setCategories] = useState<UnifiedCategory[]>(initialData?.categories ?? []);
-  const [incomeSources, setIncomeSources] = useState<UnifiedIncomeSource[]>(initialData?.incomeSources ?? []);
-  
-  const defaultMetrics = {
-    totalIncome: 0,
-    totalExpenses: 0,
-    savings: 0,
-    savingsRate: 0,
-    averageDailySpending: 0,
-    categoryTrends: [] as { name: string; value: number }[],
-    incomeBreakdown: [] as { name: string; value: number }[],
-  };
-
-  // Reports metrics
-  const [metrics, setMetrics] = useState(() => (initialData?.reports ? initialData.reports : defaultMetrics));
+  const {
+    accounts,
+    transactions,
+    budgets,
+    goals,
+    groups,
+    categories,
+    incomeSources,
+    reports: metrics,
+  } = initialData;
 
   // Modal triggers
   const [showTxModal, setShowTxModal] = useState(false);
@@ -93,36 +88,10 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
     balance: "",
   });
 
-  const [isLoading, setIsLoading] = useState(!initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const loadData = async (options?: { silent?: boolean }) => {
-    try {
-      if (!options?.silent) {
-        setIsLoading(true);
-      }
-      const data = await getDashboardData("monthly");
-      setAccounts(data.accounts);
-      setTransactions(data.transactions);
-      setMetrics(data.reports);
-      setBudgets(data.budgets);
-      setGoals(data.goals);
-      setGroups(data.groups);
-      setCategories(data.categories);
-      setIncomeSources(data.incomeSources);
-    } catch (err) {
-      toastError(err, "Failed to load dashboard data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
     setMounted(true);
-    if (!initialData) {
-      loadData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openTxModal = () => {
@@ -172,7 +141,7 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
 
       setShowTxModal(false);
       toast.success("Transaction recorded successfully");
-      await loadData({ silent: true });
+      router.refresh();
     } catch (err) {
       toastError(err, "Failed to record transaction");
     } finally {
@@ -202,7 +171,7 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
         balance: "",
       });
       toast.success("Account created successfully");
-      await loadData({ silent: true });
+      router.refresh();
     } catch (err) {
       toastError(err, "Failed to create account");
     } finally {
@@ -210,24 +179,8 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
     }
   };
 
-  // Safe chart data mapping
-  const chartData = [
-    { name: "Week 1", Income: metrics.totalIncome * 0.2, Expense: metrics.totalExpenses * 0.15 },
-    { name: "Week 2", Income: metrics.totalIncome * 0.35, Expense: metrics.totalExpenses * 0.3 },
-    { name: "Week 3", Income: metrics.totalIncome * 0.15, Expense: metrics.totalExpenses * 0.25 },
-    { name: "Week 4", Income: metrics.totalIncome * 0.3, Expense: metrics.totalExpenses * 0.3 },
-  ];
-
-  const categoriesColors = (mounted && typeof window !== "undefined" && document.documentElement.classList.contains("dark")) ? COLORS_DARK : COLORS;
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
-        <p className="text-sm text-neutral-500 font-medium">Syncing workspace...</p>
-      </div>
-    );
-  }
+  const isDark =
+    mounted && typeof window !== "undefined" && document.documentElement.classList.contains("dark");
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in pb-20 md:pb-0">
@@ -238,20 +191,14 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
           <p className="text-sm text-neutral-500">Your monthly activity snapshot.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowAccModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-          >
+          <Button type="button" variant="outline-app" onClick={() => setShowAccModal(true)}>
             <Wallet size={14} />
             New Account
-          </button>
-          <button
-            onClick={openTxModal}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
-          >
+          </Button>
+          <Button type="button" variant="cta" onClick={openTxModal}>
             <Plus size={14} />
             Add Transaction
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -330,97 +277,18 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
             <h4 className="text-sm font-semibold">Income vs Expense Trend</h4>
             <span className="text-xs text-neutral-400">Weekly breakdown</span>
           </div>
-          <div className="h-64 w-full min-h-[256px]" style={{ minWidth: 0 }}>
-            {mounted && (
-              <ResponsiveContainer width="100%" height={256} minWidth={0}>
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--card)",
-                      borderColor: "var(--border)",
-                      color: "var(--foreground)",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="Income"
-                    stroke="#10b981"
-                    fillOpacity={0.06}
-                    fill="#10b981"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="Expense"
-                    stroke="#ef4444"
-                    fillOpacity={0.06}
-                    fill="#ef4444"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+          {mounted ? <DashboardTrendChart metrics={metrics} /> : (
+            <div className="h-64 flex items-center justify-center text-xs text-neutral-400">Loading chart…</div>
+          )}
         </div>
 
         {/* Category breakdown (Donut) */}
         <div className="panel-card p-5 space-y-4">
           <h4 className="text-sm font-semibold">Spending by Category</h4>
-          {metrics.categoryTrends.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-xs text-neutral-400">
-              No expense data recorded this month.
-            </div>
+          {mounted ? (
+            <DashboardCategoryChart metrics={metrics} isDark={isDark} />
           ) : (
-            <div className="flex flex-col items-center justify-center h-64">
-              <div className="h-44 w-full min-h-[176px] relative" style={{ minWidth: 0 }}>
-                {mounted && (
-                  <ResponsiveContainer width="100%" height={176} minWidth={0}>
-                    <PieChart>
-                      <Pie
-                        data={metrics.categoryTrends}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={4}
-                        dataKey="value"
-                      >
-                        {metrics.categoryTrends.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={categoriesColors[index % categoriesColors.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: "var(--card)",
-                          borderColor: "var(--border)",
-                          color: "var(--foreground)",
-                          borderRadius: "6px",
-                          fontSize: "12px",
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center mt-2">
-                {metrics.categoryTrends.slice(0, 4).map((entry, index) => (
-                  <div key={entry.name} className="flex items-center gap-1.5 text-xs text-neutral-500">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{
-                        backgroundColor: categoriesColors[index % categoriesColors.length],
-                      }}
-                    />
-                    <span className="truncate max-w-[80px]">{entry.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <div className="h-64 flex items-center justify-center text-xs text-neutral-400">Loading chart…</div>
           )}
         </div>
       </div>
@@ -504,236 +372,189 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
         </div>
       </div>
 
-      {/* Add Transaction Dialog Modal */}
-      {showTxModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowTxModal(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-md p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Add Transaction</h3>
-            <form onSubmit={handleTxSubmit} className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                {["EXPENSE", "INCOME", "TRANSFER"].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setTxForm((prev) => ({ ...prev, type }))}
-                    className={cn(
-                      "py-2 rounded-md text-xs font-semibold border transition-colors",
-                      txForm.type === type
-                        ? "bg-[#09090b] text-white border-black dark:bg-[#fafafa] dark:text-black dark:border-white"
-                        : "border-black/[0.04] dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                    )}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
+      <AppDialog open={showTxModal} onOpenChange={setShowTxModal} title="Add Transaction">
+        <form onSubmit={handleTxSubmit} className="space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            {["EXPENSE", "INCOME", "TRANSFER"].map((type) => (
+              <Button
+                key={type}
+                type="button"
+                variant={txForm.type === type ? "toggle-active" : "toggle-inactive"}
+                className="w-full"
+                onClick={() => setTxForm((prev) => ({ ...prev, type }))}
+              >
+                {type}
+              </Button>
+            ))}
+          </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Amount (INR)</label>
-                <input
-                  type="number"
-                  required
-                  placeholder="0.00"
-                  value={txForm.amount}
-                  onChange={(e) => setTxForm((prev) => ({ ...prev, amount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                />
-              </div>
+          <div className="space-y-1.5">
+            <FieldLabel>Amount (INR)</FieldLabel>
+            <Input
+              type="number"
+              required
+              placeholder="0.00"
+              value={txForm.amount}
+              onChange={(e) => setTxForm((prev) => ({ ...prev, amount: e.target.value }))}
+              className="font-mono"
+            />
+          </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Pay From Account</label>
-                <select
-                  required
-                  value={txForm.accountId}
-                  onChange={(e) => setTxForm((prev) => ({ ...prev, accountId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                >
-                  <option value="" disabled className="text-neutral-500">Select Account</option>
-                  {accounts.map((a) => (
+          <div className="space-y-1.5">
+            <FieldLabel>Pay From Account</FieldLabel>
+            <NativeSelect
+              required
+              value={txForm.accountId}
+              onChange={(e) => setTxForm((prev) => ({ ...prev, accountId: e.target.value }))}
+            >
+              <option value="" disabled className="text-neutral-500">Select Account</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} (₹{a.balance})
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+
+          {txForm.type === "TRANSFER" && (
+            <div className="space-y-1.5">
+              <FieldLabel>Transfer To Account</FieldLabel>
+              <NativeSelect
+                required
+                value={txForm.transferToAccountId}
+                onChange={(e) => setTxForm((prev) => ({ ...prev, transferToAccountId: e.target.value }))}
+              >
+                <option value="" disabled className="text-neutral-500">Select Target Account</option>
+                {accounts
+                  .filter((a) => a.id !== txForm.accountId)
+                  .map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} (₹{a.balance})
+                      {a.name}
                     </option>
                   ))}
-                </select>
-              </div>
+              </NativeSelect>
+            </div>
+          )}
 
-              {txForm.type === "TRANSFER" && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Transfer To Account</label>
-                  <select
-                    required
-                    value={txForm.transferToAccountId}
-                    onChange={(e) => setTxForm((prev) => ({ ...prev, transferToAccountId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  >
-                    <option value="" disabled className="text-neutral-500">Select Target Account</option>
-                    {accounts
-                      .filter((a) => a.id !== txForm.accountId)
-                      .map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
+          {txForm.type === "EXPENSE" && (
+            <div className="space-y-1.5">
+              <FieldLabel>Category</FieldLabel>
+              <NativeSelect
+                value={txForm.categoryId}
+                onChange={(e) => setTxForm((prev) => ({ ...prev, categoryId: e.target.value }))}
+              >
+                <option value="">No Category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+          )}
 
-              {txForm.type === "EXPENSE" && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Category</label>
-                  <select
-                    value={txForm.categoryId}
-                    onChange={(e) => setTxForm((prev) => ({ ...prev, categoryId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  >
-                    <option value="">No Category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+          {txForm.type === "INCOME" && (
+            <div className="space-y-1.5">
+              <FieldLabel>Income Source</FieldLabel>
+              <NativeSelect
+                value={txForm.incomeSourceId}
+                onChange={(e) => setTxForm((prev) => ({ ...prev, incomeSourceId: e.target.value }))}
+              >
+                <option value="">No Source</option>
+                {incomeSources.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+          )}
 
-              {txForm.type === "INCOME" && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">Income Source</label>
-                  <select
-                    value={txForm.incomeSourceId}
-                    onChange={(e) => setTxForm((prev) => ({ ...prev, incomeSourceId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                  >
-                    <option value="">No Source</option>
-                    {incomeSources.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Description</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Starbucks Coffee"
-                  value={txForm.description}
-                  onChange={(e) => setTxForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Date</label>
-                <input
-                  type="date"
-                  value={txForm.date}
-                  onChange={(e) => setTxForm((prev) => ({ ...prev, date: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowTxModal(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {isSubmitting && <Loader2 size={12} className="animate-spin" />}
-                  Add
-                </button>
-              </div>
-            </form>
+          <div className="space-y-1.5">
+            <FieldLabel>Description</FieldLabel>
+            <Input
+              type="text"
+              placeholder="e.g. Starbucks Coffee"
+              value={txForm.description}
+              onChange={(e) => setTxForm((prev) => ({ ...prev, description: e.target.value }))}
+            />
           </div>
-        </div>
-      )}
 
-      {/* Add Account Modal */}
-      {showAccModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowAccModal(false)}
-          />
-          <div className="panel-card bg-white dark:bg-[#18181b] w-full max-w-md p-6 relative z-10 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold">Add Account</h3>
-            <form onSubmit={handleAccSubmit} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Account Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Salary Bank Account"
-                  value={accForm.name}
-                  onChange={(e) => setAccForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Account Type</label>
-                <select
-                  value={accForm.type}
-                  onChange={(e) => setAccForm((prev) => ({ ...prev, type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
-                >
-                  <option value="CASH">Cash</option>
-                  <option value="BANK_ACCOUNT">Bank Account</option>
-                  <option value="CREDIT_CARD">Credit Card</option>
-                  <option value="DEBIT_CARD">Debit Card</option>
-                  <option value="UPI_WALLET">UPI Wallet</option>
-                  <option value="PAYTM">Paytm</option>
-                  <option value="PHONEPE">PhonePe</option>
-                  <option value="GOOGLE_PAY">Google Pay</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-neutral-400">Starting Balance (INR)</label>
-                <input
-                  type="number"
-                  required
-                  placeholder="0.00"
-                  value={accForm.balance}
-                  onChange={(e) => setAccForm((prev) => ({ ...prev, balance: e.target.value }))}
-                  className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent font-mono"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAccModal(false)}
-                  className="px-4 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {isSubmitting && <Loader2 size={12} className="animate-spin" />}
-                  Create
-                </button>
-              </div>
-            </form>
+          <div className="space-y-1.5">
+            <FieldLabel>Date</FieldLabel>
+            <Input
+              type="date"
+              value={txForm.date}
+              onChange={(e) => setTxForm((prev) => ({ ...prev, date: e.target.value }))}
+              className="font-mono"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="cancel" onClick={() => setShowTxModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 size={12} className="animate-spin" />}
+              Add
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
+
+      <AppDialog open={showAccModal} onOpenChange={setShowAccModal} title="Add Account">
+        <form onSubmit={handleAccSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <FieldLabel>Account Name</FieldLabel>
+            <Input
+              type="text"
+              required
+              placeholder="e.g. Salary Bank Account"
+              value={accForm.name}
+              onChange={(e) => setAccForm((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldLabel>Account Type</FieldLabel>
+            <NativeSelect
+              value={accForm.type}
+              onChange={(e) => setAccForm((prev) => ({ ...prev, type: e.target.value }))}
+            >
+              <option value="CASH">Cash</option>
+              <option value="BANK_ACCOUNT">Bank Account</option>
+              <option value="CREDIT_CARD">Credit Card</option>
+              <option value="DEBIT_CARD">Debit Card</option>
+              <option value="UPI_WALLET">UPI Wallet</option>
+              <option value="PAYTM">Paytm</option>
+              <option value="PHONEPE">PhonePe</option>
+              <option value="GOOGLE_PAY">Google Pay</option>
+            </NativeSelect>
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldLabel>Starting Balance (INR)</FieldLabel>
+            <Input
+              type="number"
+              required
+              placeholder="0.00"
+              value={accForm.balance}
+              onChange={(e) => setAccForm((prev) => ({ ...prev, balance: e.target.value }))}
+              className="font-mono"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="cancel" onClick={() => setShowAccModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 size={12} className="animate-spin" />}
+              Create
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
     </div>
   );
 }

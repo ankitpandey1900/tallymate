@@ -1,5 +1,6 @@
 import React from "react";
 import GoalsManager from "@/components/goals/GoalsManager";
+import { getGoalsPageData } from "@/app/actions";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,6 +8,9 @@ export const metadata: Metadata = {
   description: "Set and track progress for financial targets, emergency funds, and vacation plans.",
 };
 
-export default function GoalsPage() {
-  return <GoalsManager />;
+export const dynamic = "force-dynamic";
+
+export default async function GoalsPage() {
+  const initialData = await getGoalsPageData();
+  return <GoalsManager initialData={initialData} />;
 }
