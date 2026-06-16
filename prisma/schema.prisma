@@ -1,0 +1,377 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  name          String?
+  emailVerified Boolean         @default(false)
+  image         String?
+  passwordHash  String?         // Custom hash or fallback
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Sessions and accounts (for Better Auth)
+  sessions      Session[]
+  accounts      Account[]
+
+  // Financial relationships
+  financialAccounts  FinancialAccount[]
+  incomeSources      IncomeSource[]
+  expenseCategories  ExpenseCategory[]
+  transactions       Transaction[]
+  budgets            Budget[]
+  financialGoals     FinancialGoal[]
+  groupMembers       GroupMember[]
+  settlementsPaid    Settlement[]    @relation("SettlementsPaid")
+  settlementsRecv    Settlement[]    @relation("SettlementsReceived")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  expenseSplits      ExpenseSplit[]
+  budgetAlerts       BudgetAlert[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String    // 'google', 'credential', etc.
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String    @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+enum AccountType {
+  CASH
+  BANK_ACCOUNT
+  CREDIT_CARD
+  DEBIT_CARD
+  UPI_WALLET
+  PAYTM
+  PHONEPE
+  GOOGLE_PAY
+  CUSTOM
+}
+
+model FinancialAccount {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  type         AccountType
+  balance      Decimal       @default(0.00)
+  currency     String        @default("INR")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model IncomeSource {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String        // 'Salary', 'Freelancing', or custom
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  REFUND
+  LOAN_GIVEN
+  LOAN_TAKEN
+  INVESTMENT
+}
+
+enum TransactionScope {
+  PERSONAL
+  GROUP
+}
+
+model Transaction {
+  id                 String            @id @default(uuid())
+  userId             String
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId          String
+  account            FinancialAccount  @relation(fields: [accountId], references: [id])
+  type               TransactionType
+  scope              TransactionScope  @default(PERSONAL)
+  amount             Decimal
+  date               DateTime          @default(now())
+  description        String?
+  notes              String?
+  tags               String[]          @default([])
+  receiptUrl         String?
+  
+  // Category / Source details
+  categoryId         String?
+  category           ExpenseCategory?  @relation(fields: [categoryId], references: [id])
+  incomeSourceId     String?
+  incomeSource       IncomeSource?     @relation(fields: [incomeSourceId], references: [id])
+
+  // Group Details (if Group Scope)
+  groupId            String?
+  group              Group?            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupExpenseId     String?
+  groupExpense       GroupExpense?     @relation(fields: [groupExpenseId], references: [id])
+
+  // Transfer Destination
+  transferToAccountId String?
+
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  auditLogs          AuditLog[]
+  attachments        Attachment[]
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([date])
+}
+
+model ExpenseCategory {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  color        String?       // Hex representation
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model Budget {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId  String?          // If null, represents overall monthly budget
+  category    ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  groupId     String?          // If set, represents a shared group budget
+  group       Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  amount      Decimal
+  period      String           @default("MONTHLY") // MONTHLY, WEEKLY, QUARTERLY, YEARLY
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  alerts      BudgetAlert[]
+}
+
+model FinancialGoal {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String    // e.g. "Emergency Fund", "Vacation"
+  targetAmount  Decimal
+  currentAmount Decimal   @default(0.00)
+  deadline      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum GroupType {
+  TRIP
+  FAMILY
+  FLATMATES
+  COUPLE
+  FRIENDS
+  CUSTOM
+}
+
+model Group {
+  id                      String                  @id @default(uuid())
+  name                    String
+  inviteCode              String?                 @unique
+  type                    GroupType
+  currency                String                  @default("INR")
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  // Toggles / Settings
+  enableSharedFinance     Boolean                 @default(true)
+  enableSharedBudgets     Boolean                 @default(true)
+  enableSharedIncome      Boolean                 @default(false)
+  enableRecurringExpenses Boolean                 @default(true)
+  enableSettlementTracking Boolean                 @default(true)
+
+  // Relations
+  members                 GroupMember[]
+  invitations             GroupInvitation[]
+  transactions            Transaction[]
+  groupExpenses           GroupExpense[]
+  budgets                 Budget[]
+  settlements             Settlement[]
+  recurringTransactions   RecurringTransaction[]
+}
+
+enum GroupRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model GroupMember {
+  id        String    @id @default(uuid())
+  groupId   String
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      GroupRole @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+
+  @@unique([groupId, userId])
+}
+
+model GroupInvitation {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  email     String
+  role      GroupRole @default(MEMBER)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model GroupExpense {
+  id          String         @id @default(uuid())
+  groupId     String
+  group       Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  amount      Decimal
+  description String
+  date        DateTime       @default(now())
+  paidByUserId String        // User who paid out-of-pocket
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  splits      ExpenseSplit[]
+  transactions Transaction[] // Triggers a personal expense for each member's split
+}
+
+enum SplitType {
+  EQUAL
+  PERCENTAGE
+  CUSTOM
+  UNEQUAL
+}
+
+model ExpenseSplit {
+  id             String       @id @default(uuid())
+  groupExpenseId String
+  groupExpense   GroupExpense @relation(fields: [groupExpenseId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount         Decimal      // Split share
+  percentage     Decimal?     // Split percentage (if applicable)
+  type           SplitType    @default(EQUAL)
+
+  @@unique([groupExpenseId, userId])
+}
+
+model Settlement {
+  id           String   @id @default(uuid())
+  groupId      String
+  group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payerId      String   // User who paid the settlement
+  payer        User     @relation("SettlementsPaid", fields: [payerId], references: [id])
+  receiverId   String   // User who received the settlement
+  receiver     User     @relation("SettlementsReceived", fields: [receiverId], references: [id])
+  amount       Decimal
+  date         DateTime @default(now())
+  notes        String?
+  createdAt    DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // "BUDGET_WARNING", "SETTLEMENT_REMINDER", "GROUP_EXPENSE", etc.
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BudgetAlert {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgetId  String
+  budget    Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  percentage Decimal  // 80, 90, 100
+  firedAt   DateTime @default(now())
+}
+
+model RecurringTransaction {
+  id          String          @id @default(uuid())
+  groupId     String?
+  group       Group?          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId      String
+  type        TransactionType
+  amount      Decimal
+  frequency   String          // "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
+  startDate   DateTime
+  nextDueDate DateTime
+  isActive    Boolean         @default(true)
+  description String
+  createdAt   DateTime        @default(now())
+}
+
+model AuditLog {
+  id            String       @id @default(uuid())
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action        String       // e.g. "CREATE_TRANSACTION", "DELETE_GROUP"
+  details       String
+  transactionId String?
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+}
+
+model Attachment {
+  id            String       @id @default(uuid())
+  transactionId String
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  fileUrl       String
+  fileName      String
+  fileSize      Int
+  mimeType      String
+  createdAt     DateTime     @default(now())
+}

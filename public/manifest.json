@@ -1,0 +1,47 @@
+{
+  "name": "Antigravity Finance",
+  "short_name": "Antigravity",
+  "description": "Unified Personal Finance Tracker & Bill Splitting PWA",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4b8.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/128x128/1f4b8.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/512x512/1f4b8.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Open your monthly overview stats"
+    },
+    {
+      "name": "Transactions",
+      "url": "/transactions",
+      "description": "Audit personal transactions"
+    },
+    {
+      "name": "Groups",
+      "url": "/groups",
+      "description": "Split bill expenses with friends"
+    }
+  ]
+}
