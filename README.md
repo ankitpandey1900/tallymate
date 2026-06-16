@@ -27,8 +27,6 @@ If you want to run this on your own machine, just follow these steps:
 4. Run `npx prisma db push` so Prisma can create all the tables in your database.
 5. Run `npm run dev` and open `http://localhost:3000` in your browser.
 
-## A quick note on deployment
-When deploying to Vercel, make sure you add the `DATABASE_URL` and `BETTER_AUTH_SECRET` in the Vercel environment variables settings. I also made sure the database queries only fetch data for the logged-in user, so everything is secure.
 
 ---
 Hope you like it! Feel free to use the code or let me know if you find any bugs.
