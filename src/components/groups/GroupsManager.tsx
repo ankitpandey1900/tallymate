@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast, toastError } from "@/lib/toast";
 import {
   getGroups,
   createGroup,
@@ -165,9 +166,10 @@ export default function GroupsManager() {
       });
       setShowCreateGroup(false);
       setNewGroupForm({ name: "", type: "TRIP", memberEmails: ["", ""] });
+      toast.success("Group created successfully");
       loadGroups();
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to create group");
     }
   };
 
@@ -179,10 +181,10 @@ export default function GroupsManager() {
       await joinGroup(inviteCode);
       setShowJoinGroup(false);
       setInviteCode("");
+      toast.success("Joined group successfully");
       loadGroups();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to join group";
-      alert(message);
+      toastError(err, "Failed to join group");
     }
   };
 
@@ -196,10 +198,10 @@ export default function GroupsManager() {
     try {
       await deleteGroup(groupId);
       if (selectedGroupId === groupId) setSelectedGroupId(null);
+      toast.success("Group deleted");
       await loadGroups();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to delete group";
-      alert(message);
+      toastError(err, "Failed to delete group");
     } finally {
       setDeletingGroupId(null);
     }
@@ -255,7 +257,7 @@ export default function GroupsManager() {
     // Verify split total matches expense total amount
     const sumSplits = splits.reduce((sum, s) => sum + s.amount, 0);
     if (Math.abs(sumSplits - totalAmount) > 2) {
-      alert(`Split values total (₹${sumSplits}) does not match expense amount (₹${totalAmount})`);
+      toast.error(`Split total (₹${sumSplits}) must match expense amount (₹${totalAmount})`);
       return;
     }
 
@@ -275,9 +277,10 @@ export default function GroupsManager() {
         description: "",
         customShares: {},
       }));
+      toast.success("Group expense added");
       loadGroupDetails(groupDetails.group.id);
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to add group expense");
     }
   };
 
@@ -305,8 +308,9 @@ export default function GroupsManager() {
         receiveAccountId: "",
       });
       loadGroupDetails(groupDetails.group.id);
+      toast.success("Settlement recorded");
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to record settlement");
     }
   };
 
@@ -370,7 +374,7 @@ export default function GroupsManager() {
 
                   {/* Delete button — visible on hover, owner only */}
                   {isOwner && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity">
                       {isConfirming ? (
                         <>
                           <button

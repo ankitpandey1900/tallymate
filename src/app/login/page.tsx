@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, signUp, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 import { Loader2, ArrowRight, Lock, Mail, User } from "lucide-react";
 import TallymateLogo from "@/components/TallymateLogo";
 
@@ -38,6 +39,7 @@ export default function LoginPage() {
         }, {
           onRequest: () => setLoading(true),
           onResponse: () => setLoading(false),
+          onSuccess: () => { toast.success("Signed in successfully"); },
           onError: (ctx) => {
             setError(ctx.error.message || "Invalid email or password.");
           }
@@ -51,6 +53,7 @@ export default function LoginPage() {
         }, {
           onRequest: () => setLoading(true),
           onResponse: () => setLoading(false),
+          onSuccess: () => { toast.success("Account created successfully"); },
           onError: (ctx) => {
             setError(ctx.error.message || "Failed to create account. Please try again.");
           }

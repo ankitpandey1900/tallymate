@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast, toastError } from "@/lib/toast";
 import {
   getTransactions,
   getAccounts,
@@ -92,7 +93,7 @@ export default function TransactionsView() {
         setTxForm((prev) => ({ ...prev, accountId: prev.accountId || accs[0].id }));
       }
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to load transactions");
     } finally {
       setIsLoading(false);
     }
@@ -170,14 +171,16 @@ export default function TransactionsView() {
 
       if (editingTx) {
         await updateTransaction(editingTx.id, commonData);
+        toast.success("Transaction updated");
       } else {
         await createTransaction({ ...commonData, scope: "PERSONAL" });
+        toast.success("Transaction recorded");
       }
 
       closeModal();
       await loadData();
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to save transaction");
     } finally {
       setSubmitting(false);
     }
@@ -192,9 +195,10 @@ export default function TransactionsView() {
     setConfirmDeleteId(null);
     try {
       await deleteTransaction(txId);
+      toast.success("Transaction deleted");
       await loadData();
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to delete transaction");
     } finally {
       setDeletingId(null);
     }

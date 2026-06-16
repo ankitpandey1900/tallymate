@@ -10,6 +10,51 @@ import { cache } from "react";
 import { computeReports, type ReportMetrics, getReportStartDate } from "@/lib/reports";
 import { enforceActionRateLimit } from "@/lib/rate-limit";
 
+const DEFAULT_CATEGORIES = [
+  { name: "Food & Dining", color: "#EF4444" },
+  { name: "Transport", color: "#3B82F6" },
+  { name: "Shopping", color: "#8B5CF6" },
+  { name: "Entertainment", color: "#F59E0B" },
+  { name: "Bills & Rent", color: "#10B981" },
+];
+
+const DEFAULT_INCOME_SOURCES = ["Salary", "Freelancing", "Investments"];
+
+async function ensureUserDefaults(userId: string) {
+  const [categories, incomeSources] = await Promise.all([
+    UnifiedDB.getCategories(userId),
+    UnifiedDB.getIncomeSources(userId),
+  ]);
+
+  if (categories.length === 0) {
+    await Promise.all(
+      DEFAULT_CATEGORIES.map((c) => UnifiedDB.createCategory(userId, c.name, c.color))
+    );
+  }
+
+  if (incomeSources.length === 0) {
+    await Promise.all(
+      DEFAULT_INCOME_SOURCES.map((name) => UnifiedDB.createIncomeSource(userId, name))
+    );
+  }
+}
+
+async function getReportsForUser(
+  userId: string,
+  timeframe: "weekly" | "monthly" | "quarterly" | "yearly"
+): Promise<ReportMetrics> {
+  const now = new Date();
+  const startDate = getReportStartDate(timeframe, now);
+
+  const [txs, categories, incomeSources] = await Promise.all([
+    UnifiedDB.getTransactions(userId, { startDate: startDate.toISOString(), endDate: now.toISOString() }),
+    UnifiedDB.getCategories(userId),
+    UnifiedDB.getIncomeSources(userId),
+  ]);
+
+  return computeReports(txs, categories, incomeSources, timeframe, now);
+}
+
 // Helper to get active session user or redirect if unauthenticated
 export const getCurrentUser = cache(async () => {
   try {
@@ -38,15 +83,18 @@ export async function getAccounts() {
 // Dashboard (single fetch to reduce round-trips)
 export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarterly" | "yearly" = "monthly") {
   const user = await getCurrentUser();
+  await ensureUserDefaults(user.id);
 
-  const [accounts, transactions, budgets, goals, groups, reports] =
+  const [accounts, transactions, budgets, goals, groups, reports, categories, incomeSources] =
     await Promise.all([
       UnifiedDB.getAccounts(user.id),
       UnifiedDB.getTransactions(user.id, { limit: 5 }),
       UnifiedDB.getBudgets(user.id),
       UnifiedDB.getGoals(user.id),
       UnifiedDB.getGroups(user.id),
-      getReports(timeframe),
+      getReportsForUser(user.id, timeframe),
+      UnifiedDB.getCategories(user.id),
+      UnifiedDB.getIncomeSources(user.id),
     ]);
 
   return {
@@ -56,6 +104,8 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
     goals,
     groups,
     reports,
+    categories,
+    incomeSources,
   };
 }
 
@@ -474,17 +524,7 @@ export async function markNotificationAsRead(id: string) {
 // Reports & Analytics actions
 export async function getReports(timeframe: "weekly" | "monthly" | "quarterly" | "yearly") {
   const user = await getCurrentUser();
-  const now = new Date();
-  const startDate = getReportStartDate(timeframe, now);
-
-  const [txs, categories, incomeSources] = await Promise.all([
-    UnifiedDB.getTransactions(user.id, { startDate: startDate.toISOString(), endDate: now.toISOString() }),
-    UnifiedDB.getCategories(user.id),
-    UnifiedDB.getIncomeSources(user.id),
-  ]);
-
-  const metrics: ReportMetrics = computeReports(txs, categories, incomeSources, timeframe, now);
-  return metrics;
+  return getReportsForUser(user.id, timeframe);
 }
 
 export async function uploadReceipt(formData: FormData) {

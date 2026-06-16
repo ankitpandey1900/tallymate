@@ -3,7 +3,7 @@ const CACHE_NAME = "antigravity-cache-v1";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
-  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/128x128/1f4b8.png"
+  "/favicon.svg"
 ];
 
 self.addEventListener("install", (event) => {

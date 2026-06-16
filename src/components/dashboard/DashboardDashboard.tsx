@@ -27,6 +27,7 @@ import {
   Cell,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { toast, toastError } from "@/lib/toast";
 import {
   getDashboardData,
   createTransaction,
@@ -38,6 +39,8 @@ import {
   UnifiedBudget,
   UnifiedGoal,
   UnifiedGroup,
+  UnifiedCategory,
+  UnifiedIncomeSource,
 } from "@/lib/unified-db";
 
 const COLORS = ["#000000", "#4b5563", "#9ca3af", "#d1d5db", "#e5e7eb"];
@@ -52,6 +55,8 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
   const [budgets, setBudgets] = useState<UnifiedBudget[]>(initialData?.budgets ?? []);
   const [goals, setGoals] = useState<UnifiedGoal[]>(initialData?.goals ?? []);
   const [groups, setGroups] = useState<UnifiedGroup[]>(initialData?.groups ?? []);
+  const [categories, setCategories] = useState<UnifiedCategory[]>(initialData?.categories ?? []);
+  const [incomeSources, setIncomeSources] = useState<UnifiedIncomeSource[]>(initialData?.incomeSources ?? []);
   
   const defaultMetrics = {
     totalIncome: 0,
@@ -89,10 +94,13 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
   });
 
   const [isLoading, setIsLoading] = useState(!initialData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (options?: { silent?: boolean }) => {
     try {
-      setIsLoading(true);
+      if (!options?.silent) {
+        setIsLoading(true);
+      }
       const data = await getDashboardData("monthly");
       setAccounts(data.accounts);
       setTransactions(data.transactions);
@@ -100,8 +108,10 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
       setBudgets(data.budgets);
       setGoals(data.goals);
       setGroups(data.groups);
+      setCategories(data.categories);
+      setIncomeSources(data.incomeSources);
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to load dashboard data");
     } finally {
       setIsLoading(false);
     }
@@ -115,10 +125,37 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openTxModal = () => {
+    if (accounts.length === 0) {
+      toast.error("Create an account first before adding transactions.");
+      setShowAccModal(true);
+      return;
+    }
+    setTxForm({
+      amount: "",
+      type: "EXPENSE",
+      accountId: accounts[0]?.id || "",
+      categoryId: "",
+      incomeSourceId: "",
+      description: "",
+      date: new Date().toISOString().split("T")[0],
+      transferToAccountId: "",
+    });
+    setShowTxModal(true);
+  };
+
   const handleTxSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!txForm.amount || !txForm.accountId) return;
+    if (!txForm.amount || !txForm.accountId) {
+      toast.error("Amount and account are required.");
+      return;
+    }
+    if (txForm.type === "TRANSFER" && !txForm.transferToAccountId) {
+      toast.error("Select a target account for the transfer.");
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
       await createTransaction({
         accountId: txForm.accountId,
@@ -134,26 +171,23 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
       });
 
       setShowTxModal(false);
-      setTxForm({
-        amount: "",
-        type: "EXPENSE",
-        accountId: "",
-        categoryId: "",
-        incomeSourceId: "",
-        description: "",
-        date: new Date().toISOString().split("T")[0],
-        transferToAccountId: "",
-      });
-      loadData();
+      toast.success("Transaction recorded successfully");
+      await loadData({ silent: true });
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to record transaction");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleAccSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accForm.name || !accForm.balance) return;
+    if (!accForm.name || !accForm.balance) {
+      toast.error("Account name and balance are required.");
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
       await createAccount({
         name: accForm.name,
@@ -167,9 +201,12 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
         type: "BANK_ACCOUNT",
         balance: "",
       });
-      loadData();
+      toast.success("Account created successfully");
+      await loadData({ silent: true });
     } catch (err) {
-      console.error(err);
+      toastError(err, "Failed to create account");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -209,7 +246,7 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
             New Account
           </button>
           <button
-            onClick={() => setShowTxModal(true)}
+            onClick={openTxModal}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
           >
             <Plus size={14} />
@@ -293,9 +330,9 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
             <h4 className="text-sm font-semibold">Income vs Expense Trend</h4>
             <span className="text-xs text-neutral-400">Weekly breakdown</span>
           </div>
-          <div className="h-64 w-full min-h-[256px]">
+          <div className="h-64 w-full min-h-[256px]" style={{ minWidth: 0 }}>
             {mounted && (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={256} minWidth={0}>
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
@@ -337,9 +374,9 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-64">
-              <div className="h-44 w-full min-h-[176px] relative">
+              <div className="h-44 w-full min-h-[176px] relative" style={{ minWidth: 0 }}>
                 {mounted && (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={176} minWidth={0}>
                     <PieChart>
                       <Pie
                         data={metrics.categoryTrends}
@@ -554,16 +591,11 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
                     className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
                   >
                     <option value="">No Category</option>
-                    {metrics.categoryTrends.map((c) => (
-                      <option key={c.name} value={c.name}>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
                     ))}
-                    <option value="cat-1">Food &amp; Dining</option>
-                    <option value="cat-2">Transport</option>
-                    <option value="cat-3">Shopping</option>
-                    <option value="cat-4">Entertainment</option>
-                    <option value="cat-5">Bills &amp; Rent</option>
                   </select>
                 </div>
               )}
@@ -577,9 +609,11 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
                     className="w-full px-3 py-2 border border-black/[0.04] dark:border-neutral-800 rounded-md text-sm bg-transparent"
                   >
                     <option value="">No Source</option>
-                    <option value="src-1">Salary</option>
-                    <option value="src-2">Freelancing</option>
-                    <option value="src-3">Investments</option>
+                    {incomeSources.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -615,8 +649,10 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center gap-1.5"
                 >
+                  {isSubmitting && <Loader2 size={12} className="animate-spin" />}
                   Add
                 </button>
               </div>
@@ -687,8 +723,10 @@ export default function DashboardDashboard({ initialData }: { initialData?: Dash
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[#09090b] dark:bg-[#fafafa] hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black rounded-md text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center gap-1.5"
                 >
+                  {isSubmitting && <Loader2 size={12} className="animate-spin" />}
                   Create
                 </button>
               </div>
