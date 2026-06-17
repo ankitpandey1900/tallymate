@@ -152,24 +152,38 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
     user.id,
     "dashboard",
     async () => {
-      const [accounts, transactions, budgets, goals, groups, reports, catalog] =
+      const [accounts, transactions, budgets, goals, groups, reports, catalog, monthTransactions] =
         await Promise.all([
           UnifiedDB.getAccounts(user.id),
-          UnifiedDB.getTransactions(user.id, { limit: 5 }),
+          UnifiedDB.getTransactions(user.id, { limit: 8 }),
           UnifiedDB.getBudgets(user.id),
           UnifiedDB.getGoals(user.id),
           UnifiedDB.getGroups(user.id),
           getReportsForUser(user.id, timeframe),
           ensureCatalogDefaults(user.id),
+          UnifiedDB.getTransactions(user.id, {
+            startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+          }),
         ]);
+
+      const budgetProgress = computeBudgetProgress(
+        budgets,
+        catalog.categories,
+        groups,
+        monthTransactions
+      );
+
+      const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
 
       return {
         accounts,
         transactions,
         budgets,
+        budgetProgress,
         goals,
         groups,
         reports,
+        netWorth,
         categories: catalog.categories,
         incomeSources: catalog.incomeSources,
       };
@@ -498,6 +512,19 @@ export async function createCategory(data: { name: string; color: string }) {
   return cat;
 }
 
+export async function updateCategory(categoryId: string, data: { name?: string; color?: string }) {
+  const user = await getCurrentUser();
+  const cat = await UnifiedDB.updateCategory(user.id, categoryId, data);
+  await bustPageCache(user.id);
+  return cat;
+}
+
+export async function deleteCategory(categoryId: string) {
+  const user = await getCurrentUser();
+  await UnifiedDB.deleteCategory(user.id, categoryId);
+  await bustPageCache(user.id);
+}
+
 // Income Sources actions
 export async function getIncomeSources() {
   const user = await getCurrentUser();
@@ -509,6 +536,19 @@ export async function createIncomeSource(data: { name: string }) {
   const src = await UnifiedDB.createIncomeSource(user.id, data.name);
   await bustPageCache(user.id);
   return src;
+}
+
+export async function updateIncomeSource(sourceId: string, data: { name: string }) {
+  const user = await getCurrentUser();
+  const src = await UnifiedDB.updateIncomeSource(user.id, sourceId, data);
+  await bustPageCache(user.id);
+  return src;
+}
+
+export async function deleteIncomeSource(sourceId: string) {
+  const user = await getCurrentUser();
+  await UnifiedDB.deleteIncomeSource(user.id, sourceId);
+  await bustPageCache(user.id);
 }
 
 // Transactions actions

@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { FieldLabel } from "@/components/ui/field-label";
 import { AppDialog } from "@/components/ui/app-dialog";
+import { formatPaymentMode, ACCOUNT_TYPE_OPTIONS } from "@/lib/account-labels";
 import {
   createTransaction,
   createAccount,
@@ -59,11 +60,13 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
     accounts,
     transactions,
     budgets,
+    budgetProgress,
     goals,
     groups,
     categories,
     incomeSources,
     reports: metrics,
+    netWorth,
   } = initialData;
 
   // Modal triggers
@@ -202,68 +205,71 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
         </div>
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Income Card */}
+      {/* Overview stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="panel-card p-5 space-y-1 sm:col-span-2 lg:col-span-1">
+          <span className="text-xs font-medium text-neutral-500">Net worth</span>
+          <p className="text-2xl font-bold font-mono">₹{netWorth.toLocaleString()}</p>
+          <p className="text-[10px] text-neutral-400">Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}</p>
+        </div>
+
         <div className="panel-card p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Total Income</span>
-            <p className="text-2xl font-bold font-mono">₹{metrics.totalIncome.toLocaleString()}</p>
+            <span className="text-xs font-medium text-neutral-500">Income</span>
+            <p className="text-xl font-bold font-mono text-emerald-600">₹{metrics.totalIncome.toLocaleString()}</p>
           </div>
           <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center">
-            <ArrowUpRight size={20} />
+            <ArrowUpRight size={18} />
           </div>
         </div>
 
-        {/* Expense Card */}
         <div className="panel-card p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Total Expenses</span>
-            <p className="text-2xl font-bold font-mono">₹{metrics.totalExpenses.toLocaleString()}</p>
+            <span className="text-xs font-medium text-neutral-500">Expenses</span>
+            <p className="text-xl font-bold font-mono text-rose-600">₹{metrics.totalExpenses.toLocaleString()}</p>
           </div>
           <div className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 flex items-center justify-center">
-            <ArrowDownRight size={20} />
+            <ArrowDownRight size={18} />
           </div>
         </div>
 
-        {/* Savings Card */}
         <div className="panel-card p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Net Savings</span>
-            <p className="text-2xl font-bold font-mono">₹{metrics.savings.toLocaleString()}</p>
+            <span className="text-xs font-medium text-neutral-500">Saved</span>
+            <p className="text-xl font-bold font-mono">₹{metrics.savings.toLocaleString()}</p>
           </div>
           <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-950/20 text-blue-600 flex items-center justify-center">
-            <TrendingUp size={20} />
+            <TrendingUp size={18} />
           </div>
         </div>
 
-        {/* Savings Rate Card */}
         <div className="panel-card p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Savings Rate</span>
-            <p className="text-2xl font-bold font-mono">{metrics.savingsRate}%</p>
+            <span className="text-xs font-medium text-neutral-500">Savings rate</span>
+            <p className="text-xl font-bold font-mono">{metrics.savingsRate}%</p>
           </div>
-          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 flex items-center justify-center">
-            <Percent size={18} />
+          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 flex items-center justify-center">
+            <Percent size={16} />
           </div>
         </div>
       </div>
 
-      {/* Accounts display bar */}
+      {/* Accounts */}
       <div className="space-y-3">
-        <h3 className="text-xs uppercase font-bold tracking-wider text-neutral-400">Your Accounts</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Your accounts</h3>
+          <span className="text-xs text-neutral-400">Payment method = account type</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {accounts.map((acc) => (
-            <div key={acc.id} className="panel-card p-4 flex flex-col justify-between h-24">
-              <span className="text-xs font-semibold text-neutral-500">{acc.name}</span>
-              <div className="flex items-baseline justify-between">
-                <span className="text-xl font-bold font-mono">
-                  ₹{acc.balance.toLocaleString()}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full border border-black/[0.04] dark:border-neutral-800 text-neutral-500 font-mono">
-                  {acc.type}
+            <div key={acc.id} className="panel-card p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-sm font-semibold truncate">{acc.name}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 shrink-0">
+                  {formatPaymentMode(acc.type)}
                 </span>
               </div>
+              <p className="text-xl font-bold font-mono">₹{acc.balance.toLocaleString()}</p>
             </div>
           ))}
         </div>
@@ -312,57 +318,80 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
                 No recent transactions.
               </div>
             ) : (
-              transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-none">
-                  <div>
-                    <p className="text-xs font-semibold">{tx.description}</p>
-                    <p className="text-[10px] text-neutral-400 font-mono mt-0.5">
-                      {new Date(tx.date).toLocaleDateString()} • {tx.scope}
+              transactions.map((tx) => {
+                const acc = accounts.find((a) => a.id === tx.accountId);
+                return (
+                <div key={tx.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-800 last:border-none">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{tx.description}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      {" · "}
+                      {formatPaymentMode(acc?.type)}
+                      {acc?.name ? ` · ${acc.name}` : ""}
                     </p>
                   </div>
                   <span
                     className={cn(
-                      "text-xs font-bold font-mono",
+                      "text-sm font-bold font-mono shrink-0",
                       tx.type === "INCOME" || tx.type === "REFUND"
                         ? "text-emerald-500"
                         : "text-neutral-900 dark:text-neutral-100"
                     )}
                   >
-                    {tx.type === "INCOME" || tx.type === "REFUND" ? "+" : "-"}
+                    {tx.type === "INCOME" || tx.type === "REFUND" ? "+" : "−"}
                     ₹{tx.amount.toLocaleString()}
                   </span>
                 </div>
-              ))
+              );
+              })
             )}
           </div>
         </div>
 
-        {/* Savings Goals Widgets */}
+        {/* Savings Goals */}
         <div className="panel-card p-5 space-y-4">
-          <h4 className="text-sm font-semibold">Financial Goals</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold">Savings goals</h4>
+            <Link href="/goals" className="text-xs text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200">
+              Manage
+            </Link>
+          </div>
+          <p className="text-[11px] text-neutral-500 -mt-2">Target = how much you want to save. Progress shows saved vs target.</p>
           <div className="space-y-4">
             {goals.length === 0 ? (
-              <div className="py-12 text-center text-xs text-neutral-400">
-                No active savings goals.
+              <div className="py-8 text-center text-xs text-neutral-400">
+                No goals yet. <Link href="/goals" className="underline">Create one</Link> with a target amount.
               </div>
             ) : (
               goals.map((g) => {
-                const percent = Math.min(Math.round((g.currentAmount / g.targetAmount) * 100), 100);
+                const percent = g.targetAmount > 0
+                  ? Math.min(Math.round((g.currentAmount / g.targetAmount) * 100), 100)
+                  : 0;
+                const remaining = Math.max(g.targetAmount - g.currentAmount, 0);
                 return (
-                  <div key={g.id} className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold">{g.name}</span>
-                      <span className="text-neutral-400 font-mono">{percent}%</span>
+                  <div key={g.id} className="space-y-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-900/30">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold truncate">{g.name}</span>
+                      <span className="text-xs font-mono text-neutral-500">{percent}%</span>
                     </div>
-                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-neutral-900 dark:bg-white h-1.5 rounded-full"
+                        className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all"
                         style={{ width: `${percent}%` }}
                       />
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-neutral-400 font-mono">
-                      <span>Saved: ₹{g.currentAmount.toLocaleString()}</span>
-                      <span>Target: ₹{g.targetAmount.toLocaleString()}</span>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-mono">
+                        <span className="text-emerald-600 font-semibold">₹{g.currentAmount.toLocaleString()}</span>
+                        <span className="text-neutral-400"> saved</span>
+                      </span>
+                      <span className="font-mono text-neutral-500">
+                        Target ₹{g.targetAmount.toLocaleString()}
+                        {remaining > 0 && (
+                          <span className="text-neutral-400"> · ₹{remaining.toLocaleString()} left</span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 );
@@ -371,6 +400,46 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
           </div>
         </div>
       </div>
+
+      {/* Budget targets */}
+      {budgetProgress && budgetProgress.length > 0 && (
+        <div className="panel-card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold">Budget targets</h4>
+            <Link href="/budgets" className="text-xs text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200">
+              View all
+            </Link>
+          </div>
+          <p className="text-[11px] text-neutral-500 -mt-2">Target = monthly spending limit you set. Bar shows how much you&apos;ve used.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {budgetProgress.slice(0, 4).map((b) => (
+              <div key={b.budget.id} className="p-3 rounded-lg border border-neutral-100 dark:border-neutral-800 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">{b.categoryName}</span>
+                  <span className={cn(
+                    "text-xs font-mono",
+                    b.percentage >= 100 ? "text-rose-500" : b.percentage >= 80 ? "text-amber-500" : "text-neutral-500"
+                  )}>
+                    {b.percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5">
+                  <div
+                    className={cn(
+                      "h-1.5 rounded-full",
+                      b.percentage >= 100 ? "bg-rose-500" : b.percentage >= 80 ? "bg-amber-500" : "bg-emerald-500"
+                    )}
+                    style={{ width: `${Math.min(b.percentage, 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-neutral-500 font-mono">
+                  ₹{b.spent.toLocaleString()} of ₹{Number(b.budget.amount).toLocaleString()} target
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <AppDialog open={showTxModal} onOpenChange={setShowTxModal} title="Add Transaction">
         <form onSubmit={handleTxSubmit} className="space-y-3">
@@ -401,38 +470,47 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel>Pay From Account</FieldLabel>
+            <FieldLabel>Pay from account</FieldLabel>
             <NativeSelect
               required
               value={txForm.accountId}
               onChange={(e) => setTxForm((prev) => ({ ...prev, accountId: e.target.value }))}
             >
-              <option value="" disabled className="text-neutral-500">Select Account</option>
+              <option value="" disabled>Select account</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name} (₹{a.balance})
+                  {a.name} · {formatPaymentMode(a.type)} (₹{a.balance})
                 </option>
               ))}
             </NativeSelect>
+            {txForm.accountId && (
+              <p className="text-[10px] text-neutral-500">
+                Payment method: {formatPaymentMode(accounts.find((a) => a.id === txForm.accountId)?.type)}
+              </p>
+            )}
           </div>
 
           {txForm.type === "TRANSFER" && (
             <div className="space-y-1.5">
-              <FieldLabel>Transfer To Account</FieldLabel>
-              <NativeSelect
-                required
-                value={txForm.transferToAccountId}
-                onChange={(e) => setTxForm((prev) => ({ ...prev, transferToAccountId: e.target.value }))}
-              >
-                <option value="" disabled className="text-neutral-500">Select Target Account</option>
-                {accounts
-                  .filter((a) => a.id !== txForm.accountId)
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-              </NativeSelect>
+              <FieldLabel>Transfer to</FieldLabel>
+              {accounts.filter((a) => a.id !== txForm.accountId).length === 0 ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">Create a second account to transfer between accounts.</p>
+              ) : (
+                <NativeSelect
+                  required
+                  value={txForm.transferToAccountId}
+                  onChange={(e) => setTxForm((prev) => ({ ...prev, transferToAccountId: e.target.value }))}
+                >
+                  <option value="">Choose destination</option>
+                  {accounts
+                    .filter((a) => a.id !== txForm.accountId)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} · {formatPaymentMode(a.type)}
+                      </option>
+                    ))}
+                </NativeSelect>
+              )}
             </div>
           )}
 
@@ -516,19 +594,16 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel>Account Type</FieldLabel>
+            <FieldLabel>Payment method / account type</FieldLabel>
             <NativeSelect
               value={accForm.type}
               onChange={(e) => setAccForm((prev) => ({ ...prev, type: e.target.value }))}
             >
-              <option value="CASH">Cash</option>
-              <option value="BANK_ACCOUNT">Bank Account</option>
-              <option value="CREDIT_CARD">Credit Card</option>
-              <option value="DEBIT_CARD">Debit Card</option>
-              <option value="UPI_WALLET">UPI Wallet</option>
-              <option value="PAYTM">Paytm</option>
-              <option value="PHONEPE">PhonePe</option>
-              <option value="GOOGLE_PAY">Google Pay</option>
+              {ACCOUNT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </NativeSelect>
           </div>
 

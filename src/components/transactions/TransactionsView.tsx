@@ -23,6 +23,7 @@ import { FieldLabel } from "@/components/ui/field-label";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { fieldInputClass } from "@/components/ui/app-styles";
+import { formatPaymentMode, ACCOUNT_TYPE_OPTIONS } from "@/lib/account-labels";
 import {
   createTransaction,
   updateTransaction,
@@ -308,7 +309,8 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                 <th className="p-4">Description</th>
                 <th className="p-4">Type</th>
                 <th className="p-4 hidden sm:table-cell">Account</th>
-                <th className="p-4 hidden md:table-cell">Category</th>
+                <th className="p-4 hidden md:table-cell">Payment</th>
+                <th className="p-4 hidden lg:table-cell">Category</th>
                 <th className="p-4 text-right">Amount</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
@@ -316,13 +318,13 @@ export default function TransactionsView({ initialData }: { initialData: Transac
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 text-xs">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center">
+                  <td colSpan={8} className="p-12 text-center">
                     <Loader2 className="w-6 h-6 animate-spin text-neutral-400 mx-auto" />
                   </td>
                 </tr>
               ) : paginatedTxs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-neutral-400">
+                  <td colSpan={8} className="p-8 text-center text-neutral-400">
                     No transactions found matching active filters.
                   </td>
                 </tr>
@@ -359,6 +361,11 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                       </td>
                       <td className="p-4 text-neutral-500 font-medium hidden sm:table-cell">{acc?.name || "—"}</td>
                       <td className="p-4 hidden md:table-cell">
+                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                          {formatPaymentMode(acc?.type)}
+                        </span>
+                      </td>
+                      <td className="p-4 hidden lg:table-cell">
                         {cat ? (
                           <div className="flex items-center gap-1.5">
                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
@@ -405,7 +412,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                 type="button"
                                 variant="unstyled"
                                 onClick={() => openEditModal(tx)}
-                                className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all"
+                                className="p-1.5 rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all"
                                 title="Edit transaction"
                               >
                                 <Pencil size={13} />
@@ -415,7 +422,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                 variant="unstyled"
                                 onClick={() => handleDelete(tx.id)}
                                 disabled={isDeleting}
-                                className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500 transition-all disabled:opacity-50"
+                                className="p-1.5 rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500 transition-all disabled:opacity-50"
                                 title="Delete transaction"
                               >
                                 {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
@@ -493,28 +500,51 @@ export default function TransactionsView({ initialData }: { initialData: Transac
 
           {!editingTx && (
             <div className="space-y-1.5">
-              <FieldLabel>Financial Account</FieldLabel>
+              <FieldLabel>Paid from (account)</FieldLabel>
               <NativeSelect
                 required
                 value={txForm.accountId}
                 onChange={(e) => setTxForm((prev) => ({ ...prev, accountId: e.target.value }))}
               >
-                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} (₹{a.balance.toLocaleString()})</option>)}
+                {accounts.length === 0 ? (
+                  <option value="">No accounts — create one first</option>
+                ) : (
+                  accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} · {formatPaymentMode(a.type)} (₹{a.balance.toLocaleString()})
+                    </option>
+                  ))
+                )}
               </NativeSelect>
+              {txForm.accountId && (
+                <p className="text-[10px] text-neutral-500">
+                  Payment method: {formatPaymentMode(accounts.find((a) => a.id === txForm.accountId)?.type)}
+                </p>
+              )}
             </div>
           )}
 
           {txForm.type === "TRANSFER" && !editingTx && (
             <div className="space-y-1.5">
-              <FieldLabel>Target Account</FieldLabel>
-              <NativeSelect
-                required
-                value={txForm.transferToAccountId}
-                onChange={(e) => setTxForm((prev) => ({ ...prev, transferToAccountId: e.target.value }))}
-              >
-                <option value="" disabled>Select Target Account</option>
-                {accounts.filter((a) => a.id !== txForm.accountId).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </NativeSelect>
+              <FieldLabel>Transfer to</FieldLabel>
+              {accounts.filter((a) => a.id !== txForm.accountId).length === 0 ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400 py-2">
+                  Add another account to transfer money between accounts.
+                </p>
+              ) : (
+                <NativeSelect
+                  required
+                  value={txForm.transferToAccountId}
+                  onChange={(e) => setTxForm((prev) => ({ ...prev, transferToAccountId: e.target.value }))}
+                >
+                  <option value="">Choose destination account</option>
+                  {accounts.filter((a) => a.id !== txForm.accountId).map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} · {formatPaymentMode(a.type)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              )}
             </div>
           )}
 

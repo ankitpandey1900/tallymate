@@ -281,6 +281,40 @@ export class UnifiedDB {
     return { id: cat.id, userId: cat.userId, name: cat.name, color: cat.color || "#9CA3AF" };
   }
 
+  static async updateCategory(
+    userId: string,
+    categoryId: string,
+    data: { name?: string; color?: string }
+  ): Promise<UnifiedCategory> {
+    const existing = await prisma.expenseCategory.findFirst({ where: { id: categoryId, userId } });
+    if (!existing) throw new Error("Category not found.");
+
+    const cat = await prisma.expenseCategory.update({
+      where: { id: categoryId },
+      data: {
+        ...(data.name !== undefined && { name: data.name.trim() }),
+        ...(data.color !== undefined && { color: data.color }),
+      },
+    });
+    return { id: cat.id, userId: cat.userId, name: cat.name, color: cat.color || "#9CA3AF" };
+  }
+
+  static async deleteCategory(userId: string, categoryId: string): Promise<void> {
+    const existing = await prisma.expenseCategory.findFirst({ where: { id: categoryId, userId } });
+    if (!existing) throw new Error("Category not found.");
+
+    const budgetCount = await prisma.budget.count({ where: { categoryId, userId } });
+    if (budgetCount > 0) {
+      throw new Error("This category is used in a budget. Delete or change that budget first.");
+    }
+
+    await prisma.transaction.updateMany({
+      where: { categoryId, userId },
+      data: { categoryId: null },
+    });
+    await prisma.expenseCategory.delete({ where: { id: categoryId } });
+  }
+
   static async getIncomeSources(userId: string): Promise<UnifiedIncomeSource[]> {
     const sources = await prisma.incomeSource.findMany({ where: { userId } });
     return sources.map((s) => ({
@@ -295,6 +329,32 @@ export class UnifiedDB {
       data: { userId, name },
     });
     return { id: src.id, userId: src.userId, name: src.name };
+  }
+
+  static async updateIncomeSource(
+    userId: string,
+    sourceId: string,
+    data: { name: string }
+  ): Promise<UnifiedIncomeSource> {
+    const existing = await prisma.incomeSource.findFirst({ where: { id: sourceId, userId } });
+    if (!existing) throw new Error("Income source not found.");
+
+    const src = await prisma.incomeSource.update({
+      where: { id: sourceId },
+      data: { name: data.name.trim() },
+    });
+    return { id: src.id, userId: src.userId, name: src.name };
+  }
+
+  static async deleteIncomeSource(userId: string, sourceId: string): Promise<void> {
+    const existing = await prisma.incomeSource.findFirst({ where: { id: sourceId, userId } });
+    if (!existing) throw new Error("Income source not found.");
+
+    await prisma.transaction.updateMany({
+      where: { incomeSourceId: sourceId, userId },
+      data: { incomeSourceId: null },
+    });
+    await prisma.incomeSource.delete({ where: { id: sourceId } });
   }
 
   static async getTransactions(
