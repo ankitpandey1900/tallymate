@@ -7,10 +7,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Tallymate - Smart Personal Finance & Bill Splitting App",
     description: "Take control of your money with Tallymate. The best app to track personal expenses, set smart monthly budgets, and split bills fairly with friends.",
-    url: "https://tallymate.app/",
+    url: "https://tallymate.alltracker.online/",
   },
   alternates: {
-    canonical: "https://tallymate.app/",
+    canonical: "https://tallymate.alltracker.online/",
   },
 };
 import Link from "next/link";

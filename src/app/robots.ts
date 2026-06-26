@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/dashboard/', '/api/'],
     },
-    sitemap: 'https://tallymate.app/sitemap.xml',
+    sitemap: 'https://tallymate.alltracker.online/sitemap.xml',
   };
 }

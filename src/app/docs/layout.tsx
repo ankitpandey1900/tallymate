@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Help Center & Documentation | Tallymate",
     description: "Learn how to use Tallymate: track expenses, split bills with groups, set budgets, create savings goals, and manage your complete financial life.",
-    url: "https://tallymate.app/docs",
+    url: "https://tallymate.alltracker.online/docs",
   },
   alternates: {
-    canonical: "https://tallymate.app/docs",
+    canonical: "https://tallymate.alltracker.online/docs",
   },
 };
 

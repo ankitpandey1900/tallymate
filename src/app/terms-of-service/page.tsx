@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Terms of Service",
   description: "Read the Tallymate Terms of Service. Learn about your rights and responsibilities when using our platform.",
   alternates: {
-    canonical: "https://tallymate.app/terms-of-service",
+    canonical: "https://tallymate.alltracker.online/terms-of-service",
   },
 };
 import Link from "next/link";

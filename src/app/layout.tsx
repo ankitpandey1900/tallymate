@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tallymate.app"),
+  metadataBase: new URL("https://tallymate.alltracker.online"),
   title: {
     default: "Tallymate - Personal Finance & Bill Splitting",
     template: "%s | Tallymate",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://tallymate.app",
+    url: "https://tallymate.alltracker.online",
     title: "Tallymate - Master your money. Together.",
     description: "Track spending, split bills with friends, and stay on budget — all in one simple app.",
     siteName: "Tallymate",

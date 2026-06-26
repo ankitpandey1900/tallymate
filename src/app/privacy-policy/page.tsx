@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "Read the Tallymate Privacy Policy. Learn how we handle your financial data securely and privately.",
   alternates: {
-    canonical: "https://tallymate.app/privacy-policy",
+    canonical: "https://tallymate.alltracker.online/privacy-policy",
   },
 };
 import Link from "next/link";

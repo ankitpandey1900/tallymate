@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact Us | Tallymate",
     description: "Get in touch with the Tallymate team for support, feature requests, or bug reports.",
-    url: "https://tallymate.app/contact",
+    url: "https://tallymate.alltracker.online/contact",
   },
   alternates: {
-    canonical: "https://tallymate.app/contact",
+    canonical: "https://tallymate.alltracker.online/contact",
   },
 };
 
