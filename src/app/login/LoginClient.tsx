@@ -247,7 +247,7 @@ export default function LoginClient({ googleEnabled }: { googleEnabled: boolean 
                     <Input
                       type="text"
                       required
-                      placeholder="Jane Doe"
+                      placeholder="Sachin Yadav"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="h-10 pl-9 bg-transparent border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
