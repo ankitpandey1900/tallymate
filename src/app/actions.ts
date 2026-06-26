@@ -506,6 +506,32 @@ export async function createAccount(data: { name: string; type: string; balance:
   return acc;
 }
 
+export async function updateAccount(accountId: string, data: { name: string; type: string; balance: number }) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "updateAccount", 40, 60);
+  const user = await getCurrentUser();
+  const acc = await UnifiedDB.updateAccount(user.id, accountId, data);
+  
+  await UnifiedDB.createNotification(
+    user.id,
+    "Financial Account Updated",
+    `Account "${data.name}" has been updated.`,
+    "GOAL_PROGRESS"
+  );
+
+  await bustPageCache(user.id);
+  return acc;
+}
+
+export async function deleteAccount(accountId: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "deleteAccount", 20, 60);
+  const user = await getCurrentUser();
+  await UnifiedDB.deleteAccount(user.id, accountId);
+  
+  await bustPageCache(user.id);
+}
+
 // Categories actions
 export async function getCategories() {
   const user = await getCurrentUser();

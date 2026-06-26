@@ -17,6 +17,8 @@ import {
   TrendingUp,
   Loader2,
   FileText,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
@@ -29,6 +31,8 @@ import { formatPaymentMode, ACCOUNT_TYPE_OPTIONS } from "@/lib/account-labels";
 import {
   createTransaction,
   createAccount,
+  updateAccount,
+  deleteAccount,
   type getDashboardData,
 } from "@/app/actions";
 
@@ -93,6 +97,8 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -162,25 +168,74 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
 
     setIsSubmitting(true);
     try {
-      await createAccount({
-        name: accForm.name,
-        type: accForm.type,
-        balance: Number(accForm.balance),
-      });
+      if (editingAccountId) {
+        await updateAccount(editingAccountId, {
+          name: accForm.name,
+          type: accForm.type,
+          balance: Number(accForm.balance),
+        });
+        toast.success("Account updated successfully");
+      } else {
+        await createAccount({
+          name: accForm.name,
+          type: accForm.type,
+          balance: Number(accForm.balance),
+        });
+        toast.success("Account created successfully");
+      }
 
       setShowAccModal(false);
+      setEditingAccountId(null);
       setAccForm({
         name: "",
         type: "BANK_ACCOUNT",
         balance: "",
       });
-      toast.success("Account created successfully");
       router.refresh();
     } catch (err) {
-      toastError(err, "Failed to create account");
+      toastError(err, editingAccountId ? "Failed to update account" : "Failed to create account");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!editingAccountId) return;
+    setIsSubmitting(true);
+    try {
+      await deleteAccount(editingAccountId);
+      setShowAccModal(false);
+      setEditingAccountId(null);
+      setIsConfirmingDelete(false);
+      toast.success("Account deleted successfully");
+      router.refresh();
+    } catch (err) {
+      toastError(err, "Failed to delete account");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditAccount = (acc: any) => {
+    setEditingAccountId(acc.id);
+    setAccForm({
+      name: acc.name,
+      type: acc.type,
+      balance: acc.balance.toString(),
+    });
+    setIsConfirmingDelete(false);
+    setShowAccModal(true);
+  };
+
+  const openNewAccount = () => {
+    setEditingAccountId(null);
+    setAccForm({
+      name: "",
+      type: "BANK_ACCOUNT",
+      balance: "",
+    });
+    setIsConfirmingDelete(false);
+    setShowAccModal(true);
   };
 
   const isDark =
@@ -195,7 +250,7 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
           <p className="text-sm text-neutral-500">Your monthly activity snapshot.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline-app" onClick={() => setShowAccModal(true)}>
+          <Button type="button" variant="outline-app" onClick={openNewAccount}>
             <Wallet size={14} />
             New Account
           </Button>
@@ -267,10 +322,19 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
               </div>
               <div className="relative z-10 space-y-8">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 truncate">{acc.name}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/60 dark:bg-black/40 text-neutral-500 backdrop-blur-sm shrink-0 border border-black/5 dark:border-white/5 shadow-sm">
-                    {formatPaymentMode(acc.type)}
-                  </span>
+                  <span className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 truncate pr-6">{acc.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/60 dark:bg-black/40 text-neutral-500 backdrop-blur-sm shrink-0 border border-black/5 dark:border-white/5 shadow-sm">
+                      {formatPaymentMode(acc.type)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openEditAccount(acc)}
+                      className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-colors"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Balance</p>
@@ -629,7 +693,7 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
         </form>
       </AppDialog>
 
-      <AppDialog open={showAccModal} onOpenChange={setShowAccModal} title="Add Account">
+      <AppDialog open={showAccModal} onOpenChange={setShowAccModal} title={editingAccountId ? "Edit Account" : "Add Account"}>
         <form onSubmit={handleAccSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <FieldLabel>Account Name</FieldLabel>
@@ -657,7 +721,7 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel>Starting Balance (INR)</FieldLabel>
+            <FieldLabel>{editingAccountId ? "Update Balance (INR)" : "Starting Balance (INR)"}</FieldLabel>
             <Input
               type="number"
               required
@@ -668,14 +732,36 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4">
-            <Button type="button" variant="cancel" onClick={() => setShowAccModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 size={12} className="animate-spin" />}
-              Create
-            </Button>
+          <div className="flex items-center justify-between pt-4">
+            <div>
+              {editingAccountId && (
+                isConfirmingDelete ? (
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="destructive-sm" onClick={handleDeleteAccount} disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 size={12} className="animate-spin" />}
+                      Delete?
+                    </Button>
+                    <Button type="button" variant="unstyled" onClick={() => setIsConfirmingDelete(false)} className="text-xs px-2">
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button type="button" variant="unstyled" onClick={() => setIsConfirmingDelete(true)} className="text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 text-sm font-medium flex items-center gap-1 p-2 -ml-2">
+                    <Trash2 size={14} />
+                    Delete Account
+                  </Button>
+                )
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="cancel" onClick={() => setShowAccModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 size={12} className="animate-spin" />}
+                {editingAccountId ? "Save Changes" : "Create"}
+              </Button>
+            </div>
           </div>
         </form>
       </AppDialog>

@@ -264,6 +264,31 @@ export class UnifiedDB {
     };
   }
 
+  static async updateAccount(userId: string, accountId: string, data: { name: string; type: string; balance: number }): Promise<UnifiedAccount> {
+    const acc = await prisma.financialAccount.update({
+      where: { id: accountId, userId },
+      data: {
+        name: data.name,
+        type: data.type as "CASH" | "BANK_ACCOUNT" | "CREDIT_CARD" | "DEBIT_CARD" | "UPI_WALLET" | "PAYTM" | "PHONEPE" | "GOOGLE_PAY" | "CUSTOM",
+        balance: data.balance,
+      },
+    });
+    return {
+      id: acc.id,
+      userId: acc.userId,
+      name: acc.name,
+      type: acc.type,
+      balance: Number(acc.balance),
+      currency: acc.currency,
+    };
+  }
+
+  static async deleteAccount(userId: string, accountId: string): Promise<void> {
+    await prisma.financialAccount.delete({
+      where: { id: accountId, userId },
+    });
+  }
+
   static async getCategories(userId: string): Promise<UnifiedCategory[]> {
     const categories = await prisma.expenseCategory.findMany({ where: { userId } });
     return categories.map((c) => ({
