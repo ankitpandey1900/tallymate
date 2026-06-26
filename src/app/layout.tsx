@@ -81,6 +81,8 @@ const themeScript = `
 
 import NextTopLoader from 'nextjs-toploader';
 
+import { CSPostHogProvider } from "@/components/providers/PostHogProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -97,8 +99,10 @@ export default function RootLayout({
           {themeScript}
         </Script>
         <NextTopLoader color="#10B981" showSpinner={false} height={3} shadow="0 0 10px #10B981,0 0 5px #10B981" />
-        {children}
-        <Toaster />
+        <CSPostHogProvider>
+          {children}
+          <Toaster />
+        </CSPostHogProvider>
       </body>
     </html>
   );
