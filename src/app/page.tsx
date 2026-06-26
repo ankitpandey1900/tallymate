@@ -1,4 +1,18 @@
 import React from "react";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Tallymate - Smart Personal Finance & Bill Splitting App",
+  description: "Take control of your money with Tallymate. The best app to track personal expenses, set smart monthly budgets, and split bills fairly with friends.",
+  openGraph: {
+    title: "Tallymate - Smart Personal Finance & Bill Splitting App",
+    description: "Take control of your money with Tallymate. The best app to track personal expenses, set smart monthly budgets, and split bills fairly with friends.",
+    url: "https://tallymate.app/",
+  },
+  alternates: {
+    canonical: "https://tallymate.app/",
+  },
+};
 import Link from "next/link";
 import { ArrowRight, Shield, Sparkles, TrendingUp, Users, CheckCircle2, Target, PieChart, Bell, BookOpen, ChevronDown } from "lucide-react";
 import LandingThemeToggle from "@/components/LandingThemeToggle";

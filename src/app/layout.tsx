@@ -15,11 +15,53 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tallymate",
-  description: "Unified Personal Finance Tracker & Bill Splitting PWA",
+  metadataBase: new URL("https://tallymate.app"),
+  title: {
+    default: "Tallymate - Personal Finance & Bill Splitting",
+    template: "%s | Tallymate",
+  },
+  description: "Track your personal expenses, set monthly budgets, and split bills with friends seamlessly in one unified app.",
+  keywords: ["personal finance", "expense tracker", "bill splitting", "budgeting app", "split expenses", "Splitwise alternative", "finance app India"],
+  authors: [{ name: "Ankit Pandey" }],
+  creator: "Ankit Pandey",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://tallymate.app",
+    title: "Tallymate - Master your money. Together.",
+    description: "Track spending, split bills with friends, and stay on budget — all in one simple app.",
+    siteName: "Tallymate",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Tallymate Dashboard Preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tallymate - Master your money. Together.",
+    description: "Track spending, split bills with friends, and stay on budget — all in one simple app.",
+    images: ["/og-image.png"],
+    creator: "@AnkitPande5641",
+  },
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
+    apple: "/apple-touch-icon.png",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 

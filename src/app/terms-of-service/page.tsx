@@ -1,4 +1,13 @@
 import React from "react";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "Read the Tallymate Terms of Service. Learn about your rights and responsibilities when using our platform.",
+  alternates: {
+    canonical: "https://tallymate.app/terms-of-service",
+  },
+};
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import TallymateLogo from "@/components/TallymateLogo";
