@@ -78,6 +78,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
   const [leavingGroupId, setLeavingGroupId] = useState<string | null>(null);
   const [confirmLeaveGroupId, setConfirmLeaveGroupId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Create Group Form
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -150,8 +151,9 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newGroupForm.name) return;
+    if (!newGroupForm.name || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       await createGroup({
         name: newGroupForm.name,
@@ -164,13 +166,16 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       router.refresh();
     } catch (err) {
       toastError(err, "Failed to create group");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleJoinGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteCode) return;
+    if (!inviteCode || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       await joinGroup(inviteCode);
       setShowJoinGroup(false);
@@ -179,6 +184,8 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       router.refresh();
     } catch (err: unknown) {
       toastError(err, "Failed to join group");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -246,12 +253,13 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!groupDetails || !expenseForm.amount || !expenseForm.description) return;
+    if (!groupDetails || !expenseForm.amount || !expenseForm.description || isSubmitting) return;
     if (!expenseForm.paidByUserId) {
       toast.error("Please select who paid for this expense.");
       return;
     }
 
+    setIsSubmitting(true);
     const totalAmount = Number(expenseForm.amount);
     const membersCount = groupDetails.members.length;
 
@@ -286,6 +294,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     const sumSplits = splits.reduce((sum, s) => sum + s.amount, 0);
     if (Math.abs(sumSplits - totalAmount) > 2) {
       toast.error(`Split total (₹${sumSplits}) must match expense amount (₹${totalAmount})`);
+      setIsSubmitting(false);
       return;
     }
 
@@ -309,13 +318,16 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       loadGroupDetails(groupDetails.group.id);
     } catch (err) {
       toastError(err, "Failed to add group expense");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!groupDetails || !expenseForm.amount || !expenseForm.description || !editingExpenseId) return;
+    if (!groupDetails || !expenseForm.amount || !expenseForm.description || !editingExpenseId || isSubmitting) return;
 
+    setIsSubmitting(true);
     const totalAmount = Number(expenseForm.amount);
     const membersCount = groupDetails.members.length;
 
@@ -348,6 +360,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     const sumSplits = splits.reduce((sum, s) => sum + s.amount, 0);
     if (Math.abs(sumSplits - totalAmount) > 2) {
       toast.error(`Split total (₹${sumSplits}) must match expense amount (₹${totalAmount})`);
+      setIsSubmitting(false);
       return;
     }
 
@@ -371,6 +384,8 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       loadGroupDetails(groupDetails.group.id);
     } catch (err) {
       toastError(err, "Failed to update group expense");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -388,8 +403,9 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
 
   const handleSettleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!groupDetails || !settlementForm.payerId || !settlementForm.receiverId || !settlementForm.amount) return;
+    if (!groupDetails || !settlementForm.payerId || !settlementForm.receiverId || !settlementForm.amount || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       await createSettlement(groupDetails.group.id, {
         payerId: settlementForm.payerId,
@@ -413,6 +429,8 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       toast.success("Payment recorded");
     } catch (err) {
       toastError(err, "Failed to record payment");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1000,7 +1018,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             <Button type="button" variant="cancel" onClick={() => setShowCreateGroup(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="submit">
+            <Button type="submit" variant="submit" disabled={isSubmitting}>
               Create Group
             </Button>
           </div>
@@ -1026,7 +1044,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             <Button type="button" variant="cancel" onClick={() => setShowJoinGroup(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="submit">
+            <Button type="submit" variant="submit" disabled={isSubmitting}>
               Join Group
             </Button>
           </div>
@@ -1169,7 +1187,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <Button type="button" variant="cancel" onClick={() => setShowAddExpense(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="submit">
+              <Button type="submit" variant="submit" disabled={isSubmitting}>
                 Save Expense
               </Button>
             </div>
@@ -1298,7 +1316,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <Button type="button" variant="cancel" onClick={() => setShowEditExpense(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="submit">
+              <Button type="submit" variant="submit" disabled={isSubmitting}>
                 Update Expense
               </Button>
             </div>

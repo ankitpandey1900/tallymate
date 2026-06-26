@@ -26,6 +26,7 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
   const [showAddBudget, setShowAddBudget] = useState(false);
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
   const [confirmDeleteBudgetId, setConfirmDeleteBudgetId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     categoryId: "",
     groupId: "",
@@ -46,8 +47,9 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.amount) return;
+    if (!form.amount || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       await createBudget({
         categoryId: form.categoryId || null,
@@ -72,6 +74,8 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
       router.refresh();
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -326,8 +330,8 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
             <Button type="button" variant="cancel" onClick={() => setShowAddBudget(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="submit">
-              Create
+            <Button type="submit" variant="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create"}
             </Button>
           </div>
         </form>
