@@ -66,6 +66,9 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
 }
 
 model Verification {
@@ -100,6 +103,8 @@ model FinancialAccount {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
+
+  @@index([userId])
 }
 
 model IncomeSource {
@@ -109,6 +114,8 @@ model IncomeSource {
   name         String        // 'Salary', 'Freelancing', or custom
   createdAt    DateTime      @default(now())
   transactions Transaction[]
+
+  @@index([userId])
 }
 
 enum TransactionType {
@@ -175,6 +182,8 @@ model ExpenseCategory {
   createdAt    DateTime      @default(now())
   transactions Transaction[]
   budgets      Budget[]
+
+  @@index([userId])
 }
 
 model Budget {
@@ -192,6 +201,9 @@ model Budget {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   alerts      BudgetAlert[]
+
+  @@index([userId])
+  @@index([groupId])
 }
 
 model FinancialGoal {
@@ -204,6 +216,8 @@ model FinancialGoal {
   deadline      DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 enum GroupType {

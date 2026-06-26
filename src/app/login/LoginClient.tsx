@@ -159,134 +159,154 @@ export default function LoginClient({ googleEnabled }: { googleEnabled: boolean 
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafafa] dark:bg-[#09090b] text-[#09090b] dark:text-[#fafafa] transition-colors duration-200 p-4">
-      <div className="w-full max-w-[400px] space-y-6">
-        <div className="flex flex-col items-center text-center space-y-2">
-          <TallymateLogo size={40} className="text-neutral-900 dark:text-white" />
-          <h2 className="text-xl font-bold tracking-tight">Tallymate</h2>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            Track spending, split bills, and stay on budget — together.
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-[#fafafa] dark:bg-[#000000] text-[#09090b] dark:text-[#fafafa] selection:bg-emerald-500/30 p-4 relative overflow-hidden">
+      {/* Extremely subtle professional grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+
+      <div className="w-full max-w-[380px] space-y-8 relative z-10">
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="p-3 bg-white dark:bg-[#111] rounded-2xl shadow-sm border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center">
+            <TallymateLogo size={32} className="text-neutral-900 dark:text-white" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+              {activeTab === "signin" ? "Welcome back" : "Create an account"}
+            </h2>
+            <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
+              {activeTab === "signin" 
+                ? "Enter your details to access your dashboard." 
+                : "Track spending and stay on budget — together."}
+            </p>
+          </div>
         </div>
 
-        <div className="flex p-1 bg-neutral-100 dark:bg-neutral-900 rounded-lg">
-          <Button
-            type="button"
-            variant={activeTab === "signin" ? "auth-tab-active" : "auth-tab-inactive"}
-            onClick={() => {
-              setActiveTab("signin");
-              setError(null);
-            }}
-          >
-            Sign In
-          </Button>
-          <Button
-            type="button"
-            variant={activeTab === "signup" ? "auth-tab-active" : "auth-tab-inactive"}
-            onClick={() => {
-              setActiveTab("signup");
-              setError(null);
-            }}
-          >
-            Sign Up
-          </Button>
-        </div>
+        <div className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800/80 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
+          <div className="flex p-1 bg-neutral-50/50 dark:bg-neutral-900/20 border-b border-neutral-100 dark:border-neutral-800/50">
+            <button
+              type="button"
+              className={`flex-1 text-[13px] font-medium py-2 rounded-md transition-all ${
+                activeTab === "signin" 
+                  ? "bg-white dark:bg-[#1a1a1a] text-neutral-900 dark:text-white shadow-sm border border-neutral-200/50 dark:border-neutral-800" 
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+              onClick={() => { setActiveTab("signin"); setError(null); }}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`flex-1 text-[13px] font-medium py-2 rounded-md transition-all ${
+                activeTab === "signup" 
+                  ? "bg-white dark:bg-[#1a1a1a] text-neutral-900 dark:text-white shadow-sm border border-neutral-200/50 dark:border-neutral-800" 
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+              onClick={() => { setActiveTab("signup"); setError(null); }}
+            >
+              Sign Up
+            </button>
+          </div>
 
-        <div className="panel-card p-6 bg-white dark:bg-[#18181b] border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-4">
-          {error && (
-            <div className="p-3 text-xs bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-md border border-rose-100 dark:border-rose-900/30">
-              {error}
-            </div>
-          )}
-
-          {googleEnabled && (
-            <>
-              <Button
-                type="button"
-                variant="outline-app"
-                disabled={loading}
-                onClick={handleGoogleSignIn}
-                className="w-full gap-2 py-2.5 font-semibold"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
-                Continue with Google
-              </Button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-neutral-200 dark:border-neutral-800" />
-                </div>
-                <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
-                  <span className="bg-white dark:bg-[#18181b] px-2 text-neutral-400">or use email</span>
-                </div>
-              </div>
-            </>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {activeTab === "signup" && (
-              <div className="space-y-1">
-                <FieldLabel className="tracking-wider">Full Name</FieldLabel>
-                <div className="relative">
-                  <User className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                  <Input
-                    type="text"
-                    required
-                    placeholder="Your name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={loginInputClass}
-                  />
-                </div>
+          <div className="p-6 space-y-5">
+            {error && (
+              <div className="p-3 text-[13px] font-medium bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-900/30 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                {error}
               </div>
             )}
 
-            <div className="space-y-1">
-              <FieldLabel className="tracking-wider">Email Address</FieldLabel>
-              <div className="relative">
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                <Input
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={loginInputClass}
-                />
-              </div>
-            </div>
+            {googleEnabled && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline-app"
+                  disabled={loading}
+                  onClick={handleGoogleSignIn}
+                  className="w-full h-10 gap-2 font-medium text-[14px] bg-white dark:bg-[#111] hover:bg-neutral-50 dark:hover:bg-[#161616] transition-colors border-neutral-200 dark:border-neutral-800 rounded-lg"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : <GoogleIcon />}
+                  Continue with Google
+                </Button>
+                
+                <div className="relative py-2 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-neutral-100 dark:border-neutral-800/80" />
+                  </div>
+                  <span className="relative bg-white dark:bg-[#0a0a0a] px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+                    Or continue with email
+                  </span>
+                </div>
+              </>
+            )}
 
-            <div className="space-y-1">
-              <FieldLabel className="tracking-wider">Password</FieldLabel>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                <Input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={loginInputClass}
-                />
-              </div>
-            </div>
-
-            <Button type="submit" variant="auth-submit" disabled={loading}>
-              {loading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : activeTab === "signin" ? (
-                <>
-                  Sign In
-                  <ArrowRight size={14} />
-                </>
-              ) : (
-                <>
-                  Create Account
-                  <ArrowRight size={14} />
-                </>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {activeTab === "signup" && (
+                <div className="space-y-1.5">
+                  <FieldLabel className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">Full Name</FieldLabel>
+                  <div className="relative group">
+                    <User className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400 group-focus-within:text-neutral-600 dark:group-focus-within:text-neutral-300 transition-colors" />
+                    <Input
+                      type="text"
+                      required
+                      placeholder="Jane Doe"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-10 pl-9 bg-transparent border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
+                    />
+                  </div>
+                </div>
               )}
-            </Button>
-          </form>
+
+              <div className="space-y-1.5">
+                <FieldLabel className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">Email Address</FieldLabel>
+                <div className="relative group">
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400 group-focus-within:text-neutral-600 dark:group-focus-within:text-neutral-300 transition-colors" />
+                  <Input
+                    type="email"
+                    required
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-10 pl-9 bg-transparent border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <FieldLabel className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">Password</FieldLabel>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400 group-focus-within:text-neutral-600 dark:group-focus-within:text-neutral-300 transition-colors" />
+                  <Input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-10 pl-9 bg-transparent border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                variant="cta"
+                disabled={loading}
+                className="w-full h-10 mt-2 font-medium text-[14px] bg-neutral-900 hover:bg-neutral-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-neutral-950 transition-colors rounded-lg shadow-sm"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    {activeTab === "signin" ? "Sign In" : "Create Account"}
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
+        <p className="text-center text-[11px] text-neutral-400 dark:text-neutral-500">
+          By continuing, you agree to our Terms of Service and Privacy Policy.
+        </p>
       </div>
     </div>
   );

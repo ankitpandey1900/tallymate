@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Tag, Landmark, Plus, Check, Shield, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { User, Tag, Landmark, Plus, Check, Shield, Pencil, Trash2, X, Loader2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
+import { signOut } from "@/lib/auth-client";
 import {
   createCategory,
   updateCategory,
@@ -163,6 +164,20 @@ export default function SettingsManager({ initialData }: { initialData: Settings
       toastError(err, "Failed to delete income source");
     } finally {
       setSavingSourceId(null);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/login");
+          }
+        }
+      });
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -488,7 +503,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
               <div className="relative pt-20 px-6 pb-8 space-y-8">
                 {currentUser ? (
                   <>
-                    <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5">
                       <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111113] bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 shadow-xl flex items-center justify-center shrink-0 z-10 text-3xl font-bold text-neutral-400 dark:text-neutral-500 overflow-hidden relative">
                         {currentUser.image ? (
                           <img src={currentUser.image} alt={currentUser.name || "Profile"} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -496,13 +511,24 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                           currentUser.name ? currentUser.name.charAt(0).toUpperCase() : (currentUser.email?.charAt(0).toUpperCase() || "?")
                         )}
                       </div>
-                      <div className="text-center sm:text-left space-y-1 pb-2">
+                      <div className="text-center sm:text-left space-y-1 pb-2 flex-1">
                         <h3 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
                           {currentUser.name || "User"}
                         </h3>
                         <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
                           {currentUser.email}
                         </p>
+                      </div>
+                      <div className="pt-2 sm:pt-0">
+                        <Button 
+                          type="button" 
+                          variant="outline-app" 
+                          onClick={handleLogout}
+                          className="h-9 gap-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/50"
+                        >
+                          <LogOut size={14} />
+                          Log out
+                        </Button>
                       </div>
                     </div>
 
@@ -521,9 +547,9 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-[13px] font-medium border border-indigo-100 dark:border-indigo-500/20">
+                    <div className="flex items-center gap-2 p-4 bg-neutral-50 dark:bg-neutral-900/50 text-neutral-600 dark:text-neutral-400 rounded-lg text-[13px] font-medium border border-neutral-100 dark:border-neutral-800">
                       <Shield size={16} className="shrink-0" />
-                      <span>Password and Google sign-in methods are managed securely on the main login screen.</span>
+                      <span>Security settings and sign-in methods are managed securely on the main login screen.</span>
                     </div>
                   </>
                 ) : (
