@@ -1008,6 +1008,12 @@ export async function markNotificationAsRead(id: string) {
   return await UnifiedDB.markNotificationRead(id);
 }
 
+export async function clearAllNotifications() {
+  const user = await getCurrentUser();
+  await UnifiedDB.clearAllNotifications(user.id);
+  await invalidateUserPageCache(user.id);
+}
+
 // Reports & Analytics actions
 export async function getReports(timeframe: "weekly" | "monthly" | "quarterly" | "yearly") {
   const user = await getCurrentUser();

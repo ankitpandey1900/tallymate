@@ -252,7 +252,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
               <div className="panel-card p-5 space-y-4">
                 <h3 className="text-sm font-semibold">Your categories</h3>
                 <p className="text-xs text-neutral-500">Tap edit to rename or change color. Delete removes the category from future use.</p>
-                <div className="space-y-2">
+                <div className="flex flex-wrap gap-3">
                   {categories.map((c) => {
                     const isEditing = editingCategoryId === c.id;
                     const isConfirmingDelete = confirmDeleteCategoryId === c.id;
@@ -260,19 +260,19 @@ export default function SettingsManager({ initialData }: { initialData: Settings
 
                     if (isEditing) {
                       return (
-                        <div key={c.id} className="p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 space-y-3">
+                        <div key={c.id} className="p-3 w-full sm:w-auto rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-3 bg-neutral-50 dark:bg-neutral-800/50">
                           <Input
                             value={editCatName}
                             onChange={(e) => setEditCatName(e.target.value)}
-                            className="text-sm"
+                            className="text-sm max-w-[200px]"
                           />
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap max-w-[200px]">
                             {colorPresets.map((color) => (
                               <button
                                 key={color}
                                 type="button"
                                 onClick={() => setEditCatColor(color)}
-                                className="w-6 h-6 rounded-full border border-black/10"
+                                className="w-5 h-5 rounded-full border border-black/10 transition-transform hover:scale-110"
                                 style={{ backgroundColor: color }}
                               />
                             ))}
@@ -280,7 +280,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                               type="color"
                               value={editCatColor}
                               onChange={(e) => setEditCatColor(e.target.value)}
-                              className="w-6 h-6 rounded cursor-pointer"
+                              className="w-5 h-5 rounded cursor-pointer p-0 border-none bg-transparent"
                             />
                           </div>
                           <div className="flex gap-2">
@@ -289,7 +289,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                               variant="submit"
                               onClick={() => handleSaveCategory(c.id)}
                               disabled={isBusy}
-                              className="text-xs py-1.5"
+                              className="text-[11px] h-7 px-3"
                             >
                               {isBusy ? <Loader2 size={12} className="animate-spin" /> : "Save"}
                             </Button>
@@ -297,7 +297,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                               type="button"
                               variant="cancel"
                               onClick={() => setEditingCategoryId(null)}
-                              className="text-xs py-1.5"
+                              className="text-[11px] h-7 px-3"
                             >
                               Cancel
                             </Button>
@@ -309,13 +309,13 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                     return (
                       <div
                         key={c.id}
-                        className="flex items-center justify-between gap-2 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800"
+                        className="group flex items-center gap-3 pl-3 pr-1 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#151518] shadow-sm shrink-0"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-                          <span className="text-sm font-medium truncate">{c.name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                          <span className="text-[13px] font-medium truncate">{c.name}</span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-neutral-100 dark:bg-neutral-800 rounded-full px-1">
                           {isConfirmingDelete ? (
                             <>
                               <Button
@@ -323,6 +323,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                                 variant="destructive-sm"
                                 onClick={() => handleDeleteCategory(c.id)}
                                 disabled={isBusy}
+                                className="h-6 text-[10px] px-2 rounded-full"
                               >
                                 {isBusy ? <Loader2 size={11} className="animate-spin" /> : "Delete?"}
                               </Button>
@@ -330,7 +331,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                                 type="button"
                                 variant="unstyled"
                                 onClick={() => setConfirmDeleteCategoryId(null)}
-                                className="p-1.5 text-xs"
+                                className="px-1.5 text-[10px] hover:text-neutral-900 dark:hover:text-white"
                               >
                                 No
                               </Button>
@@ -341,20 +342,19 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                                 type="button"
                                 variant="unstyled"
                                 onClick={() => startEditCategory(c)}
-                                className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+                                className="p-1 rounded-full hover:text-neutral-900 dark:hover:text-white text-neutral-500 transition-colors"
                                 title="Edit category"
                               >
-                                <Pencil size={13} />
+                                <Pencil size={11} />
                               </Button>
                               <Button
                                 type="button"
                                 variant="unstyled"
-                                onClick={() => handleDeleteCategory(c.id)}
-                                disabled={isBusy}
-                                className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500"
+                                onClick={() => setConfirmDeleteCategoryId(c.id)}
+                                className="p-1 rounded-full hover:text-rose-600 text-neutral-500 transition-colors"
                                 title="Delete category"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={11} />
                               </Button>
                             </>
                           )}
@@ -482,34 +482,56 @@ export default function SettingsManager({ initialData }: { initialData: Settings
           )}
 
           {activeTab === "profile" && (
-            <div className="panel-card p-6 space-y-6">
-              <div className="space-y-1 pb-4 border-b border-neutral-100 dark:border-neutral-800">
-                <h3 className="text-base font-semibold tracking-tight">Your profile</h3>
-                <p className="text-xs text-neutral-500">Account details from sign-in.</p>
-              </div>
+            <div className="panel-card relative overflow-hidden bg-white dark:bg-[#111113]">
+              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-90 dark:opacity-40" />
+              
+              <div className="relative pt-20 px-6 pb-8 space-y-8">
+                {currentUser ? (
+                  <>
+                    <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5">
+                      <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111113] bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 shadow-xl flex items-center justify-center shrink-0 z-10 text-3xl font-bold text-neutral-400 dark:text-neutral-500 overflow-hidden relative">
+                        {currentUser.image ? (
+                          <img src={currentUser.image} alt={currentUser.name || "Profile"} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          currentUser.name ? currentUser.name.charAt(0).toUpperCase() : (currentUser.email?.charAt(0).toUpperCase() || "?")
+                        )}
+                      </div>
+                      <div className="text-center sm:text-left space-y-1 pb-2">
+                        <h3 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                          {currentUser.name || "User"}
+                        </h3>
+                        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                          {currentUser.email}
+                        </p>
+                      </div>
+                    </div>
 
-              {currentUser ? (
-                <div className="space-y-5 max-w-md">
-                  <div className="space-y-1.5">
-                    <FieldLabel>Email</FieldLabel>
-                    <div className="px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-900 border border-black/[0.04] dark:border-neutral-800 rounded-md">
-                      {currentUser.email}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-black/[0.04] dark:border-white/[0.04]">
+                      <div className="space-y-1.5">
+                        <FieldLabel>Full Name</FieldLabel>
+                        <div className="px-4 py-3 text-sm font-medium bg-neutral-50 dark:bg-neutral-900/50 border border-black/[0.04] dark:border-white/[0.04] rounded-lg">
+                          {currentUser.name || "—"}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <FieldLabel>Email Address</FieldLabel>
+                        <div className="px-4 py-3 text-sm font-medium bg-neutral-50 dark:bg-neutral-900/50 border border-black/[0.04] dark:border-white/[0.04] rounded-lg">
+                          {currentUser.email}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <FieldLabel>Name</FieldLabel>
-                    <div className="px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-900 border border-black/[0.04] dark:border-neutral-800 rounded-md">
-                      {currentUser.name || "—"}
+
+                    <div className="flex items-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-[13px] font-medium border border-indigo-100 dark:border-indigo-500/20">
+                      <Shield size={16} className="shrink-0" />
+                      <span>Password and Google sign-in methods are managed securely on the main login screen.</span>
                     </div>
+                  </>
+                ) : (
+                  <div className="h-48 flex items-center justify-center">
+                    <Loader2 size={24} className="animate-spin text-neutral-400" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-neutral-400 pt-2">
-                    <Shield size={14} />
-                    <span>Password and Google sign-in are managed on the login page.</span>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-400">Loading profile…</p>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>

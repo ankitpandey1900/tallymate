@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, AlertTriangle, AlertCircle, PieChart, Trash2, Loader2 } from "lucide-react";
+import { Plus, AlertTriangle, AlertCircle, PieChart, Trash2, Loader2, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createBudget, deleteBudget, type getBudgetsPageData } from "@/app/actions";
 import { UnifiedBudget, UnifiedCategory, UnifiedGroup } from "@/lib/unified-db";
@@ -206,21 +206,21 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
                 {/* Rich Progress Section */}
                 <div className="space-y-2 mb-5">
                   <div className="flex items-end justify-between mb-1">
-                    <span className="text-2xl font-bold font-mono tracking-tight text-neutral-900 dark:text-white">
-                      ₹{bp.spent.toLocaleString()}
+                    <span className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                      ₹{bp.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </span>
-                    <span className="text-[13px] font-medium text-neutral-500 mb-1">
-                      of ₹{bp.budget.amount.toLocaleString()}
+                    <span className="text-[13px] font-medium text-neutral-500 mb-1.5">
+                      of ₹{bp.budget.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                   
                   {/* Thick Progress Bar */}
-                  <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-3 overflow-hidden shadow-inner">
+                  <div className="w-full bg-neutral-100 dark:bg-[#1a1a1c] rounded-full h-2 overflow-hidden shadow-inner">
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-500 ease-out",
                         isExceeded
-                          ? "bg-red-500"
+                          ? "bg-rose-500"
                           : isWarning90 || isWarning80
                           ? "bg-amber-500"
                           : "bg-emerald-500"
@@ -235,8 +235,8 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-0.5">Remaining</span>
                     <span className={cn(
-                      "text-[13px] font-bold font-mono",
-                      bp.remaining < 0 ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"
+                      "text-[13px] font-bold",
+                      bp.remaining < 0 ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
                     )}>
                       {bp.remaining < 0 ? "-" : ""}₹{Math.abs(bp.remaining).toLocaleString()}
                     </span>

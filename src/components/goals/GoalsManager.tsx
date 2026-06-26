@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Target, Calendar, Trash2, Loader2 } from "lucide-react";
+import { Plus, Target, Calendar, Trash2, Loader2, Check, X } from "lucide-react";
+import confetti from "canvas-confetti";
 import { cn } from "@/lib/utils";
 import { createGoal, updateGoalProgress, deleteGoal, type getGoalsPageData } from "@/app/actions";
 import { UnifiedGoal } from "@/lib/unified-db";
@@ -61,7 +62,19 @@ export default function GoalsManager({ initialData }: { initialData: GoalsInitia
     if (!selectedGoal || !updateAmount) return;
 
     try {
-      await updateGoalProgress(selectedGoal.id, Number(updateAmount));
+      const newAmount = Number(updateAmount);
+      await updateGoalProgress(selectedGoal.id, newAmount);
+      
+      if (selectedGoal.currentAmount < selectedGoal.targetAmount && newAmount >= selectedGoal.targetAmount) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#34d399', '#059669', '#fbbf24', '#f59e0b'],
+          disableForReducedMotion: true
+        });
+      }
+
       setShowUpdateModal(false);
       setUpdateAmount("");
       router.refresh();
@@ -168,20 +181,20 @@ export default function GoalsManager({ initialData }: { initialData: GoalsInitia
                   {/* Rich Progress Section */}
                   <div className="space-y-2 mt-4">
                     <div className="flex items-end justify-between mb-1">
-                      <span className="text-2xl font-bold font-mono tracking-tight text-neutral-900 dark:text-white">
-                        ₹{g.currentAmount.toLocaleString()}
+                      <span className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                        ₹{g.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
-                      <span className="text-[13px] font-medium text-neutral-500 mb-1">
-                        of ₹{g.targetAmount.toLocaleString()}
+                      <span className="text-[13px] font-medium text-neutral-500 mb-1.5">
+                        of ₹{g.targetAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     
                     {/* Thick Progress Bar */}
-                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-3 overflow-hidden shadow-inner">
+                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2 overflow-hidden">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all duration-500 ease-out",
-                          isAchieved ? "bg-emerald-500" : "bg-neutral-900 dark:bg-white"
+                          isAchieved ? "bg-emerald-500" : "bg-indigo-500"
                         )}
                         style={{ width: `${percent}%` }}
                       />
@@ -295,8 +308,31 @@ export default function GoalsManager({ initialData }: { initialData: GoalsInitia
                   placeholder="0.00"
                   value={updateAmount}
                   onChange={(e) => setUpdateAmount(e.target.value)}
-                  className="font-mono"
+                  className="font-mono text-lg py-6"
                 />
+                
+                {/* Quick Add Chips */}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {[500, 1000, 2000, 5000].map(amount => (
+                    <Button
+                      key={amount}
+                      type="button"
+                      variant="outline-app"
+                      className="h-7 text-[11px] px-2.5 rounded-full"
+                      onClick={() => setUpdateAmount(String(Number(updateAmount || 0) + amount))}
+                    >
+                      +₹{amount}
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline-app"
+                    className="h-7 text-[11px] px-2.5 rounded-full text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    onClick={() => setUpdateAmount(String(selectedGoal.targetAmount))}
+                  >
+                    Set to Max
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">

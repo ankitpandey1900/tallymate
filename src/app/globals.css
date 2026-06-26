@@ -137,81 +137,83 @@
 }
 
 /* ── Global resets ── */
-* {
-  border-color: var(--border);
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    border-color: var(--border);
+    box-sizing: border-box;
+  }
 
-html {
-  font-feature-settings: "cv11", "ss01";
-  font-variation-settings: "opsz" 32;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
+  html {
+    font-feature-settings: "cv11", "ss01";
+    font-variation-settings: "opsz" 32;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: 1.6;
-  letter-spacing: var(--tracking-normal);
-  overflow-x: hidden;
-}
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    letter-spacing: var(--tracking-normal);
+    overflow-x: hidden;
+  }
 
-/* ── Typography ── */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  letter-spacing: var(--tracking-tight);
-  line-height: 1.25;
-  color: var(--foreground);
-}
+  /* ── Typography ── */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1.25;
+    color: var(--foreground);
+  }
 
-h1 { font-size: var(--text-3xl); font-weight: 700; }
-h2 { font-size: var(--text-2xl); }
-h3 { font-size: var(--text-xl); }
-h4 { font-size: var(--text-lg); }
+  h1 { font-size: var(--text-3xl); font-weight: 700; }
+  h2 { font-size: var(--text-2xl); }
+  h3 { font-size: var(--text-xl); }
+  h4 { font-size: var(--text-lg); }
 
-p {
-  color: var(--muted-foreground);
-  line-height: 1.65;
-}
+  p {
+    color: var(--muted-foreground);
+    line-height: 1.65;
+  }
 
-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
+  label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
 
-/* ── Inputs ── */
-input, textarea, select {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  color: var(--foreground);
-  background-color: var(--card);
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) - 2px);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
+  /* ── Inputs ── */
+  input, textarea, select {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--foreground);
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
 
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--ring);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 15%, transparent);
-}
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 15%, transparent);
+  }
 
-/* Remove number spinners */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
+  /* Remove number spinners */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 /* ── Custom Scrollbars ── */

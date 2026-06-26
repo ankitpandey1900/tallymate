@@ -220,6 +220,17 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     }
   };
 
+  const handleDeleteSettlement = async (settlementId: string) => {
+    if (!selectedGroupId) return;
+    try {
+      await deleteSettlement(selectedGroupId, settlementId);
+      toast.success("Payment deleted");
+      loadGroupDetails(selectedGroupId);
+    } catch (err) {
+      toastError(err, "Failed to delete payment");
+    }
+  };
+
   const handleToggleSetting = async (key: keyof UnifiedGroup) => {
     if (!groupDetails) return;
     const currentVal = groupDetails.group[key];

@@ -10,6 +10,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  CartesianGrid,
 } from "recharts";
 
 const COLORS = ["#6366f1", "#f43f5e", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
@@ -33,19 +34,34 @@ export function DashboardTrendChart({ metrics }: { metrics: ChartMetrics }) {
     <div className="h-64 w-full min-h-[256px]" style={{ minWidth: 0 }}>
       <ResponsiveContainer width="100%" height={256} minWidth={0}>
         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+          <defs>
+            <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+            </linearGradient>
+            <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-black/5 dark:text-white/5" />
+          <XAxis dataKey="name" stroke="currentColor" className="text-neutral-400" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+          <YAxis stroke="currentColor" className="text-neutral-400" fontSize={11} tickLine={false} axisLine={false} dx={-10} tickFormatter={(val) => `₹${val}`} />
           <Tooltip
             contentStyle={{
-              background: "var(--card)",
-              borderColor: "var(--border)",
-              color: "var(--foreground)",
-              borderRadius: "6px",
+              backgroundColor: "rgba(17, 17, 19, 0.9)",
+              borderColor: "rgba(255, 255, 255, 0.1)",
+              color: "#fff",
+              borderRadius: "8px",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
               fontSize: "12px",
+              backdropFilter: "blur(4px)",
+              padding: "8px 12px",
             }}
+            itemStyle={{ color: "#e5e7eb", fontSize: "13px", fontWeight: 500, padding: "2px 0" }}
           />
-          <Area type="monotone" dataKey="Income" stroke="#10b981" fillOpacity={0.06} fill="#10b981" />
-          <Area type="monotone" dataKey="Expense" stroke="#ef4444" fillOpacity={0.06} fill="#ef4444" />
+          <Area type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" />
+          <Area type="monotone" dataKey="Expense" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -71,17 +87,19 @@ export function DashboardCategoryChart({
 
   return (
     <div className="flex flex-col items-center justify-center h-64">
-      <div className="h-44 w-full min-h-[176px] relative" style={{ minWidth: 0 }}>
-        <ResponsiveContainer width="100%" height={176} minWidth={0}>
+      <div className="h-48 w-full min-h-[192px] relative" style={{ minWidth: 0 }}>
+        <ResponsiveContainer width="100%" height={192} minWidth={0}>
           <PieChart>
             <Pie
               data={metrics.categoryTrends}
               cx="50%"
               cy="50%"
-              innerRadius={50}
-              outerRadius={70}
-              paddingAngle={4}
+              innerRadius={55}
+              outerRadius={75}
+              paddingAngle={6}
+              cornerRadius={8}
               dataKey="value"
+              stroke="none"
             >
               {metrics.categoryTrends.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color || categoriesColors[index % categoriesColors.length]} />
@@ -89,21 +107,25 @@ export function DashboardCategoryChart({
             </Pie>
             <Tooltip
               contentStyle={{
-                background: "var(--card)",
-                borderColor: "var(--border)",
-                color: "var(--foreground)",
-                borderRadius: "6px",
+                backgroundColor: "rgba(17, 17, 19, 0.9)",
+                borderColor: "rgba(255, 255, 255, 0.1)",
+                color: "#fff",
+                borderRadius: "8px",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                 fontSize: "12px",
+                backdropFilter: "blur(4px)",
               }}
+              itemStyle={{ color: "#e5e7eb", fontSize: "13px", fontWeight: 500 }}
+              formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, "Spent"]}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center mt-2">
+      <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center mt-3">
         {metrics.categoryTrends.slice(0, 4).map((entry, index) => (
-          <div key={entry.name} className="flex items-center gap-1.5 text-xs text-neutral-500">
+          <div key={entry.name} className="flex items-center gap-2 text-xs font-medium text-neutral-600 dark:text-neutral-400">
             <div
-              className="w-2 h-2 rounded-full"
+              className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: entry.color || categoriesColors[index % categoriesColors.length] }}
             />
             <span className="truncate max-w-[80px]">{entry.name}</span>

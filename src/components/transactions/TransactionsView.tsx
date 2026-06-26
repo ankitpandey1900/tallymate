@@ -371,9 +371,9 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                           {displayDate}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-tight">
-                        {group.totalIncome > 0 && <span className="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-0.5 rounded-md">+₹{group.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
-                        {group.totalExpense > 0 && <span className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-2 py-0.5 rounded-md">−₹{group.totalExpense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
+                      <div className="flex items-center gap-3 text-[13px] font-medium tracking-tight">
+                        {group.totalIncome > 0 && <span className="text-emerald-600 dark:text-emerald-500">+₹{group.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
+                        {group.totalExpense > 0 && <span className="text-neutral-500 dark:text-neutral-400">−₹{group.totalExpense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
                       </div>
                     </div>
 

@@ -773,6 +773,12 @@ export class UnifiedDB {
     return true;
   }
 
+  static async clearAllNotifications(userId: string): Promise<void> {
+    await prisma.notification.deleteMany({
+      where: { userId },
+    });
+  }
+
   static async createNotification(userId: string, title: string, message: string, type: string): Promise<UnifiedNotification> {
     const n = await prisma.notification.create({
       data: { userId, title, message, type },

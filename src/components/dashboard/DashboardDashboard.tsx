@@ -16,6 +16,7 @@ import {
   ArrowRight,
   TrendingUp,
   Loader2,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
@@ -206,70 +207,76 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
       </div>
 
       {/* Overview stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="panel-card p-6 space-y-1 sm:col-span-2 lg:col-span-1 shadow-sm bg-white dark:bg-[#111113]">
-          <span className="text-[13px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Net worth</span>
-          <p className="text-3xl font-bold font-mono tracking-tight">₹{netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
-          <p className="text-xs text-neutral-400 mt-2 font-medium">Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}</p>
-        </div>
-
-        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
-          <div className="space-y-1">
-            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Income</span>
-            <p className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-500 tracking-tight">₹{metrics.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-500 flex items-center justify-center shrink-0">
-            <ArrowUpRight size={20} strokeWidth={2.5} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Hero Net Worth Card */}
+        <div className="panel-card p-6 sm:p-8 sm:col-span-2 lg:col-span-4 bg-white dark:bg-gradient-to-br dark:from-[#1c1c1f] dark:to-[#111113] text-neutral-900 dark:text-white border border-black/[0.04] dark:border-none relative overflow-hidden flex flex-col justify-center min-h-[140px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-none">
+          <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50/50 dark:bg-white/10 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute -left-20 -bottom-20 w-48 h-48 bg-indigo-500/10 dark:bg-indigo-500/20 blur-3xl rounded-full pointer-events-none" />
+          <div className="relative z-10">
+            <span className="text-[13px] font-bold text-neutral-500 dark:text-neutral-400 mb-2 block">Net worth</span>
+            <p className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white drop-shadow-sm dark:drop-shadow-sm">₹{netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+            <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-3 font-medium">Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}</p>
           </div>
         </div>
 
-        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
-          <div className="space-y-1">
-            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Expenses</span>
-            <p className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-500 tracking-tight">₹{metrics.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+        {/* Metric Cards */}
+        <div className="panel-card p-5 space-y-3 shadow-sm shadow-black/[0.03] dark:shadow-none">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
+            <ArrowUpRight size={16} strokeWidth={2.5} />
+            <span className="text-[12px] font-bold uppercase tracking-wider">Income</span>
           </div>
-          <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-500 flex items-center justify-center shrink-0">
-            <ArrowDownRight size={20} strokeWidth={2.5} />
-          </div>
+          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
         </div>
 
-        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
-          <div className="space-y-1">
-            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Saved</span>
-            <p className="text-2xl font-bold font-mono tracking-tight">₹{metrics.savings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+        <div className="panel-card p-5 space-y-3 shadow-sm shadow-black/[0.03] dark:shadow-none">
+          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-500">
+            <ArrowDownRight size={16} strokeWidth={2.5} />
+            <span className="text-[12px] font-bold uppercase tracking-wider">Expenses</span>
           </div>
-          <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-600 flex items-center justify-center shrink-0">
-            <TrendingUp size={20} strokeWidth={2.5} />
-          </div>
+          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
         </div>
 
-        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
-          <div className="space-y-1">
-            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Savings rate</span>
-            <p className="text-2xl font-bold font-mono tracking-tight">{metrics.savingsRate}%</p>
+        <div className="panel-card p-5 space-y-3 shadow-sm shadow-black/[0.03] dark:shadow-none">
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-500">
+            <TrendingUp size={16} strokeWidth={2.5} />
+            <span className="text-[12px] font-bold uppercase tracking-wider">Saved</span>
           </div>
-          <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 flex items-center justify-center shrink-0">
-            <Percent size={20} strokeWidth={2.5} />
+          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.savings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+        </div>
+
+        <div className="panel-card p-5 space-y-3 shadow-sm shadow-black/[0.03] dark:shadow-none">
+          <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+            <Percent size={16} strokeWidth={2.5} />
+            <span className="text-[12px] font-bold uppercase tracking-wider">Savings rate</span>
           </div>
+          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">{metrics.savingsRate}%</p>
         </div>
       </div>
 
       {/* Accounts */}
-      <div className="space-y-3">
+      <div className="space-y-4 pt-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Your accounts</h3>
           <span className="text-xs text-neutral-400">Payment method = account type</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map((acc) => (
-            <div key={acc.id} className="panel-card p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-sm font-semibold truncate">{acc.name}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 shrink-0">
-                  {formatPaymentMode(acc.type)}
-                </span>
+            <div key={acc.id} className="relative overflow-hidden rounded-2xl border border-black/[0.04] dark:border-white/[0.04] p-5 transition-transform hover:-translate-y-1 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-[#1a1a1c] dark:to-[#111113] shadow-sm">
+              <div className="absolute -right-4 -bottom-4 p-4 opacity-[0.03] dark:opacity-[0.02] pointer-events-none">
+                 <Wallet size={120} strokeWidth={1} />
               </div>
-              <p className="text-xl font-bold font-mono">₹{acc.balance.toLocaleString()}</p>
+              <div className="relative z-10 space-y-8">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 truncate">{acc.name}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/60 dark:bg-black/40 text-neutral-500 backdrop-blur-sm shrink-0 border border-black/5 dark:border-white/5 shadow-sm">
+                    {formatPaymentMode(acc.type)}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Balance</p>
+                  <p className="text-2xl font-bold tracking-tight">₹{acc.balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -318,33 +325,56 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
                 No recent transactions.
               </div>
             ) : (
-              transactions.map((tx) => {
-                const acc = accounts.find((a) => a.id === tx.accountId);
-                return (
-                <div key={tx.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-neutral-100 dark:border-neutral-800 last:border-none">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{tx.description}</p>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">
-                      {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                      {" · "}
-                      {formatPaymentMode(acc?.type)}
-                      {acc?.name ? ` · ${acc.name}` : ""}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "text-sm font-bold font-mono shrink-0",
-                      tx.type === "INCOME" || tx.type === "REFUND"
-                        ? "text-emerald-500"
-                        : "text-neutral-900 dark:text-neutral-100"
-                    )}
-                  >
-                    {tx.type === "INCOME" || tx.type === "REFUND" ? "+" : "−"}
-                    ₹{tx.amount.toLocaleString()}
-                  </span>
-                </div>
-              );
-              })
+              <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                {transactions.map((tx) => {
+                  const acc = accounts.find((a) => a.id === tx.accountId);
+                  const cat = categories.find((c) => c.id === tx.categoryId);
+                  const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
+                  const formattedAmount = `₹${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+                  return (
+                    <div key={tx.id} className="flex items-center p-3 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors relative group/item rounded-lg">
+                      {/* Icon */}
+                      <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
+                        {cat ? <span className="font-bold text-base">{cat.name.charAt(0)}</span> : <FileText size={16} />}
+                      </div>
+                      
+                      {/* Title & Details */}
+                      <div className="ml-3 flex-1 min-w-0 flex flex-col justify-center">
+                        <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{tx.description}</p>
+                        <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 mt-0.5">
+                          <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate max-w-[120px]">
+                            {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                          </span>
+                          <span>·</span>
+                          <span className={cn(
+                            "font-semibold px-1 py-0.5 rounded-[4px] uppercase tracking-wider text-[8px]",
+                            isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                            : tx.type === "EXPENSE" ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                            : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                          )}>
+                            {tx.type}
+                          </span>
+                          <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
+                            {acc?.name || "—"}
+                          </span>
+                          {cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
+                        </div>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="shrink-0 flex flex-col items-end justify-center min-w-[80px] pl-3">
+                        <span className={cn(
+                          "text-sm font-bold font-mono tracking-tight whitespace-nowrap",
+                          isIncome ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-900 dark:text-white"
+                        )}>
+                          {isIncome ? "+" : "−"}{formattedAmount}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -358,40 +388,44 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
             </Link>
           </div>
           <p className="text-[11px] text-neutral-500 -mt-2">Target = how much you want to save. Progress shows saved vs target.</p>
-          <div className="space-y-4">
+          <div className="space-y-5 pt-2">
             {goals.length === 0 ? (
               <div className="py-8 text-center text-xs text-neutral-400">
-                No goals yet. <Link href="/goals" className="underline">Create one</Link> with a target amount.
+                No goals yet. <Link href="/goals" className="underline hover:text-neutral-900 dark:hover:text-neutral-200 transition-colors">Create one</Link> with a target amount.
               </div>
             ) : (
               goals.map((g) => {
                 const percent = g.targetAmount > 0
                   ? Math.min(Math.round((g.currentAmount / g.targetAmount) * 100), 100)
                   : 0;
-                const remaining = Math.max(g.targetAmount - g.currentAmount, 0);
+                
                 return (
-                  <div key={g.id} className="space-y-2 p-3 rounded-lg bg-neutral-50/50 dark:bg-neutral-900/30">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold truncate">{g.name}</span>
-                      <span className="text-xs font-mono text-neutral-500">{percent}%</span>
+                  <div key={g.id} className="group relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-md bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-500/20">
+                          <Target size={14} />
+                        </div>
+                        <span className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{g.name}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-md">{percent}%</span>
                     </div>
-                    <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-2 overflow-hidden">
+                    
+                    <div className="w-full bg-neutral-100 dark:bg-[#1a1a1c] rounded-full h-1.5 overflow-hidden mb-1.5">
                       <div
-                        className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all"
+                        className="bg-indigo-500 h-1.5 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${percent}%` }}
                       />
                     </div>
+                    
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-mono">
-                        <span className="text-emerald-600 font-semibold">₹{g.currentAmount.toLocaleString()}</span>
-                        <span className="text-neutral-400"> saved</span>
-                      </span>
-                      <span className="font-mono text-neutral-500">
-                        Target ₹{g.targetAmount.toLocaleString()}
-                        {remaining > 0 && (
-                          <span className="text-neutral-400"> · ₹{remaining.toLocaleString()} left</span>
-                        )}
-                      </span>
+                      <div>
+                        <span className="font-bold text-neutral-700 dark:text-neutral-300">₹{g.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                        <span className="text-neutral-400 font-medium ml-1">saved</span>
+                      </div>
+                      <div className="text-neutral-400 font-medium">
+                        Target <span className="font-semibold text-neutral-600 dark:text-neutral-400">₹{g.targetAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -406,37 +440,52 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
         <div className="panel-card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">Budget targets</h4>
-            <Link href="/budgets" className="text-xs text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200">
+            <Link href="/budgets" className="text-xs text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 transition-colors">
               View all
             </Link>
           </div>
           <p className="text-[11px] text-neutral-500 -mt-2">Target = monthly spending limit you set. Bar shows how much you&apos;ve used.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {budgetProgress.slice(0, 4).map((b) => (
-              <div key={b.budget.id} className="p-3 rounded-lg border border-neutral-100 dark:border-neutral-800 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">{b.categoryName}</span>
-                  <span className={cn(
-                    "text-xs font-mono",
-                    b.percentage >= 100 ? "text-rose-500" : b.percentage >= 80 ? "text-amber-500" : "text-neutral-500"
-                  )}>
-                    {b.percentage}%
-                  </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+            {budgetProgress.slice(0, 4).map((b) => {
+              const isOver = b.percentage >= 100;
+              const isWarning = b.percentage >= 80 && !isOver;
+              
+              return (
+                <div key={b.budget.id} className="group relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate pr-4">{b.categoryName}</span>
+                    <span className={cn(
+                      "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
+                      isOver ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                      : isWarning ? "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+                      : "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                    )}>
+                      {b.percentage}%
+                    </span>
+                  </div>
+                  
+                  <div className="w-full bg-neutral-100 dark:bg-[#1a1a1c] rounded-full h-1.5 overflow-hidden mb-1.5">
+                    <div
+                      className={cn(
+                        "h-1.5 rounded-full transition-all duration-500 ease-out",
+                        isOver ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"
+                      )}
+                      style={{ width: `${Math.min(b.percentage, 100)}%` }}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-[11px]">
+                    <div>
+                      <span className="font-bold text-neutral-700 dark:text-neutral-300">₹{b.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                      <span className="text-neutral-400 font-medium ml-1">spent</span>
+                    </div>
+                    <div className="text-neutral-400 font-medium">
+                      Target <span className="font-semibold text-neutral-600 dark:text-neutral-400">₹{Number(b.budget.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5">
-                  <div
-                    className={cn(
-                      "h-1.5 rounded-full",
-                      b.percentage >= 100 ? "bg-rose-500" : b.percentage >= 80 ? "bg-amber-500" : "bg-emerald-500"
-                    )}
-                    style={{ width: `${Math.min(b.percentage, 100)}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-neutral-500 font-mono">
-                  ₹{b.spent.toLocaleString()} of ₹{Number(b.budget.amount).toLocaleString()} target
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
