@@ -20,7 +20,7 @@ Historically, people have had to use **two completely separate apps** to manage 
 
 **The Problem:** When you go out to dinner and pay a $100 bill on behalf of 4 friends, your personal budgeting app records a $100 expense, ruining your monthly budget analytics. You then have to manually track the $75 your friends owe you in Splitwise. It's disconnected, manual, and stressful.
 
-**The Solution:** Tallymate solves this by unifying both ecosystems. When you record that $100 shared expense in Tallymate, the app is smart enough to log a $25 personal expense against your "Dining" budget, while simultaneously logging a $75 pending receivable in your "Friends" group. One transaction, perfectly balanced across personal budgets and group ledgers.
+**The Solution:** Tallymate solves this by unifying both ecosystems. When you record that ₹100 shared expense in Tallymate, the app is smart enough to log a ₹25 personal expense against your "Dining" budget, while simultaneously logging a ₹75 pending receivable in your "Friends" group. One transaction, perfectly balanced across personal budgets and group ledgers.
 
 ## 🚀 Why is it different from other tools?
 - **True Unification:** It completely eliminates the need for both Splitwise and YNAB. Personal ledgers and group ledgers talk to each other natively.
