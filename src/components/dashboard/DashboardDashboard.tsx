@@ -28,6 +28,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { FieldLabel } from "@/components/ui/field-label";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { formatPaymentMode, ACCOUNT_TYPE_OPTIONS } from "@/lib/account-labels";
+import { getCategoryIcon } from "@/lib/category-icons";
 import {
   createTransaction,
   createAccount,
@@ -399,8 +400,8 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
                   return (
                     <div key={tx.id} className="flex items-center p-3 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors relative group/item rounded-lg">
                       {/* Icon */}
-                      <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
-                        {cat ? <span className="font-bold text-base">{cat.name.charAt(0)}</span> : <FileText size={16} />}
+                      <div className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
+                        {getCategoryIcon(cat?.name, 16)}
                       </div>
                       
                       {/* Title & Details */}
@@ -412,9 +413,9 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
                           </span>
                           <span>·</span>
                           <span className={cn(
-                            "font-semibold px-1 py-0.5 rounded-[4px] uppercase tracking-wider text-[8px]",
+                            "font-medium px-2 py-0.5 rounded-full text-[10px]",
                             isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                            : tx.type === "EXPENSE" ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                            : tx.type === "EXPENSE" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
                             : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
                           )}>
                             {tx.type}

@@ -25,6 +25,7 @@ import { AppDialog } from "@/components/ui/app-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { fieldInputClass } from "@/components/ui/app-styles";
 import { formatPaymentMode, ACCOUNT_TYPE_OPTIONS } from "@/lib/account-labels";
+import { getCategoryIcon } from "@/lib/category-icons";
 import {
   createTransaction,
   updateTransaction,
@@ -274,7 +275,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
       </div>
 
       {/* Filter panel */}
-      <div className="panel-card p-4 space-y-3">
+      <div className="bg-white dark:bg-[#111113] rounded-xl border border-black/[0.06] dark:border-white/[0.06] p-4 space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
@@ -359,7 +360,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                   <div key={group.date} className="flex flex-col">
                     {/* Sticky Date Header */}
                     <div 
-                      className="sticky top-0 z-10 flex items-center justify-between px-4 py-2.5 bg-neutral-50/90 dark:bg-[#1a1a1c]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-white dark:bg-[#111113] border-b border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1c] transition-colors"
                       onClick={() => toggleDateGroup(group.date)}
                     >
                       <div className="flex items-center gap-3">
@@ -367,11 +368,11 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                           size={14} 
                           className={cn("text-neutral-400 transition-transform duration-200", isCollapsed && "-rotate-90")} 
                         />
-                        <span className="text-[13px] font-bold text-neutral-700 dark:text-neutral-300 tracking-wide">
+                        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                           {displayDate}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-[13px] font-medium tracking-tight">
+                      <div className="flex items-center gap-3 text-sm font-medium">
                         {group.totalIncome > 0 && <span className="text-emerald-600 dark:text-emerald-500">+₹{group.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
                         {group.totalExpense > 0 && <span className="text-neutral-500 dark:text-neutral-400">−₹{group.totalExpense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
                       </div>
@@ -396,8 +397,8 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                               onClick={() => setPreviewTx(tx)}
                             >
                               {/* Icon */}
-                              <div className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
-                                {cat ? <span className="font-bold text-lg">{cat.name.charAt(0)}</span> : <FileText size={18} />}
+                              <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
+                                {getCategoryIcon(cat?.name, 18)}
                               </div>
                               
                               {/* Title & Details */}
@@ -405,9 +406,9 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                 <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{tx.description}</p>
                                 <div className="flex items-center gap-2 text-xs text-neutral-500 mt-1">
                                   <span className={cn(
-                                    "font-semibold px-1.5 py-0.5 rounded-sm uppercase tracking-wider text-[9px]",
+                                    "font-medium px-2 py-0.5 rounded-full text-[10px]",
                                     isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                                    : tx.type === "EXPENSE" ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                                    : tx.type === "EXPENSE" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
                                     : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
                                   )}>
                                     {tx.type}
