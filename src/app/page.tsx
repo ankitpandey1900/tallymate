@@ -1,9 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Shield, Sparkles, TrendingUp, Users, CheckCircle2, DollarSign, Target, PieChart, Bell, ArrowUpRight, BookOpen } from "lucide-react";
+import { ArrowRight, Shield, Sparkles, TrendingUp, Users, CheckCircle2, Target, PieChart, Bell, BookOpen, ChevronDown } from "lucide-react";
 import LandingThemeToggle from "@/components/LandingThemeToggle";
 import TallymateLogo from "@/components/TallymateLogo";
 import AnimatedLetters from "@/components/AnimatedLetters";
+import ScrollFadeIn from "@/components/ScrollFadeIn";
+import SplitBillDemo from "@/components/landing/SplitBillDemo";
+import FAQAccordion from "@/components/landing/FAQAccordion";
 
 export default function Home() {
   return (
@@ -47,80 +50,56 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] hidden dark:block dark:bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="relative flex flex-col items-center w-full max-w-4xl mt-4 mb-8">
-          {/* Connecting "strings" for the hanging effect */}
-          <svg
-            className="absolute top-[32px] left-0 w-full h-[180px] pointer-events-none z-0 md:h-[220px]"
-            style={{ overflow: 'visible' }}
-          >
-            {/* String to "Master your money." */}
-            <path
-              d="M 50% 0 C 45% 50, 35% 60, 35% 100"
-              stroke="currentColor"
-              fill="none"
-              className="text-neutral-300 dark:text-neutral-800"
-              strokeWidth="1.5"
-            />
-            {/* String to "Together." */}
-            <path
-              d="M 50% 0 C 55% 50, 65% 60, 65% 140"
-              stroke="currentColor"
-              fill="none"
-              className="text-neutral-300 dark:text-neutral-800"
-              strokeWidth="1.5"
-            />
-          </svg>
-
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-200/60 dark:border-neutral-800/60 bg-white dark:bg-white/5 backdrop-blur-md text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-12 z-10 shadow-sm cursor-default">
-            <Sparkles size={14} className="text-emerald-500" />
-            <span>Introducing Tallymate 1.0</span>
+          {/* Clean Badge */}
+          <div className="relative group cursor-pointer mb-8">
+            <div className="relative inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-200/60 dark:border-white/10 bg-white dark:bg-[#09090b] text-xs font-medium text-neutral-600 dark:text-neutral-300 z-10 shadow-sm transition-all hover:bg-neutral-50 dark:hover:bg-neutral-900">
+              <Sparkles size={14} className="text-emerald-500" />
+              <span>Introducing Tallymate 1.0</span>
+              <span className="w-[1px] h-3 bg-neutral-200 dark:bg-white/20 mx-1"></span>
+              <span className="text-emerald-500 dark:text-emerald-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors flex items-center gap-1">
+                Read the launch post <ArrowRight size={12} />
+              </span>
+            </div>
           </div>
 
+          {/* Ultra-modern clean title */}
           <h1
-            className="font-extrabold tracking-tight text-center text-neutral-900 dark:text-white z-10 dark:drop-shadow-sm w-full flex flex-col items-center leading-[1.1] md:leading-[0.95]"
-            style={{ fontSize: "clamp(2rem, 8vw, 110px)" }}
+            className="font-extrabold tracking-tight text-center text-neutral-900 dark:text-white z-10 w-full flex flex-col items-center leading-[1.05]"
+            style={{ fontSize: "clamp(3rem, 10vw, 120px)" }}
           >
-            <span className="inline-block animate-float origin-top" style={{ perspective: "1000px", animationDelay: "0ms", transform: "rotate(-2deg)" }}>
-              <span className="md:whitespace-nowrap inline-block" style={{ transformStyle: "preserve-3d" }}>
-                <AnimatedLetters text="Master your money." delayOffset={0} />
-              </span>
+            <span className="md:whitespace-nowrap inline-block animate-in fade-in slide-in-from-bottom-8 duration-1000">
+              Master your money.
             </span>
-            <span className="inline-block mt-2 md:mt-0 animate-float origin-top" style={{ perspective: "1000px", animationDelay: "400ms", transform: "rotate(1.5deg)" }}>
-              <span className="inline-block pb-4" style={{ transformStyle: "preserve-3d" }}>
-                <AnimatedLetters
-                  text="Together."
-                  delayOffset={0.6}
-                  letterClassName="bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-cyan-400 bg-clip-text text-transparent"
-                />
+            <span className="relative inline-block mt-1 md:mt-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both pb-2">
+              <span className="bg-gradient-to-br from-emerald-500 via-teal-400 to-cyan-500 bg-clip-text text-transparent drop-shadow-sm">
+                Together.
               </span>
             </span>
           </h1>
         </div>
 
-        <p className="text-lg md:text-[22px] text-neutral-600 dark:text-neutral-400 max-w-2xl text-center leading-[1.6] font-medium z-10 text-balance" style={{ perspective: "1000px" }}>
-          <span className="inline-block" style={{ transformStyle: "preserve-3d" }}>
-            <AnimatedLetters
-              text="Track spending, split bills with friends, and stay on budget — all in one simple app."
-              delayOffset={1.2}
-            />
-          </span>
+        <p className="text-lg md:text-[21px] text-neutral-600 dark:text-neutral-400 max-w-2xl text-center leading-[1.6] font-medium z-10 text-balance animate-in fade-in duration-1000 delay-1000 fill-mode-both">
+          Track spending, split bills with friends, and stay on budget — all in one simple app.
         </p>
 
-        <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center justify-center z-10">
+        <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center justify-center z-10 animate-in fade-in duration-1000 delay-[1200ms] fill-mode-both">
           <Link
             href="/dashboard"
-            className="group flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#09090b] text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 font-bold text-sm transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+            className="group flex items-center gap-2 px-8 py-3.5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-black font-bold text-[15px] transition-all shadow-[0_4px_14px_0_rgb(0,0,0,0.1)] dark:shadow-[0_4px_14px_0_rgb(255,255,255,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_6px_20px_rgba(255,255,255,0.15)] hover:-translate-y-0.5"
           >
             Launch Dashboard
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
           <Link
             href="/docs"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-full border border-black/[0.08] dark:border-neutral-800 hover:bg-black/[0.02] dark:hover:bg-neutral-900 font-bold text-sm transition-colors text-neutral-600 dark:text-neutral-300"
+            className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-white dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 font-bold text-[15px] transition-all text-neutral-700 dark:text-neutral-300 shadow-sm hover:shadow-md"
           >
-            <BookOpen size={15} />
+            <BookOpen size={16} className="text-neutral-500" />
             View Documentation
           </Link>
         </div>
+
+
 
         {/* Mobile social proof strip — shows only on mobile where mockup is hidden */}
         <div className="md:hidden mt-12 w-full max-w-sm grid grid-cols-3 gap-3 z-10">
@@ -239,14 +218,12 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Features Section */}
-      <section id="features" className="py-32 px-6 md:px-12 max-w-7xl mx-auto w-full">
+      <ScrollFadeIn delay={200}>
+        <section id="features" className="py-32 px-6 md:px-12 max-w-7xl mx-auto w-full">
         <div className="max-w-2xl mb-16 space-y-5">
           <div className="w-12 h-1 bg-emerald-500 rounded-full" />
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-balance text-neutral-900 dark:text-white" style={{ perspective: "1000px" }}>
-            <span className="inline-block" style={{ transformStyle: "preserve-3d" }}>
-              <AnimatedLetters text="Built for modern financial clarity." delayOffset={0} />
-            </span>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-balance text-neutral-900 dark:text-white">
+            Built for modern financial clarity.
           </h2>
           <p className="text-neutral-600 dark:text-neutral-400 text-lg md:text-xl leading-relaxed text-balance">
             Stop switching between banking apps, spreadsheets, and bill-splitting apps. Keep your money in one clear view.
@@ -325,15 +302,27 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </ScrollFadeIn>
 
+      <ScrollFadeIn delay={200}>
+      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto w-full border-t border-black/[0.06] dark:border-neutral-800">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">See it in action.</h2>
+          <p className="text-neutral-500 dark:text-neutral-400 text-lg">
+            Money awkwardness is a thing of the past. Adjust the bill below to see how Tallymate automatically splits and balances your accounts.
+          </p>
+        </div>
+        <SplitBillDemo />
+      </section>
+      </ScrollFadeIn>
+
+      <ScrollFadeIn delay={200}>
       {/* Methodology Section */}
       <section id="methodology" className="py-24 px-6 md:px-12 max-w-7xl mx-auto w-full border-t border-black/[0.06] dark:border-neutral-800">
         <div className="flex flex-col md:flex-row gap-16 items-center">
           <div className="flex-1 space-y-6">
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight" style={{ perspective: "1000px" }}>
-              <span className="inline-block" style={{ transformStyle: "preserve-3d" }}>
-                <AnimatedLetters text="The Tallymate Methodology" delayOffset={0} />
-              </span>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white">
+              The Tallymate Methodology
             </h2>
             <p className="text-neutral-500 dark:text-neutral-400 text-lg leading-relaxed">
               We believe personal finance shouldn&apos;t feel like accounting. Tallymate is built around three core principles designed to reduce friction and build wealth passively.
@@ -375,7 +364,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </ScrollFadeIn>
 
+      <ScrollFadeIn delay={200}>
       {/* Security Section */}
       <section id="security" className="py-24 px-6 md:px-12 max-w-7xl mx-auto w-full border-t border-black/[0.06] dark:border-neutral-800 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-black/[0.03] dark:bg-neutral-900 mb-8 border border-black/[0.06] dark:border-neutral-800">
@@ -401,20 +392,81 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </ScrollFadeIn>
+
+      <ScrollFadeIn delay={200}>
+      {/* FAQ Section */}
+      <section id="faq" className="py-24 px-6 md:px-12 max-w-7xl mx-auto w-full border-t border-black/[0.06] dark:border-neutral-800">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Frequently Asked Questions</h2>
+          <p className="text-neutral-500 dark:text-neutral-400 text-lg">Everything you need to know about Tallymate.</p>
+        </div>
+        <FAQAccordion />
+      </section>
+      </ScrollFadeIn>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-black/[0.06] dark:border-neutral-800 bg-white dark:bg-[#0c0c0e]">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <TallymateLogo size={20} className="text-neutral-900 dark:text-white" />
-            <span className="font-bold text-xs text-neutral-900 dark:text-white tracking-tight">Tallymate</span>
+      <footer className="pt-20 pb-10 border-t border-black/[0.06] dark:border-neutral-800 bg-white dark:bg-[#0c0c0e]">
+        <div className="max-w-7xl mx-auto px-6 md:px-12">
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-16">
+            <div className="col-span-2 md:col-span-2 space-y-4">
+              <div className="flex items-center gap-2">
+                <TallymateLogo size={24} className="text-neutral-900 dark:text-white" />
+                <span className="font-bold text-lg text-neutral-900 dark:text-white tracking-tight">Tallymate</span>
+              </div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-xs leading-relaxed">
+                The unified personal finance and bill-splitting application designed to effortlessly bridge the gap between individual budget tracking and shared group expenses.
+              </p>
+              <div className="flex items-center gap-4 pt-2">
+                <a href="https://x.com/AnkitPande5641" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="https://www.instagram.com/ankit.pandey19/" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                </a>
+                <a href="https://github.com/ankitpandey1900/" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-bold text-sm text-neutral-900 dark:text-white">Product</h4>
+              <ul className="space-y-3 text-sm text-neutral-500 dark:text-neutral-400">
+                <li><Link href="#features" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Features</Link></li>
+                <li><Link href="#methodology" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Methodology</Link></li>
+                <li><Link href="#security" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Security</Link></li>
+                <li><Link href="/login" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Sign Up</Link></li>
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-bold text-sm text-neutral-900 dark:text-white">Resources</h4>
+              <ul className="space-y-3 text-sm text-neutral-500 dark:text-neutral-400">
+                <li><Link href="/docs" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Documentation</Link></li>
+                <li><Link href="#faq" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Help Center / FAQ</Link></li>
+                <li><Link href="#" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Blog</Link></li>
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-bold text-sm text-neutral-900 dark:text-white">Company</h4>
+              <ul className="space-y-3 text-sm text-neutral-500 dark:text-neutral-400">
+                <li><Link href="/privacy-policy" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms-of-service" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link href="/contact" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Contact Us</Link></li>
+              </ul>
+            </div>
           </div>
-          <div className="flex gap-6 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-            <Link href="/docs" className="hover:text-neutral-900 dark:hover:text-white">Documentation</Link>
-            <Link href="#" className="hover:text-neutral-900 dark:hover:text-white">Privacy Policy</Link>
-            <Link href="#" className="hover:text-neutral-900 dark:hover:text-white">Terms of Service</Link>
+
+          <div className="pt-8 border-t border-black/[0.06] dark:border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4">
+            <span className="text-sm text-neutral-500 dark:text-neutral-400">© 2026 Tallymate. All rights reserved.</span>
+            <span className="text-sm text-neutral-500 dark:text-neutral-400">
+              Built by <span className="text-neutral-900 dark:text-white font-semibold">Ankit Pandey</span> · <a href="https://www.instagram.com/ankit.pandey19/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-500 font-semibold transition-colors">Instagram</a>
+            </span>
           </div>
-          <span className="text-xs text-neutral-400 font-mono">© 2026 Tallymate</span>
+
         </div>
       </footer>
     </div>

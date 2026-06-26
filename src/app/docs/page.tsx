@@ -179,8 +179,8 @@ export default function DocsPage() {
                 <TallymateLogo size={32} className="text-neutral-900 dark:text-white" />
               </div>
               <div>
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-white mb-2">Tallymate Docs</h1>
-                <p className="text-base text-neutral-500 dark:text-neutral-400">Your complete guide to mastering personal finance.</p>
+                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-white mb-2">Help Center</h1>
+                <p className="text-base text-neutral-500 dark:text-neutral-400">Easy guides to help you use Tallymate and master your money.</p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
@@ -217,7 +217,7 @@ export default function DocsPage() {
           {/* ── DASHBOARD ── */}
           <div className="mt-14">
             <SectionHeading id="dashboard" icon={LayoutDashboard} title="Dashboard" subtitle="Your financial command centre. Everything important, at a glance." />
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">The Dashboard is the first screen you see after logging in. It is designed to give you an instant snapshot of your financial health without requiring you to dig through menus.</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">Your Dashboard is your home screen. It gives you a quick summary of your money so you don't have to search around for answers.</p>
             <div className="space-y-4">
               {[
                 { label: "Net Worth", desc: "The sum of all your accounts (bank balances, cash, wallets) minus credit card balances. This is your single most important number." },
@@ -261,7 +261,7 @@ export default function DocsPage() {
           {/* ── BUDGETS ── */}
           <div className="mt-14">
             <SectionHeading id="budgets" icon={PieChart} title="Budgets" subtitle="Set monthly limits per category and get alerted before you overspend." />
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">Budgets are the most powerful tool in Tallymate for building spending discipline. You set a monthly cap on a category and the app tracks your spending against it in real-time.</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">Budgets help you stop overspending. Just set a limit for things like &quot;Food&quot; or &quot;Shopping&quot;, and Tallymate will warn you before you run out of money.</p>
             <h3 className="font-semibold text-base mb-3 text-neutral-800 dark:text-neutral-200">Creating a Budget</h3>
             <Step n={1} title="Go to Budgets">Click Budgets in the left sidebar.</Step>
             <Step n={2} title="Click New Budget">Fill in the Category (e.g., Food), your monthly Limit (e.g., ₹8,000), and an optional alert threshold (default is 80%).</Step>
@@ -291,7 +291,7 @@ export default function DocsPage() {
 
           {/* ── GROUPS ── */}
           <div className="mt-14">
-            <SectionHeading id="groups" icon={Users} title="Groups & Bill Splitting" subtitle="Split expenses with roommates, travel buddies, or your partner — then settle up instantly." />
+            <SectionHeading id="groups" icon={Users} title="Split Bills with Friends" subtitle="Easily split dinner bills, rent, or travel costs with your friends. Tallymate calculates who owes who." />
             <h3 className="font-semibold text-base mb-3 text-neutral-800 dark:text-neutral-200">Creating a Group</h3>
             <Step n={1} title="Go to Groups and click New Group">Give it a name (e.g., &quot;Goa Trip 2026&quot; or &quot;Flat mates&quot;) and select a currency.</Step>
             <Step n={2} title="Share your Invite Code">Every group gets a unique invite code. Share it with your friends so they can join the group.</Step>
@@ -313,13 +313,13 @@ export default function DocsPage() {
             <Step n={3} title="Record who paid">Select the member who paid upfront. Tallymate automatically calculates who owes who.</Step>
 
             <h3 className="font-semibold text-base mb-3 mt-8 text-neutral-800 dark:text-neutral-200">Settling Up</h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">Tallymate figures out the fewest payments needed so everyone is even. For example, 10 small debts might become just 3 payments. Open <strong>Who owes what</strong> in your group and tap <strong>Mark as paid</strong> when you send or receive money — only the people involved can record a payment.</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">Tallymate does the math for you. It figures out the easiest way for everyone to pay each other back. For example, if A owes B, and B owes C, Tallymate might just tell A to pay C directly! Open <strong>Who owes what</strong> in your group and tap <strong>Mark as paid</strong> when you send or receive money.</p>
           </div>
 
           {/* ── DEBTS ── */}
           <div className="mt-14">
             <SectionHeading id="debts" icon={HandCoins} title="Debt Tracker" subtitle="See what you owe and what others owe you across all your groups." />
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">The <strong>Debts</strong> page in the sidebar adds up balances from every group you belong to. You get a single view of money you owe, money owed to you, and suggested payments — without opening each group one by one.</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">The <strong>Debts</strong> page adds up everything from all your groups. It gives you one simple list showing who you owe, and who owes you money — without having to check each group one by one.</p>
             <Step n={1} title="Open Debts from the sidebar">See your total position at the top: you owe, you&apos;re owed, and net balance.</Step>
             <Step n={2} title="Review suggested payments">Payments you can make or confirm appear under <strong>Payments you can make</strong>. Tap <strong>Settle</strong> to jump to the right group.</Step>
             <Step n={3} title="Check balances by person or group">Use <strong>By person</strong> and <strong>By group</strong> to understand who you share debts with and where they come from.</Step>
@@ -394,7 +394,7 @@ export default function DocsPage() {
 
           {/* ── SECURITY ── */}
           <div className="mt-14 mb-20">
-            <SectionHeading id="security" icon={Shield} title="Security & Privacy" subtitle="Your financial data is sensitive. Here is how we protect it." />
+            <SectionHeading id="security" icon={Shield} title="Security & Privacy" subtitle="Your money is your business. We keep it safe." />
             <div className="space-y-4">
               {[
                 { label: "Secure Authentication", desc: "Tallymate uses Better Auth, an industry-standard authentication framework. Your password is hashed and never stored in plain text." },
