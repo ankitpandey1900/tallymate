@@ -19,6 +19,7 @@ import { UnifiedUser, UnifiedCategory, UnifiedIncomeSource } from "@/lib/unified
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/ui/field-label";
+import { getCategoryIcon } from "@/lib/category-icons";
 
 type SettingsInitialData = Awaited<ReturnType<typeof getSettingsPageData>>;
 
@@ -327,7 +328,9 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                         className="group flex items-center gap-3 pl-3 pr-1 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#151518] shadow-sm shrink-0"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                          <div style={{ color: c.color }} className="shrink-0 flex items-center justify-center">
+                            {getCategoryIcon(c.name, 14)}
+                          </div>
                           <span className="text-[13px] font-medium truncate">{c.name}</span>
                         </div>
                         <div className="flex items-center shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-neutral-100 dark:bg-neutral-800 rounded-full px-1">
