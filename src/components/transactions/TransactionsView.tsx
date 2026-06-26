@@ -14,6 +14,7 @@ import {
   X,
   Check,
   Loader2,
+  ArrowDownToLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
@@ -397,8 +398,8 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                               onClick={() => setPreviewTx(tx)}
                             >
                               {/* Icon */}
-                              <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
-                                {getCategoryIcon(cat?.name, 18)}
+                              <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
+                                {isIncome ? <ArrowDownToLine size={18} /> : getCategoryIcon(cat?.name, 18)}
                               </div>
                               
                               {/* Title & Details */}

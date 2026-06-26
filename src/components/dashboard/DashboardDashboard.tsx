@@ -19,6 +19,7 @@ import {
   FileText,
   Pencil,
   Trash2,
+  ArrowDownToLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
@@ -265,13 +266,23 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
       {/* Overview stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Hero Net Worth Card */}
-        <div className="panel-card p-6 sm:p-8 sm:col-span-2 lg:col-span-4 bg-white dark:bg-gradient-to-br dark:from-[#1c1c1f] dark:to-[#111113] text-neutral-900 dark:text-white border border-black/[0.04] dark:border-none relative overflow-hidden flex flex-col justify-center min-h-[140px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-none">
-          <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-50/50 dark:bg-white/10 blur-3xl rounded-full pointer-events-none" />
-          <div className="absolute -left-20 -bottom-20 w-48 h-48 bg-indigo-500/10 dark:bg-indigo-500/20 blur-3xl rounded-full pointer-events-none" />
-          <div className="relative z-10">
-            <span className="text-[13px] font-bold text-neutral-500 dark:text-neutral-400 mb-2 block">Net worth</span>
-            <p className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white drop-shadow-sm dark:drop-shadow-sm">₹{netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
-            <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-3 font-medium">Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}</p>
+        <div className="col-span-1 sm:col-span-2 lg:col-span-4 bg-white dark:bg-[#111113] rounded-2xl p-6 sm:p-8 flex flex-col justify-center border border-black/[0.06] dark:border-white/[0.06] shadow-sm relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-2/3 h-full bg-gradient-to-l from-emerald-500/5 dark:from-emerald-500/10 to-transparent pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="space-y-2">
+              <span className="text-sm font-semibold text-neutral-500">Total Net Worth</span>
+              <p className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                ₹{netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-[#1a1a1c] border border-black/[0.04] dark:border-white/[0.04] rounded-full self-start sm:self-end shrink-0">
+              <Wallet size={14} className="text-neutral-400" />
+              <span className="text-xs font-medium text-neutral-500">
+                {accounts.length} Connected Account{accounts.length !== 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -400,8 +411,8 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
                   return (
                     <div key={tx.id} className="flex items-center p-3 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors relative group/item rounded-lg">
                       {/* Icon */}
-                      <div className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
-                        {getCategoryIcon(cat?.name, 16)}
+                      <div className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
+                        {isIncome ? <ArrowDownToLine size={16} /> : getCategoryIcon(cat?.name, 16)}
                       </div>
                       
                       {/* Title & Details */}

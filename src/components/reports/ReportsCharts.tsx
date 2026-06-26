@@ -33,19 +33,24 @@ export function ExpenseCategoryChart({
   }
 
   return (
-    <div className="h-64 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-64 w-full" style={{ minWidth: 1, minHeight: 1 }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
         <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+          <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
           <Tooltip
+            cursor={{ fill: 'rgba(150, 150, 150, 0.1)' }}
             contentStyle={{
-              background: "var(--card)",
-              borderColor: "var(--border)",
-              color: "var(--foreground)",
-              borderRadius: "6px",
+              backgroundColor: "rgba(17, 17, 19, 0.9)",
+              borderColor: "rgba(255, 255, 255, 0.1)",
+              color: "#fff",
+              borderRadius: "8px",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
               fontSize: "12px",
+              backdropFilter: "blur(4px)",
+              padding: "8px 12px",
             }}
+            itemStyle={{ color: "#e5e7eb", fontSize: "13px", fontWeight: 500, padding: "2px 0" }}
           />
           <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
             {data.map((entry, index) => (
@@ -76,19 +81,24 @@ export function IncomeSourcesChart({
   }
 
   return (
-    <div className="h-64 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-64 w-full" style={{ minWidth: 1, minHeight: 1 }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
         <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+          <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
           <Tooltip
+            cursor={{ fill: 'rgba(150, 150, 150, 0.1)' }}
             contentStyle={{
-              background: "var(--card)",
-              borderColor: "var(--border)",
-              color: "var(--foreground)",
-              borderRadius: "6px",
+              backgroundColor: "rgba(17, 17, 19, 0.9)",
+              borderColor: "rgba(255, 255, 255, 0.1)",
+              color: "#fff",
+              borderRadius: "8px",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
               fontSize: "12px",
+              backdropFilter: "blur(4px)",
+              padding: "8px 12px",
             }}
+            itemStyle={{ color: "#e5e7eb", fontSize: "13px", fontWeight: 500, padding: "2px 0" }}
           />
           <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
             {data.map((entry, index) => (
