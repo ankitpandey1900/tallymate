@@ -60,7 +60,13 @@ const DashboardCategoryChart = dynamic(
 
 type DashboardInitialData = Awaited<ReturnType<typeof getDashboardData>>;
 
-export default function DashboardDashboard({ initialData }: { initialData: DashboardInitialData }) {
+export default function DashboardDashboard({ 
+  initialData, 
+  timeframe = "monthly" 
+}: { 
+  initialData: DashboardInitialData;
+  timeframe?: "weekly" | "monthly" | "quarterly" | "yearly";
+}) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const {
@@ -364,7 +370,18 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
         <div className="panel-card p-5 lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">Income vs Expense Trend</h4>
-            <span className="text-xs text-neutral-400">Weekly breakdown</span>
+            <div className="w-32">
+              <NativeSelect
+                value={timeframe}
+                onChange={(e) => router.push(`?timeframe=${e.target.value}`)}
+                className="!text-xs !py-1 !h-8"
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </NativeSelect>
+            </div>
           </div>
           {mounted ? <DashboardTrendChart metrics={metrics} /> : (
             <div className="h-64 flex items-center justify-center text-xs text-neutral-400">Loading chart…</div>

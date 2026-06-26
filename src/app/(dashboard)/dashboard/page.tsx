@@ -10,7 +10,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const initialData = await getDashboardData("monthly");
-  return <DashboardDashboard initialData={initialData} />;
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ timeframe?: string }>;
+}) {
+  const params = await searchParams;
+  const timeframe = (params.timeframe as "weekly" | "monthly" | "quarterly" | "yearly") || "monthly";
+  const initialData = await getDashboardData(timeframe);
+  return <DashboardDashboard initialData={initialData} timeframe={timeframe} />;
 }

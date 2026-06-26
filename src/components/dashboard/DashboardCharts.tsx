@@ -20,15 +20,11 @@ type ChartMetrics = {
   totalIncome: number;
   totalExpenses: number;
   categoryTrends: { name: string; value: number; color?: string }[];
+  trendData?: { name: string; Income: number; Expense: number }[];
 };
 
 export function DashboardTrendChart({ metrics }: { metrics: ChartMetrics }) {
-  const chartData = [
-    { name: "Week 1", Income: metrics.totalIncome * 0.2, Expense: metrics.totalExpenses * 0.15 },
-    { name: "Week 2", Income: metrics.totalIncome * 0.35, Expense: metrics.totalExpenses * 0.3 },
-    { name: "Week 3", Income: metrics.totalIncome * 0.15, Expense: metrics.totalExpenses * 0.25 },
-    { name: "Week 4", Income: metrics.totalIncome * 0.3, Expense: metrics.totalExpenses * 0.3 },
-  ];
+  const chartData = metrics.trendData || [];
 
   return (
     <div className="h-64 w-full min-h-[256px]" style={{ minWidth: 1, minHeight: 1 }}>

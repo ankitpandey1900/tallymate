@@ -11,6 +11,7 @@ export interface ReportMetrics {
   burnRate: number;
   categoryTrends: { name: string; value: number; color?: string }[];
   incomeBreakdown: { name: string; value: number; color?: string }[];
+  trendData: { name: string; Income: number; Expense: number }[];
 }
 
 export function getReportStartDate(timeframe: ReportTimeframe, now = new Date()): Date {
@@ -84,6 +85,53 @@ export function computeReports(
     value: Math.round(value * 100) / 100,
   }));
 
+  // Calculate trend data based on timeframe
+  const trendData: { name: string; Income: number; Expense: number }[] = [];
+  
+  if (timeframe === "weekly") {
+    // 7 days
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStr = d.toLocaleDateString("en-US", { weekday: "short" });
+      const dayTxs = filteredTxs.filter(t => new Date(t.date).toDateString() === d.toDateString());
+      const income = dayTxs.filter(t => t.type === "INCOME" || t.type === "REFUND").reduce((s, t) => s + Number(t.amount), 0);
+      const expense = dayTxs.filter(t => t.type === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
+      trendData.push({ name: dayStr, Income: income, Expense: expense });
+    }
+  } else if (timeframe === "monthly") {
+    // 4 weeks approx
+    for (let i = 0; i < 4; i++) {
+      const weekStart = new Date(startDate);
+      weekStart.setDate(weekStart.getDate() + (i * 7));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      if (i === 3) weekEnd.setDate(weekEnd.getDate() + 10); // cover rest of month
+      
+      const weekTxs = filteredTxs.filter(t => {
+        const d = new Date(t.date);
+        return d >= weekStart && d <= weekEnd;
+      });
+      const income = weekTxs.filter(t => t.type === "INCOME" || t.type === "REFUND").reduce((s, t) => s + Number(t.amount), 0);
+      const expense = weekTxs.filter(t => t.type === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
+      trendData.push({ name: `Week ${i + 1}`, Income: income, Expense: expense });
+    }
+  } else if (timeframe === "quarterly" || timeframe === "yearly") {
+    // Group by month
+    const monthsCount = timeframe === "quarterly" ? 3 : 12;
+    for (let i = monthsCount - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStr = d.toLocaleDateString("en-US", { month: "short" });
+      const monthTxs = filteredTxs.filter(t => {
+        const td = new Date(t.date);
+        return td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear();
+      });
+      const income = monthTxs.filter(t => t.type === "INCOME" || t.type === "REFUND").reduce((s, t) => s + Number(t.amount), 0);
+      const expense = monthTxs.filter(t => t.type === "EXPENSE").reduce((s, t) => s + Number(t.amount), 0);
+      trendData.push({ name: monthStr, Income: income, Expense: expense });
+    }
+  }
+
   return {
     totalIncome,
     totalExpenses,
@@ -93,5 +141,6 @@ export function computeReports(
     burnRate: averageDailySpending,
     categoryTrends,
     incomeBreakdown,
+    trendData,
   };
 }
