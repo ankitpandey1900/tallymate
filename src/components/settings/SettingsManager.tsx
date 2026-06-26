@@ -497,29 +497,25 @@ export default function SettingsManager({ initialData }: { initialData: Settings
           )}
 
           {activeTab === "profile" && (
-            <div className="panel-card relative overflow-hidden bg-white dark:bg-[#111113]">
-              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-90 dark:opacity-40" />
+            <div className="panel-card overflow-hidden bg-white dark:bg-[#111113]">
+              {/* Premium sleek banner */}
+              <div className="h-32 bg-gradient-to-r from-neutral-800 via-neutral-900 to-black relative">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30"></div>
+              </div>
               
-              <div className="relative pt-20 px-6 pb-8 space-y-8">
+              <div className="px-6 pb-8 space-y-6">
                 {currentUser ? (
                   <>
-                    <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5">
-                      <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111113] bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 shadow-xl flex items-center justify-center shrink-0 z-10 text-3xl font-bold text-neutral-400 dark:text-neutral-500 overflow-hidden relative">
+                    <div className="flex justify-between items-end -mt-12 mb-2 relative z-10">
+                      <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111113] bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 shadow-xl flex items-center justify-center shrink-0 text-3xl font-bold text-neutral-400 dark:text-neutral-500 overflow-hidden">
                         {currentUser.image ? (
                           <img src={currentUser.image} alt={currentUser.name || "Profile"} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
                           currentUser.name ? currentUser.name.charAt(0).toUpperCase() : (currentUser.email?.charAt(0).toUpperCase() || "?")
                         )}
                       </div>
-                      <div className="text-center sm:text-left space-y-1 pb-2 flex-1">
-                        <h3 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                          {currentUser.name || "User"}
-                        </h3>
-                        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-                          {currentUser.email}
-                        </p>
-                      </div>
-                      <div className="pt-2 sm:pt-0">
+                      <div className="pb-1">
                         <Button 
                           type="button" 
                           variant="outline-app" 
@@ -530,6 +526,15 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                           Log out
                         </Button>
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                        {currentUser.name || "User"}
+                      </h3>
+                      <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                        {currentUser.email}
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-black/[0.04] dark:border-white/[0.04]">
@@ -547,7 +552,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-4 bg-neutral-50 dark:bg-neutral-900/50 text-neutral-600 dark:text-neutral-400 rounded-lg text-[13px] font-medium border border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-2 p-4 bg-neutral-50 dark:bg-neutral-900/50 text-neutral-600 dark:text-neutral-400 rounded-lg text-[13px] font-medium border border-neutral-100 dark:border-neutral-800 mt-4">
                       <Shield size={16} className="shrink-0" />
                       <span>Security settings and sign-in methods are managed securely on the main login screen.</span>
                     </div>

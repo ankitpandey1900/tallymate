@@ -47,7 +47,7 @@ export function ExpenseCategoryChart({
               fontSize: "12px",
             }}
           />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color || chartColors[index % chartColors.length]} />
             ))}
@@ -90,7 +90,7 @@ export function IncomeSourcesChart({
               fontSize: "12px",
             }}
           />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
             ))}
