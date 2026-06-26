@@ -233,9 +233,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="p-3 border-t border-[#e5e7eb] dark:border-[#27272a] shrink-0">
           {currentUser ? (
             <div className="flex items-center gap-2.5 px-1">
-              <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center font-bold text-xs text-white dark:text-black shrink-0 select-none">
-                {userInitial}
-              </div>
+              {currentUser?.image ? (
+                <img src={currentUser.image} alt={currentUser.name || "User"} className="w-8 h-8 rounded-full shrink-0 object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center font-bold text-xs text-white dark:text-black shrink-0 select-none">
+                  {userInitial}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-[12px] font-semibold truncate">
                   {currentUser.name || "User"}

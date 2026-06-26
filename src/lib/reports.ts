@@ -9,8 +9,8 @@ export interface ReportMetrics {
   savingsRate: number;
   averageDailySpending: number;
   burnRate: number;
-  categoryTrends: { name: string; value: number }[];
-  incomeBreakdown: { name: string; value: number }[];
+  categoryTrends: { name: string; value: number; color?: string }[];
+  incomeBreakdown: { name: string; value: number; color?: string }[];
 }
 
 export function getReportStartDate(timeframe: ReportTimeframe, now = new Date()): Date {
@@ -51,17 +51,24 @@ export function computeReports(
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   const averageDailySpending = Math.round((totalExpenses / diffDays) * 100) / 100;
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
-  const categoryTotals: Record<string, number> = {};
+  const categoryMap = new Map(categories.map((c) => [c.id, { name: c.name, color: c.color }]));
+  const categoryTotals: Record<string, { value: number; color?: string }> = {};
 
   expenseTxs.forEach((t) => {
-    const catName = t.categoryId ? categoryMap.get(t.categoryId) || "Uncategorized" : "Uncategorized";
-    categoryTotals[catName] = (categoryTotals[catName] || 0) + Number(t.amount);
+    const catData = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
+    const catName = catData?.name || "Uncategorized";
+    const catColor = catData?.color;
+
+    if (!categoryTotals[catName]) {
+      categoryTotals[catName] = { value: 0, color: catColor };
+    }
+    categoryTotals[catName].value += Number(t.amount);
   });
 
-  const categoryTrends = Object.entries(categoryTotals).map(([name, value]) => ({
+  const categoryTrends = Object.entries(categoryTotals).map(([name, data]) => ({
     name,
-    value: Math.round(value * 100) / 100,
+    value: Math.round(data.value * 100) / 100,
+    color: data.color,
   }));
 
   const sourceMap = new Map(incomeSources.map((s) => [s.id, s.name]));

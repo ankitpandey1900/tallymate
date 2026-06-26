@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -10,6 +10,7 @@ import {
   Pencil,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
   Check,
   Loader2,
@@ -74,9 +75,17 @@ export default function TransactionsView({ initialData }: { initialData: Transac
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState<UnifiedTransaction | null>(null);
+  const [previewTx, setPreviewTx] = useState<UnifiedTransaction | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Grouping state
+  const [collapsedDates, setCollapsedDates] = useState<Record<string, boolean>>({});
+
+  const toggleDateGroup = (date: string) => {
+    setCollapsedDates(prev => ({ ...prev, [date]: !prev[date] }));
+  };
 
   // Delete confirm
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -225,6 +234,31 @@ export default function TransactionsView({ initialData }: { initialData: Transac
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const paginatedTxs = filteredTxs.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
+  const groupedTxs = useMemo(() => {
+    const groups = new Map<string, {
+      date: string;
+      txs: UnifiedTransaction[];
+      totalIncome: number;
+      totalExpense: number;
+    }>();
+    
+    paginatedTxs.forEach(tx => {
+      const dateStr = tx.date.split("T")[0];
+      if (!groups.has(dateStr)) {
+        groups.set(dateStr, { date: dateStr, txs: [], totalIncome: 0, totalExpense: 0 });
+      }
+      const g = groups.get(dateStr)!;
+      g.txs.push(tx);
+      if (tx.type === "INCOME" || tx.type === "REFUND") {
+        g.totalIncome += Number(tx.amount);
+      } else if (tx.type === "EXPENSE") {
+        g.totalExpense += Number(tx.amount);
+      }
+    });
+
+    return Array.from(groups.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [paginatedTxs]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -301,142 +335,157 @@ export default function TransactionsView({ initialData }: { initialData: Transac
 
       {/* Table */}
       <div className="panel-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-black/[0.04] dark:border-neutral-800 text-[10px] uppercase font-bold tracking-wider text-neutral-500">
-                <th className="p-4">Date</th>
-                <th className="p-4">Description</th>
-                <th className="p-4">Type</th>
-                <th className="p-4 hidden sm:table-cell">Account</th>
-                <th className="p-4 hidden md:table-cell">Payment</th>
-                <th className="p-4 hidden lg:table-cell">Category</th>
-                <th className="p-4 text-right">Amount</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 text-xs">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="p-12 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-neutral-400 mx-auto" />
-                  </td>
-                </tr>
-              ) : paginatedTxs.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-8 text-center text-neutral-400">
-                    No transactions found matching active filters.
-                  </td>
-                </tr>
-              ) : (
-                paginatedTxs.map((tx) => {
-                  const acc = accounts.find((a) => a.id === tx.accountId);
-                  const cat = categories.find((c) => c.id === tx.categoryId);
-                  const isDeleting = deletingId === tx.id;
-                  const isConfirming = confirmDeleteId === tx.id;
-                  return (
-                    <tr key={tx.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30 group">
-                      <td className="p-4 font-mono text-neutral-400 whitespace-nowrap">
-                        {new Date(tx.date).toLocaleDateString()}
-                      </td>
-                      <td className="p-4 font-medium max-w-[180px]">
-                        <p className="truncate">{tx.description}</p>
-                        {tx.notes && <p className="text-[10px] text-neutral-400 mt-0.5 truncate">{tx.notes}</p>}
-                        {tx.tags.length > 0 && (
-                          <div className="flex gap-1 mt-1 flex-wrap">
-                            {tx.tags.slice(0, 2).map((t) => (
-                              <span key={t} className="px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-[8px] font-bold text-neutral-500 uppercase tracking-wider">{t}</span>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider",
-                          tx.type === "INCOME" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20"
-                          : tx.type === "EXPENSE" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800"
-                          : "bg-blue-50 text-blue-600 dark:bg-blue-950/20"
-                        )}>
-                          {tx.type}
+        <div className="bg-white dark:bg-[#111113] rounded-xl overflow-hidden border border-black/[0.04] dark:border-white/[0.04]">
+          {isLoading ? (
+            <div className="py-20 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+            </div>
+          ) : groupedTxs.length === 0 ? (
+            <div className="py-20 text-center flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center text-neutral-400 mb-4">
+                <FileText size={28} />
+              </div>
+              <p className="text-base font-semibold text-neutral-900 dark:text-neutral-100">No transactions found</p>
+              <p className="text-sm text-neutral-500 mt-1">Try adjusting your filters.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+              {groupedTxs.map((group) => {
+                const groupDate = new Date(group.date);
+                const displayDate = groupDate.toLocaleDateString("en-US", { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+                const isCollapsed = collapsedDates[group.date];
+                
+                return (
+                  <div key={group.date} className="flex flex-col">
+                    {/* Sticky Date Header */}
+                    <div 
+                      className="sticky top-0 z-10 flex items-center justify-between px-4 py-2.5 bg-neutral-50/90 dark:bg-[#1a1a1c]/90 backdrop-blur-md border-b border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      onClick={() => toggleDateGroup(group.date)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <ChevronDown 
+                          size={14} 
+                          className={cn("text-neutral-400 transition-transform duration-200", isCollapsed && "-rotate-90")} 
+                        />
+                        <span className="text-[13px] font-bold text-neutral-700 dark:text-neutral-300 tracking-wide">
+                          {displayDate}
                         </span>
-                      </td>
-                      <td className="p-4 text-neutral-500 font-medium hidden sm:table-cell">{acc?.name || "—"}</td>
-                      <td className="p-4 hidden md:table-cell">
-                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                          {formatPaymentMode(acc?.type)}
-                        </span>
-                      </td>
-                      <td className="p-4 hidden lg:table-cell">
-                        {cat ? (
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                            <span>{cat.name}</span>
-                          </div>
-                        ) : tx.receiptUrl ? (
-                          <a href={tx.receiptUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-neutral-500 hover:text-neutral-900">
-                            <FileText size={12} /> View
-                          </a>
-                        ) : <span className="text-neutral-400">—</span>}
-                      </td>
-                      <td className={cn("p-4 text-right font-bold font-mono text-sm whitespace-nowrap",
-                        tx.type === "INCOME" || tx.type === "REFUND" ? "text-emerald-500" : "text-neutral-900 dark:text-neutral-100"
-                      )}>
-                        {tx.type === "INCOME" || tx.type === "REFUND" ? "+" : "−"}₹{Number(tx.amount).toLocaleString()}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-end gap-1">
-                          {isConfirming ? (
-                            <>
-                              <span className="text-[10px] text-red-500 font-semibold mr-1 hidden sm:inline">Delete?</span>
-                              <Button
-                                type="button"
-                                variant="destructive-sm"
-                                onClick={() => handleDelete(tx.id)}
-                                className="transition-colors"
-                                title="Confirm delete"
-                              >
-                                <Check size={12} />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="unstyled"
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                                title="Cancel"
-                              >
-                                <X size={12} />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                type="button"
-                                variant="unstyled"
-                                onClick={() => openEditModal(tx)}
-                                className="p-1.5 rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all"
-                                title="Edit transaction"
-                              >
-                                <Pencil size={13} />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="unstyled"
-                                onClick={() => handleDelete(tx.id)}
-                                disabled={isDeleting}
-                                className="p-1.5 rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500 transition-all disabled:opacity-50"
-                                title="Delete transaction"
-                              >
-                                {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-tight">
+                        {group.totalIncome > 0 && <span className="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-0.5 rounded-md">+₹{group.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
+                        {group.totalExpense > 0 && <span className="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-2 py-0.5 rounded-md">−₹{group.totalExpense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
+                      </div>
+                    </div>
+
+                    {/* Transactions for this date */}
+                    {!isCollapsed && (
+                      <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                        {group.txs.map((tx) => {
+                          const acc = accounts.find((a) => a.id === tx.accountId);
+                          const cat = categories.find((c) => c.id === tx.categoryId);
+                          const isDeleting = deletingId === tx.id;
+                          const isConfirming = confirmDeleteId === tx.id;
+                          
+                          const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
+                          const formattedAmount = `₹${Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+                          return (
+                            <div 
+                              key={tx.id} 
+                              className="group/item flex items-center p-4 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors relative cursor-pointer"
+                              onClick={() => setPreviewTx(tx)}
+                            >
+                              {/* Icon */}
+                              <div className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: cat ? cat.color : '#a3a3a3' }}>
+                                {cat ? <span className="font-bold text-lg">{cat.name.charAt(0)}</span> : <FileText size={18} />}
+                              </div>
+                              
+                              {/* Title & Details */}
+                              <div className="ml-4 flex-1 min-w-0 flex flex-col justify-center">
+                                <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{tx.description}</p>
+                                <div className="flex items-center gap-2 text-xs text-neutral-500 mt-1">
+                                  <span className={cn(
+                                    "font-semibold px-1.5 py-0.5 rounded-sm uppercase tracking-wider text-[9px]",
+                                    isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                    : tx.type === "EXPENSE" ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                                    : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                                  )}>
+                                    {tx.type}
+                                  </span>
+                                  <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
+                                    {acc?.name || "—"}
+                                  </span>
+                                  {cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
+                                </div>
+                              </div>
+
+                              {/* Amount & Actions */}
+                              <div className="shrink-0 flex flex-col items-end justify-center min-w-[100px] pl-4">
+                                <span className={cn(
+                                  "text-[16px] font-bold font-mono tracking-tight whitespace-nowrap",
+                                  isIncome ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-900 dark:text-white"
+                                )}>
+                                  {isIncome ? "+" : "−"}{formattedAmount}
+                                </span>
+                                
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-white dark:bg-[#111113] pl-2">
+                                  {isConfirming ? (
+                                    <>
+                                      <span className="text-[10px] text-rose-500 font-semibold mr-1">Sure?</span>
+                                      <Button
+                                        type="button"
+                                        variant="destructive-sm"
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }}
+                                        className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
+                                        title="Confirm delete"
+                                      >
+                                        <Check size={14} />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="unstyled"
+                                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                        className="w-8 h-8 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors shadow-sm"
+                                        title="Cancel"
+                                      >
+                                        <X size={14} />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        type="button"
+                                        variant="unstyled"
+                                        onClick={(e) => { e.stopPropagation(); openEditModal(tx); }}
+                                        className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
+                                        title="Edit transaction"
+                                      >
+                                        <Pencil size={14} />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="unstyled"
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }}
+                                        disabled={isDeleting}
+                                        className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800 disabled:opacity-50"
+                                        title="Delete transaction"
+                                      >
+                                        {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Pagination */}
@@ -457,20 +506,113 @@ export default function TransactionsView({ initialData }: { initialData: Transac
       </div>
 
       <AppDialog
+        open={!!previewTx}
+        onOpenChange={(open) => { if (!open) setPreviewTx(null); }}
+        title="Transaction Details"
+      >
+        {previewTx && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.04] pb-4">
+              <div>
+                <h3 className="text-xl font-bold">{previewTx.description}</h3>
+                <p className="text-sm text-neutral-500 mt-1">
+                  {new Date(previewTx.date).toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+              <div className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest",
+                (previewTx.type === "INCOME" || previewTx.type === "REFUND") ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                : previewTx.type === "EXPENSE" ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+              )}>
+                {previewTx.type}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Amount</span>
+                <p className={cn(
+                  "text-2xl font-bold font-mono tracking-tight",
+                  (previewTx.type === "INCOME" || previewTx.type === "REFUND") ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-900 dark:text-white"
+                )}>
+                  {(previewTx.type === "INCOME" || previewTx.type === "REFUND") ? "+" : "−"}₹{Number(previewTx.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Account</span>
+                <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                  {accounts.find(a => a.id === previewTx.accountId)?.name || "—"}
+                </p>
+              </div>
+            </div>
+
+            {(previewTx.categoryId || previewTx.tags.length > 0) && (
+              <div className="grid grid-cols-2 gap-4">
+                {previewTx.categoryId && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Category</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: categories.find(c => c.id === previewTx.categoryId)?.color }} />
+                      <span className="text-sm font-semibold">{categories.find(c => c.id === previewTx.categoryId)?.name}</span>
+                    </div>
+                  </div>
+                )}
+                {previewTx.tags.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Tags</span>
+                    <div className="flex gap-1.5 flex-wrap mt-1">
+                      {previewTx.tags.map((t) => (
+                        <span key={t} className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-bold text-neutral-500 uppercase tracking-wider">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {previewTx.notes && (
+              <div className="space-y-1 bg-neutral-50 dark:bg-[#111113] p-3 rounded-lg border border-black/[0.04] dark:border-white/[0.04]">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Notes</span>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed whitespace-pre-wrap">{previewTx.notes}</p>
+              </div>
+            )}
+
+            {previewTx.receiptUrl && (
+              <div className="space-y-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Receipt / Attachment</span>
+                <a 
+                  href={previewTx.receiptUrl} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="flex items-center gap-2 p-3 rounded-lg border border-black/[0.04] dark:border-white/[0.04] hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">View Receipt Document</p>
+                    <p className="text-xs text-neutral-500">Opens in a new tab</p>
+                  </div>
+                </a>
+              </div>
+            )}
+            
+            <div className="flex gap-3 justify-end pt-4 border-t border-black/[0.04] dark:border-white/[0.04]">
+              <Button type="button" variant="outline-app" onClick={() => { setPreviewTx(null); openEditModal(previewTx); }}>
+                <Pencil size={14} className="mr-2" />
+                Edit
+              </Button>
+            </div>
+          </div>
+        )}
+      </AppDialog>
+      <AppDialog
         open={showModal}
         onOpenChange={(open) => { if (open) setShowModal(true); else closeModal(); }}
         title={editingTx ? "Edit Transaction" : "Record Transaction"}
       >
-        <Button
-          type="button"
-          variant="unstyled"
-          onClick={closeModal}
-          className="absolute right-0 top-0 p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"
-        >
-          <X size={16} />
-        </Button>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-3 gap-2">
             {["EXPENSE", "INCOME", "TRANSFER"].map((type) => (
               <Button
@@ -626,7 +768,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-4">
             <Button type="button" variant="cancel" onClick={closeModal}>
               Cancel
             </Button>

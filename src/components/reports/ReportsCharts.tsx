@@ -10,10 +10,10 @@ import {
   Cell,
 } from "recharts";
 
-const COLORS = ["#000000", "#4b5563", "#9ca3af", "#d1d5db", "#e5e7eb"];
-const COLORS_DARK = ["#ffffff", "#a1a1aa", "#71717a", "#52525b", "#3f3f46"];
+const COLORS = ["#6366f1", "#f43f5e", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
+const COLORS_DARK = ["#818cf8", "#fb7185", "#34d399", "#fbbf24", "#a78bfa", "#22d3ee", "#f472b6", "#2dd4bf"];
 
-type ChartData = { name: string; value: number }[];
+type ChartData = { name: string; value: number; color?: string }[];
 
 export function ExpenseCategoryChart({
   data,
@@ -49,7 +49,7 @@ export function ExpenseCategoryChart({
           />
           <Bar dataKey="value" radius={[4, 4, 0, 0]}>
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+              <Cell key={`cell-${index}`} fill={entry.color || chartColors[index % chartColors.length]} />
             ))}
           </Bar>
         </BarChart>

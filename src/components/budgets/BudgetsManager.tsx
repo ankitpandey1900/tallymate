@@ -118,78 +118,107 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
             const isWarning80 = bp.percentage >= 80 && bp.percentage < 90;
 
             return (
-              <div key={bp.budget.id} className="panel-card p-5 space-y-4">
-                <div className="flex items-start justify-between">
+              <div key={bp.budget.id} className="relative group overflow-hidden panel-card bg-white dark:bg-[#111113] border border-black/[0.04] dark:border-white/[0.04] p-5 shadow-sm transition-all hover:shadow-md">
+                {/* Background glow for critical budgets */}
+                {(isExceeded || isWarning90) && (
+                  <div className={cn(
+                    "absolute -top-10 -right-10 w-32 h-32 blur-3xl rounded-full opacity-20 pointer-events-none transition-opacity",
+                    isExceeded ? "bg-red-500" : "bg-amber-500"
+                  )} />
+                )}
+
+                <div className="flex items-start justify-between mb-6 relative">
                   <div>
-                    <h3 className="text-sm font-semibold">{bp.categoryName}</h3>
-                    {bp.groupName && (
-                      <p className="text-[10px] uppercase font-bold text-neutral-400 font-mono mt-0.5">
+                    <h3 className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">{bp.categoryName}</h3>
+                    {bp.groupName ? (
+                      <p className="text-[11px] font-medium text-neutral-500 mt-1 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                         Group: {bp.groupName}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-medium text-neutral-500 mt-1 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Personal Budget
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
+                    {/* Status Badge */}
                     {isExceeded ? (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 text-[9px] font-bold uppercase tracking-wider">
-                        <AlertCircle size={10} />
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 text-[10px] font-bold uppercase tracking-wider">
+                        <AlertCircle size={12} />
                         Exceeded
                       </span>
                     ) : isWarning90 ? (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase tracking-wider">
-                        <AlertTriangle size={10} />
-                        Warning 90%
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider">
+                        <AlertTriangle size={12} />
+                        Warning
                       </span>
                     ) : isWarning80 ? (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-yellow-50 dark:bg-yellow-950/20 text-yellow-600 dark:text-yellow-400 text-[9px] font-bold uppercase tracking-wider">
-                        <AlertTriangle size={10} />
-                        Warning 80%
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-50 text-yellow-600 dark:bg-yellow-500/10 dark:text-yellow-400 text-[10px] font-bold uppercase tracking-wider">
+                        <AlertTriangle size={12} />
+                        Near Limit
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold uppercase tracking-wider">
+                      <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
                         Healthy
                       </span>
                     )}
-                    {/* Delete button */}
-                    {confirmDeleteBudgetId === bp.budget.id ? (
-                      <>
-                        <Button
-                          type="button"
-                          variant="destructive-sm"
-                          onClick={() => handleDeleteBudget(bp.budget.id)}
-                          className="p-1 text-[9px] font-bold"
-                        >
-                          Delete?
-                        </Button>
+
+                    {/* Actions */}
+                    <div className="flex items-center">
+                      {confirmDeleteBudgetId === bp.budget.id ? (
+                        <div className="flex items-center bg-white dark:bg-neutral-900 rounded-md border border-red-200 dark:border-red-900 p-0.5 absolute right-0 top-0 shadow-sm z-10">
+                          <span className="text-[10px] font-bold text-red-500 px-2">Sure?</span>
+                          <Button
+                            type="button"
+                            variant="destructive-sm"
+                            onClick={() => handleDeleteBudget(bp.budget.id)}
+                            className="w-6 h-6 p-0 rounded-sm"
+                          >
+                            <Check size={12} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="unstyled"
+                            onClick={() => setConfirmDeleteBudgetId(null)}
+                            className="w-6 h-6 p-0 rounded-sm ml-1 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                          >
+                            <X size={12} />
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
                           type="button"
                           variant="unstyled"
-                          onClick={() => setConfirmDeleteBudgetId(null)}
-                          className="p-1 rounded bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold"
+                          onClick={() => handleDeleteBudget(bp.budget.id)}
+                          disabled={deletingBudgetId === bp.budget.id}
+                          className="p-1.5 rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500"
+                          title="Delete budget"
                         >
-                          No
+                          {deletingBudgetId === bp.budget.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                         </Button>
-                      </>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="unstyled"
-                        onClick={() => handleDeleteBudget(bp.budget.id)}
-                        disabled={deletingBudgetId === bp.budget.id}
-                        className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-300 dark:text-neutral-600 hover:text-red-500 transition-colors"
-                        title="Delete budget"
-                      >
-                        {deletingBudgetId === bp.budget.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Progress bar */}
-                <div className="space-y-1.5">
-                  <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2 overflow-hidden">
+                {/* Rich Progress Section */}
+                <div className="space-y-2 mb-5">
+                  <div className="flex items-end justify-between mb-1">
+                    <span className="text-2xl font-bold font-mono tracking-tight text-neutral-900 dark:text-white">
+                      ₹{bp.spent.toLocaleString()}
+                    </span>
+                    <span className="text-[13px] font-medium text-neutral-500 mb-1">
+                      of ₹{bp.budget.amount.toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  {/* Thick Progress Bar */}
+                  <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-3 overflow-hidden shadow-inner">
                     <div
                       className={cn(
-                        "h-2 rounded-full",
+                        "h-full rounded-full transition-all duration-500 ease-out",
                         isExceeded
                           ? "bg-red-500"
                           : isWarning90 || isWarning80
@@ -199,15 +228,25 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
                       style={{ width: `${Math.min(bp.percentage, 100)}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-neutral-400 font-mono">
-                    <span>Spent: ₹{bp.spent.toLocaleString()}</span>
-                    <span>Limit: ₹{bp.budget.amount.toLocaleString()}</span>
-                  </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800 text-[10px] text-neutral-400 font-mono">
-                  <span>Remains: ₹{bp.remaining.toLocaleString()}</span>
-                  <span>Ends: {new Date(bp.budget.endDate).toLocaleDateString()}</span>
+                {/* Footer Stats */}
+                <div className="flex items-center justify-between pt-4 border-t border-black/[0.04] dark:border-white/[0.04]">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-0.5">Remaining</span>
+                    <span className={cn(
+                      "text-[13px] font-bold font-mono",
+                      bp.remaining < 0 ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"
+                    )}>
+                      {bp.remaining < 0 ? "-" : ""}₹{Math.abs(bp.remaining).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-0.5">Ends On</span>
+                    <span className="text-[13px] font-medium text-neutral-600 dark:text-neutral-300">
+                      {new Date(bp.budget.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               </div>
             );
@@ -216,7 +255,7 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
       )}
 
       <AppDialog open={showAddBudget} onOpenChange={setShowAddBudget} title="Create Spending Budget">
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <FieldLabel>Target Amount (INR)</FieldLabel>
             <Input
@@ -283,7 +322,7 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-4">
             <Button type="button" variant="cancel" onClick={() => setShowAddBudget(false)}>
               Cancel
             </Button>

@@ -12,13 +12,13 @@ import {
   Cell,
 } from "recharts";
 
-const COLORS = ["#000000", "#4b5563", "#9ca3af", "#d1d5db", "#e5e7eb"];
-const COLORS_DARK = ["#ffffff", "#a1a1aa", "#71717a", "#52525b", "#3f3f46"];
+const COLORS = ["#6366f1", "#f43f5e", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
+const COLORS_DARK = ["#818cf8", "#fb7185", "#34d399", "#fbbf24", "#a78bfa", "#22d3ee", "#f472b6", "#2dd4bf"];
 
 type ChartMetrics = {
   totalIncome: number;
   totalExpenses: number;
-  categoryTrends: { name: string; value: number }[];
+  categoryTrends: { name: string; value: number; color?: string }[];
 };
 
 export function DashboardTrendChart({ metrics }: { metrics: ChartMetrics }) {
@@ -84,7 +84,7 @@ export function DashboardCategoryChart({
               dataKey="value"
             >
               {metrics.categoryTrends.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={categoriesColors[index % categoriesColors.length]} />
+                <Cell key={`cell-${index}`} fill={entry.color || categoriesColors[index % categoriesColors.length]} />
               ))}
             </Pie>
             <Tooltip
@@ -104,7 +104,7 @@ export function DashboardCategoryChart({
           <div key={entry.name} className="flex items-center gap-1.5 text-xs text-neutral-500">
             <div
               className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: categoriesColors[index % categoriesColors.length] }}
+              style={{ backgroundColor: entry.color || categoriesColors[index % categoriesColors.length] }}
             />
             <span className="truncate max-w-[80px]">{entry.name}</span>
           </div>

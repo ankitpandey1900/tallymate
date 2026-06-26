@@ -207,49 +207,49 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
 
       {/* Overview stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="panel-card p-5 space-y-1 sm:col-span-2 lg:col-span-1">
-          <span className="text-xs font-medium text-neutral-500">Net worth</span>
-          <p className="text-2xl font-bold font-mono">₹{netWorth.toLocaleString()}</p>
-          <p className="text-[10px] text-neutral-400">Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}</p>
+        <div className="panel-card p-6 space-y-1 sm:col-span-2 lg:col-span-1 shadow-sm bg-white dark:bg-[#111113]">
+          <span className="text-[13px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Net worth</span>
+          <p className="text-3xl font-bold font-mono tracking-tight">₹{netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+          <p className="text-xs text-neutral-400 mt-2 font-medium">Across {accounts.length} account{accounts.length !== 1 ? "s" : ""}</p>
         </div>
 
-        <div className="panel-card p-5 flex items-center justify-between">
+        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
           <div className="space-y-1">
-            <span className="text-xs font-medium text-neutral-500">Income</span>
-            <p className="text-xl font-bold font-mono text-emerald-600">₹{metrics.totalIncome.toLocaleString()}</p>
+            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Income</span>
+            <p className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-500 tracking-tight">₹{metrics.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
           </div>
-          <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center">
-            <ArrowUpRight size={18} />
-          </div>
-        </div>
-
-        <div className="panel-card p-5 flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-medium text-neutral-500">Expenses</span>
-            <p className="text-xl font-bold font-mono text-rose-600">₹{metrics.totalExpenses.toLocaleString()}</p>
-          </div>
-          <div className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 flex items-center justify-center">
-            <ArrowDownRight size={18} />
+          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-500 flex items-center justify-center shrink-0">
+            <ArrowUpRight size={20} strokeWidth={2.5} />
           </div>
         </div>
 
-        <div className="panel-card p-5 flex items-center justify-between">
+        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
           <div className="space-y-1">
-            <span className="text-xs font-medium text-neutral-500">Saved</span>
-            <p className="text-xl font-bold font-mono">₹{metrics.savings.toLocaleString()}</p>
+            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Expenses</span>
+            <p className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-500 tracking-tight">₹{metrics.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
           </div>
-          <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-950/20 text-blue-600 flex items-center justify-center">
-            <TrendingUp size={18} />
+          <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-500 flex items-center justify-center shrink-0">
+            <ArrowDownRight size={20} strokeWidth={2.5} />
           </div>
         </div>
 
-        <div className="panel-card p-5 flex items-center justify-between">
+        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
           <div className="space-y-1">
-            <span className="text-xs font-medium text-neutral-500">Savings rate</span>
-            <p className="text-xl font-bold font-mono">{metrics.savingsRate}%</p>
+            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Saved</span>
+            <p className="text-2xl font-bold font-mono tracking-tight">₹{metrics.savings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
           </div>
-          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 flex items-center justify-center">
-            <Percent size={16} />
+          <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-600 flex items-center justify-center shrink-0">
+            <TrendingUp size={20} strokeWidth={2.5} />
+          </div>
+        </div>
+
+        <div className="panel-card p-6 flex items-center justify-between shadow-sm bg-white dark:bg-[#111113]">
+          <div className="space-y-1">
+            <span className="text-[12px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">Savings rate</span>
+            <p className="text-2xl font-bold font-mono tracking-tight">{metrics.savingsRate}%</p>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 flex items-center justify-center shrink-0">
+            <Percent size={20} strokeWidth={2.5} />
           </div>
         </div>
       </div>
@@ -442,7 +442,7 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
       )}
 
       <AppDialog open={showTxModal} onOpenChange={setShowTxModal} title="Add Transaction">
-        <form onSubmit={handleTxSubmit} className="space-y-3">
+        <form onSubmit={handleTxSubmit} className="space-y-4">
           <div className="grid grid-cols-3 gap-2">
             {["EXPENSE", "INCOME", "TRANSFER"].map((type) => (
               <Button
@@ -568,7 +568,7 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-4">
             <Button type="button" variant="cancel" onClick={() => setShowTxModal(false)}>
               Cancel
             </Button>
@@ -581,7 +581,7 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
       </AppDialog>
 
       <AppDialog open={showAccModal} onOpenChange={setShowAccModal} title="Add Account">
-        <form onSubmit={handleAccSubmit} className="space-y-3">
+        <form onSubmit={handleAccSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <FieldLabel>Account Name</FieldLabel>
             <Input
@@ -619,7 +619,7 @@ export default function DashboardDashboard({ initialData }: { initialData: Dashb
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-4">
             <Button type="button" variant="cancel" onClick={() => setShowAccModal(false)}>
               Cancel
             </Button>

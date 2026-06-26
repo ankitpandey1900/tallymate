@@ -643,6 +643,63 @@ export class UnifiedDB {
     };
   }
 
+  static async updateGroupExpense(
+    groupId: string,
+    expenseId: string,
+    data: {
+      amount?: number;
+      description?: string;
+      paidByUserId?: string;
+      splits?: { userId: string; amount: number; type: string }[];
+    }
+  ): Promise<UnifiedGroupExpense> {
+    const existing = await prisma.groupExpense.findFirst({ where: { id: expenseId, groupId } });
+    if (!existing) throw new Error("Group expense not found.");
+
+    if (data.splits) {
+      await prisma.expenseSplit.deleteMany({ where: { groupExpenseId: expenseId } });
+    }
+
+    const exp = await prisma.groupExpense.update({
+      where: { id: expenseId },
+      data: {
+        ...(data.amount !== undefined && { amount: data.amount }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.paidByUserId !== undefined && { paidByUserId: data.paidByUserId }),
+        ...(data.splits && {
+          splits: {
+            createMany: {
+              data: data.splits.map((s) => ({
+                userId: s.userId,
+                amount: s.amount,
+                type: s.type as "EQUAL" | "PERCENTAGE" | "CUSTOM" | "UNEQUAL",
+              })),
+            },
+          },
+        }),
+      },
+      include: { splits: true },
+    });
+
+    return {
+      id: exp.id,
+      groupId: exp.groupId,
+      amount: Number(exp.amount),
+      description: exp.description,
+      date: exp.date.toISOString(),
+      paidByUserId: exp.paidByUserId,
+      splits: exp.splits.map((s) => ({
+        userId: s.userId,
+        amount: Number(s.amount),
+        type: s.type,
+      })),
+    };
+  }
+
+  static async deleteGroupExpense(groupId: string, expenseId: string): Promise<void> {
+    await prisma.groupExpense.delete({ where: { id: expenseId, groupId } });
+  }
+
   static async getSettlements(groupId: string): Promise<UnifiedSettlement[]> {
     const settlements = await prisma.settlement.findMany({
       where: { groupId },
@@ -679,6 +736,10 @@ export class UnifiedDB {
       date: s.date.toISOString(),
       notes: s.notes || undefined,
     };
+  }
+
+  static async deleteSettlement(groupId: string, settlementId: string): Promise<void> {
+    await prisma.settlement.delete({ where: { id: settlementId, groupId } });
   }
 
   static async getNotifications(

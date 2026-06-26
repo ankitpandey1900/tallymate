@@ -152,20 +152,26 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
     user.id,
     "dashboard",
     async () => {
-      const [accounts, transactions, budgets, goals, groups, reports, catalog, monthTransactions] =
+      const now = new Date();
+      const reportStartDate = getReportStartDate(timeframe, now);
+      const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const oldestNeededDate = reportStartDate < monthStartDate ? reportStartDate : monthStartDate;
+
+      const [accounts, allTransactions, budgets, goals, groups, catalog] =
         await Promise.all([
           UnifiedDB.getAccounts(user.id),
-          UnifiedDB.getTransactions(user.id, { limit: 8 }),
+          UnifiedDB.getTransactions(user.id, { startDate: oldestNeededDate.toISOString() }),
           UnifiedDB.getBudgets(user.id),
           UnifiedDB.getGoals(user.id),
           UnifiedDB.getGroups(user.id),
-          getReportsForUser(user.id, timeframe),
           ensureCatalogDefaults(user.id),
-          UnifiedDB.getTransactions(user.id, {
-            startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
-          }),
         ]);
 
+      const transactionsForReports = allTransactions.filter(t => new Date(t.date) >= reportStartDate);
+      const reports = computeReports(transactionsForReports, catalog.categories, catalog.incomeSources, timeframe, now);
+
+      const monthTransactions = allTransactions.filter(t => new Date(t.date) >= monthStartDate);
+      
       const budgetProgress = computeBudgetProgress(
         budgets,
         catalog.categories,
@@ -174,10 +180,11 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
       );
 
       const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+      const recentTransactions = allTransactions.slice(0, 8);
 
       return {
         accounts,
-        transactions,
+        transactions: recentTransactions,
         budgets,
         budgetProgress,
         goals,
@@ -955,6 +962,40 @@ export async function createSettlement(
 
   await bustPageCache(user.id);
   return settlement;
+}
+
+export async function updateGroupExpense(
+  groupId: string,
+  expenseId: string,
+  data: {
+    amount?: number;
+    description?: string;
+    paidByUserId?: string;
+    splits?: { userId: string; amount: number; type: string }[];
+  }
+) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "updateGroupExpense", 60, 60);
+  const user = await getCurrentUser();
+  const expense = await UnifiedDB.updateGroupExpense(groupId, expenseId, data);
+  await bustPageCache(user.id);
+  return expense;
+}
+
+export async function deleteGroupExpense(groupId: string, expenseId: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "deleteGroupExpense", 60, 60);
+  const user = await getCurrentUser();
+  await UnifiedDB.deleteGroupExpense(groupId, expenseId);
+  await bustPageCache(user.id);
+}
+
+export async function deleteSettlement(groupId: string, settlementId: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "deleteSettlement", 60, 60);
+  const user = await getCurrentUser();
+  await UnifiedDB.deleteSettlement(groupId, settlementId);
+  await bustPageCache(user.id);
 }
 
 // Notifications actions
