@@ -20,6 +20,9 @@ import {
   CheckCircle,
   HandCoins,
   Loader2,
+  FileText,
+  CalendarDays,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -143,12 +146,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Transactions", href: "/transactions", icon: ArrowUpDown },
+    { name: "Transactions", href: "/transactions", icon: Receipt },
+    { name: "Calendar", href: "/calendar", icon: CalendarDays },
     { name: "Budgets", href: "/budgets", icon: PieChart },
     { name: "Goals", href: "/goals", icon: Target },
     { name: "Groups", href: "/groups", icon: Users },
     { name: "Debts", href: "/debts", icon: HandCoins },
     { name: "Reports", href: "/reports", icon: TrendingUp },
+    { name: "Import Rules", href: "/import-rules", icon: FileText },
     { name: "Notifications", href: "/notifications", icon: Bell },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
@@ -162,7 +167,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     : "U";
 
   return (
-    <div className="min-h-screen flex bg-neutral-50/50 dark:bg-[#0c0c0e] text-neutral-900 dark:text-[#f5f5f7]">
+    <div className="h-screen w-full flex overflow-hidden bg-neutral-50/50 dark:bg-[#0c0c0e] text-neutral-900 dark:text-[#f5f5f7]">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
@@ -233,21 +238,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="p-3 border-t border-[#e5e7eb] dark:border-[#27272a] shrink-0">
           {currentUser ? (
             <div className="flex items-center gap-2.5 px-1">
-              {currentUser?.image ? (
-                <img src={currentUser.image} alt={currentUser.name || "User"} className="w-8 h-8 rounded-full shrink-0 object-cover" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center font-bold text-xs text-white dark:text-black shrink-0 select-none">
-                  {userInitial}
+              <Link
+                href="/settings"
+                className="flex flex-1 items-center gap-2.5 min-w-0 hover:bg-black/[0.02] dark:hover:bg-[#1c1c1f] p-1.5 -ml-1.5 rounded-md transition-colors"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                {currentUser?.image ? (
+                  <img src={currentUser.image} alt={currentUser.name || "User"} className="w-8 h-8 rounded-full shrink-0 object-cover" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center font-bold text-xs text-white dark:text-black shrink-0 select-none">
+                    {userInitial}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold truncate">
+                    {currentUser.name || "User"}
+                  </p>
+                  <p className="text-[10px] text-neutral-400 truncate font-mono">
+                    {currentUser.email}
+                  </p>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold truncate">
-                  {currentUser.name || "User"}
-                </p>
-                <p className="text-[10px] text-neutral-400 truncate font-mono">
-                  {currentUser.email}
-                </p>
-              </div>
+              </Link>
               <Button
                 type="button"
                 variant="unstyled"
@@ -272,7 +283,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       {/* ─── Main Content ─── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
         {isNavPending && (
           <div className="h-0.5 w-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden shrink-0">
             <div className="h-full w-1/3 bg-neutral-900 dark:bg-white animate-[pulse_0.8s_ease-in-out_infinite]" />

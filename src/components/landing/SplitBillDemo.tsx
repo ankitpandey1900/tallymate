@@ -37,7 +37,7 @@ export default function SplitBillDemo() {
             className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
           />
           <div className="mt-2 text-2xl font-bold text-neutral-900 dark:text-white">
-            ₹{amount.toLocaleString()}
+            ₹{amount.toLocaleString('en-IN')}
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export default function SplitBillDemo() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-neutral-50 dark:bg-[#1a1a1c] border border-neutral-100 dark:border-neutral-800">
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1 font-semibold uppercase tracking-wider">Your Share</p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-white">₹{splitAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+              <p className="text-xl font-bold text-neutral-900 dark:text-white">₹{splitAmount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
               <p className="text-[10px] text-neutral-400 mt-2">Deducted from budget</p>
             </div>
             
@@ -78,7 +78,7 @@ export default function SplitBillDemo() {
                 <ArrowRight size={48} />
               </div>
               <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-semibold uppercase tracking-wider">Friends Owe You</p>
-              <p className="text-xl font-bold text-blue-700 dark:text-blue-300">₹{(amount - splitAmount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+              <p className="text-xl font-bold text-blue-700 dark:text-blue-300">₹{(amount - splitAmount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
               <p className="text-[10px] text-blue-500/70 dark:text-blue-400/70 mt-2">Added to pending receivables</p>
             </div>
           </div>

@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Users,
   Wallet,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -164,12 +165,12 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
             <TrendingDown size={16} />
             <span className="text-xs font-medium text-neutral-500">You owe</span>
           </div>
-          <p className="text-2xl font-bold font-mono">₹{data.totalYouOwe.toLocaleString()}</p>
+          <p className="text-2xl font-bold font-mono">₹{data.totalYouOwe.toLocaleString('en-IN')}</p>
           {(data.groupYouOwe > 0 || data.personalYouOwe > 0) && (
             <p className="text-[10px] text-neutral-400">
-              {data.groupYouOwe > 0 && `₹${data.groupYouOwe.toLocaleString()} groups`}
+              {data.groupYouOwe > 0 && `₹${data.groupYouOwe.toLocaleString('en-IN')} groups`}
               {data.groupYouOwe > 0 && data.personalYouOwe > 0 && " · "}
-              {data.personalYouOwe > 0 && `₹${data.personalYouOwe.toLocaleString()} personal`}
+              {data.personalYouOwe > 0 && `₹${data.personalYouOwe.toLocaleString('en-IN')} personal`}
             </p>
           )}
         </div>
@@ -178,12 +179,12 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
             <TrendingUp size={16} />
             <span className="text-xs font-medium text-neutral-500">You&apos;re owed</span>
           </div>
-          <p className="text-2xl font-bold font-mono">₹{data.totalOwedToYou.toLocaleString()}</p>
+          <p className="text-2xl font-bold font-mono">₹{data.totalOwedToYou.toLocaleString('en-IN')}</p>
           {(data.groupOwedToYou > 0 || data.personalOwedToYou > 0) && (
             <p className="text-[10px] text-neutral-400">
-              {data.groupOwedToYou > 0 && `₹${data.groupOwedToYou.toLocaleString()} groups`}
+              {data.groupOwedToYou > 0 && `₹${data.groupOwedToYou.toLocaleString('en-IN')} groups`}
               {data.groupOwedToYou > 0 && data.personalOwedToYou > 0 && " · "}
-              {data.personalOwedToYou > 0 && `₹${data.personalOwedToYou.toLocaleString()} personal`}
+              {data.personalOwedToYou > 0 && `₹${data.personalOwedToYou.toLocaleString('en-IN')} personal`}
             </p>
           )}
         </div>
@@ -198,7 +199,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
               data.netPosition > 0 ? "text-emerald-500" : data.netPosition < 0 ? "text-rose-500" : ""
             )}
           >
-            {data.netPosition >= 0 ? "+" : "-"}₹{Math.abs(data.netPosition).toLocaleString()}
+            {data.netPosition >= 0 ? "+" : "-"}₹{Math.abs(data.netPosition).toLocaleString('en-IN')}
           </p>
         </div>
       </div>
@@ -262,47 +263,53 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                       />
                     </div>
                     <p className="text-[10px] text-neutral-400 mt-1">
-                      ₹{(d.totalAmount - d.remainingAmount).toLocaleString()} of ₹{d.totalAmount.toLocaleString()} paid
+                      ₹{(d.totalAmount - d.remainingAmount).toLocaleString('en-IN')} of ₹{d.totalAmount.toLocaleString('en-IN')} paid
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      className={cn(
-                        "font-bold font-mono text-sm",
-                        isOwe ? "text-rose-500" : "text-emerald-500"
-                      )}
-                    >
-                      ₹{d.remainingAmount.toLocaleString()}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline-app"
-                      onClick={() => {
-                        setPaymentDebtId(d.id);
-                        setPaymentAmount(String(d.remainingAmount));
-                        setPaymentNotes("");
-                      }}
-                      className="text-[10px] px-2 py-1 h-auto"
-                    >
-                      Record payment
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="unstyled"
-                      onClick={() => handleMarkSettled(d.id)}
-                      className="text-[10px] px-2 py-1 h-auto text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
-                    >
-                      Settled
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="unstyled"
-                      onClick={() => handleDeleteDebt(d.id)}
-                      className="p-1.5 text-neutral-400 hover:text-rose-500"
-                      title="Delete"
-                    >
-                      <Trash2 size={13} />
-                    </Button>
+                  <div className="flex flex-col sm:items-end justify-center gap-1.5 shrink-0 mt-3 sm:mt-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">Remaining</span>
+                      <span
+                        className={cn(
+                          "font-bold font-mono text-[15px]",
+                          isOwe ? "text-rose-500" : "text-emerald-500"
+                        )}
+                      >
+                        ₹{d.remainingAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="unstyled"
+                        onClick={() => {
+                          setPaymentDebtId(d.id);
+                          setPaymentAmount(String(d.remainingAmount));
+                          setPaymentNotes("");
+                        }}
+                        className="text-[11px] font-semibold px-3 py-1.5 h-auto rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors shadow-sm"
+                      >
+                        Record Pay
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="unstyled"
+                        onClick={() => handleMarkSettled(d.id)}
+                        className="text-[11px] font-semibold px-3 py-1.5 h-auto rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors shadow-sm flex items-center gap-1.5"
+                      >
+                        <Check size={12} strokeWidth={3} />
+                        Settle
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="unstyled"
+                        onClick={() => handleDeleteDebt(d.id)}
+                        className="w-7 h-7 flex items-center justify-center rounded-md bg-white dark:bg-[#1a1a1c] border border-black/[0.06] dark:border-white/[0.06] text-neutral-400 hover:text-rose-500 hover:border-rose-200 transition-colors shadow-sm"
+                        title="Delete"
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -310,21 +317,31 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
           </div>
         )}
         {settledPersonal.length > 0 && (
-          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold mb-2">
-              Settled ({settledPersonal.length})
-            </p>
+          <div className="pt-4 mt-2 border-t border-neutral-100 dark:border-neutral-800">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] uppercase tracking-widest text-neutral-400 font-bold">
+                Settled History
+              </p>
+              <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-2 py-0.5 rounded-full font-semibold">
+                {settledPersonal.length}
+              </span>
+            </div>
             <div className="space-y-1">
               {settledPersonal.slice(0, 5).map((d) => (
-                <div key={d.id} className="flex items-center justify-between text-xs text-neutral-400 py-1">
-                  <span>{d.title} · {d.counterpartyName}</span>
+                <div key={d.id} className="flex items-center justify-between text-xs text-neutral-500 py-1.5 px-2 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 rounded-md transition-colors group">
+                  <div className="flex items-center gap-2">
+                    <Check size={14} className="text-emerald-500 opacity-50" />
+                    <span className="font-medium line-through decoration-neutral-300 dark:decoration-neutral-700">{d.title}</span>
+                    <span className="text-neutral-400">·</span>
+                    <span className="text-neutral-400">{d.counterpartyName}</span>
+                  </div>
                   <Button
                     type="button"
                     variant="unstyled"
                     onClick={() => handleDeleteDebt(d.id)}
-                    className="p-1 hover:text-rose-500"
+                    className="p-1 text-neutral-300 dark:text-neutral-700 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={14} />
                   </Button>
                 </div>
               ))}
@@ -343,45 +360,62 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
             <p className="text-xs text-neutral-400 py-6 text-center">No pending group payments.</p>
           ) : (
             <div className="space-y-3">
-              {data.pendingSettlements.map((s, idx) => (
-                <div
-                  key={`${s.groupId}-${idx}`}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-none"
-                >
-                  <div className="text-sm">
-                    {s.youArePayer ? (
-                      <>
-                        You pay <span className="font-semibold">{s.toUserName}</span>
-                      </>
-                    ) : s.youAreReceiver ? (
-                      <>
-                        <span className="font-semibold">{s.fromUserName}</span> pays you
-                      </>
-                    ) : (
-                      <>
-                        {s.fromUserName} pays {s.toUserName}
-                      </>
-                    )}
-                    <p className="text-[11px] text-neutral-400 mt-0.5">in {s.groupName}</p>
+              {data.pendingSettlements.map((s, idx) => {
+                const targetName = s.youArePayer ? s.toUserName : (s.youAreReceiver ? s.fromUserName : `${s.fromUserName} → ${s.toUserName}`);
+                const targetImage = s.youArePayer ? (s as any).toUserImage : (s.youAreReceiver ? (s as any).fromUserImage : null);
+                const initial = targetName.charAt(0).toUpperCase();
+                return (
+                  <div
+                    key={`${s.groupId}-${idx}`}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 border-b border-black/[0.04] dark:border-white/[0.04] last:border-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-black/5 flex items-center justify-center text-sm font-bold text-neutral-600 dark:text-neutral-300 shrink-0 shadow-sm overflow-hidden">
+                        {targetImage ? (
+                          <img src={targetImage} alt={targetName} className="w-full h-full object-cover" />
+                        ) : (
+                          initial
+                        )}
+                      </div>
+                      <div className="text-[13px]">
+                        {s.youArePayer ? (
+                          <div className="text-neutral-600 dark:text-neutral-300">
+                            You pay <span className="font-bold text-neutral-900 dark:text-white">{s.toUserName}</span>
+                          </div>
+                        ) : s.youAreReceiver ? (
+                          <div className="text-neutral-600 dark:text-neutral-300">
+                            <span className="font-bold text-neutral-900 dark:text-white">{s.fromUserName}</span> pays you
+                          </div>
+                        ) : (
+                          <div className="text-neutral-600 dark:text-neutral-300 font-medium">
+                            {s.fromUserName} pays {s.toUserName}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Users size={10} className="text-neutral-400" />
+                          <p className="text-[11px] text-neutral-400 font-medium">{s.groupName}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 ml-12 sm:ml-0">
+                      <span
+                        className={cn(
+                          "font-bold font-mono text-[15px]",
+                          s.youArePayer ? "text-rose-500" : "text-emerald-500"
+                        )}
+                      >
+                        ₹{s.amount.toLocaleString('en-IN')}
+                      </span>
+                      <Link
+                        href="/groups"
+                        className="inline-flex items-center px-3 py-1.5 bg-neutral-900 text-white dark:bg-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-md text-[11px] font-bold shadow-sm transition-colors"
+                      >
+                        Settle
+                      </Link>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "font-bold font-mono text-sm",
-                        s.youArePayer ? "text-rose-500" : "text-emerald-500"
-                      )}
-                    >
-                      ₹{s.amount.toLocaleString()}
-                    </span>
-                    <Link
-                      href="/groups"
-                      className="inline-flex items-center px-2 py-1 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-[10px] font-semibold"
-                    >
-                      Settle
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -394,27 +428,44 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
           {data.people.length === 0 ? (
             <p className="text-xs text-neutral-400 py-6 text-center">No group debts with anyone yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {data.people.map((p) => (
                 <div
                   key={p.userId}
-                  className="flex items-center justify-between py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-none"
+                  className="flex items-center justify-between py-2.5 border-b border-black/[0.04] dark:border-white/[0.04] last:border-none"
                 >
-                  <div>
-                    <p className="text-sm font-semibold">{p.name}</p>
-                    <p className="text-[11px] text-neutral-400">{p.groups.join(", ")}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 font-bold text-xs shrink-0 shadow-sm overflow-hidden">
+                      {(p as any).image ? (
+                        <img src={(p as any).image} alt={p.name} className="w-full h-full object-cover" />
+                      ) : (
+                        p.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-bold text-neutral-900 dark:text-white">{p.name}</p>
+                      <p className="text-[11px] text-neutral-500 font-medium line-clamp-1">{p.groups.join(", ")}</p>
+                    </div>
                   </div>
                   <span
                     className={cn(
-                      "text-xs font-bold font-mono",
+                      "text-[13px] font-bold font-mono tracking-tight text-right",
                       p.net > 0 ? "text-emerald-500" : p.net < 0 ? "text-rose-500" : "text-neutral-400"
                     )}
                   >
-                    {p.net > 0
-                      ? `Owes you ₹${p.net}`
-                      : p.net < 0
-                        ? `You owe ₹${Math.abs(p.net)}`
-                        : "Settled"}
+                    {p.net > 0 ? (
+                      <>
+                        <span className="block text-[10px] font-medium text-emerald-600/70 uppercase tracking-wider mb-0.5">Owes you</span>
+                        ₹{p.net.toLocaleString('en-IN')}
+                      </>
+                    ) : p.net < 0 ? (
+                      <>
+                        <span className="block text-[10px] font-medium text-rose-600/70 uppercase tracking-wider mb-0.5">You owe</span>
+                        ₹{Math.abs(p.net).toLocaleString('en-IN')}
+                      </>
+                    ) : (
+                      "Settled"
+                    )}
                   </span>
                 </div>
               ))}
@@ -430,39 +481,41 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
             Join or create a group to start tracking shared expenses.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.groupSummaries.map((g) => (
               <Link
                 key={g.groupId}
                 href="/groups"
-                className="flex items-center justify-between py-3 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors"
+                className="flex items-center justify-between p-3 rounded-xl border border-black/5 dark:border-white/5 bg-white dark:bg-[#151517] hover:border-emerald-500/30 hover:shadow-md transition-all group"
               >
-                <div>
-                  <p className="text-sm font-semibold">{g.groupName}</p>
-                  <p className="text-[11px] text-neutral-400">
-                    {g.pendingCount > 0
-                      ? `${g.pendingCount} suggested payment${g.pendingCount > 1 ? "s" : ""}`
-                      : "All settled"}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 font-bold shrink-0 overflow-hidden">
+                    {(g as any).groupImage ? (
+                      <img src={(g as any).groupImage} alt={g.groupName} className="w-full h-full object-cover" />
+                    ) : (
+                      g.groupName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-neutral-900 dark:text-white group-hover:text-emerald-500 transition-colors">{g.groupName}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {g.pendingCount > 0
+                        ? `${g.pendingCount} pending payment${g.pendingCount > 1 ? "s" : ""}`
+                        : "All settled"}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
-                      "text-xs font-bold font-mono",
-                      g.yourBalance > 0
-                        ? "text-emerald-500"
-                        : g.yourBalance < 0
-                          ? "text-rose-500"
-                          : "text-neutral-400"
+                      "text-sm font-bold font-mono",
+                      g.yourBalance > 0 ? "text-emerald-500" : g.yourBalance < 0 ? "text-rose-500" : "text-neutral-400"
                     )}
                   >
-                    {g.yourBalance > 0
-                      ? `+₹${g.yourBalance.toLocaleString()}`
-                      : g.yourBalance < 0
-                        ? `-₹${Math.abs(g.yourBalance).toLocaleString()}`
-                        : "Settled"}
+                    {g.yourBalance > 0 ? "+" : g.yourBalance < 0 ? "-" : ""}
+                    ₹{Math.abs(g.yourBalance).toLocaleString('en-IN')}
                   </span>
-                  <ArrowRight size={14} className="text-neutral-400" />
+                  <ArrowRight size={14} className="text-neutral-300 dark:text-neutral-700 group-hover:text-emerald-500 transition-colors" />
                 </div>
               </Link>
             ))}
@@ -572,7 +625,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
             <p className="text-xs text-neutral-500">
               {paymentDebt.title} · {paymentDebt.counterpartyName}
               <br />
-              Remaining: <span className="font-mono font-semibold">₹{paymentDebt.remainingAmount.toLocaleString()}</span>
+              Remaining: <span className="font-mono font-semibold">₹{paymentDebt.remainingAmount.toLocaleString('en-IN')}</span>
             </p>
             <div className="space-y-1.5">
               <FieldLabel>Payment amount (₹)</FieldLabel>

@@ -211,10 +211,10 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
                 <div className="space-y-2 mb-5">
                   <div className="flex items-end justify-between mb-1">
                     <span className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                      ₹{bp.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                      ₹{bp.spent.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </span>
                     <span className="text-[13px] font-medium text-neutral-500 mb-1.5">
-                      of ₹{bp.budget.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                      of ₹{bp.budget.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                   
@@ -242,7 +242,7 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
                       "text-[13px] font-bold",
                       bp.remaining < 0 ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
                     )}>
-                      {bp.remaining < 0 ? "-" : ""}₹{Math.abs(bp.remaining).toLocaleString()}
+                      {bp.remaining < 0 ? "-" : ""}₹{Math.abs(bp.remaining).toLocaleString('en-IN')}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">

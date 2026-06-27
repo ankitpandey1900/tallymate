@@ -1,13 +1,12 @@
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   CASH: "Cash",
-  BANK_ACCOUNT: "Bank account",
-  CREDIT_CARD: "Credit card",
-  DEBIT_CARD: "Debit card",
-  UPI_WALLET: "UPI wallet",
-  PAYTM: "Paytm",
-  PHONEPE: "PhonePe",
-  GOOGLE_PAY: "Google Pay",
-  CUSTOM: "Other",
+  BANK_ACCOUNT: "Bank",
+  CREDIT_CARD: "Credit Card",
+  WALLET: "Wallet",
+  FD: "FD",
+  MUTUAL_FUND: "Mutual Fund",
+  STOCKS: "Stocks",
+  CRYPTO: "Crypto",
 };
 
 /** Human-readable payment method from financial account type */
@@ -18,12 +17,11 @@ export function formatPaymentMode(accountType?: string | null) {
 
 export const ACCOUNT_TYPE_OPTIONS = [
   { value: "CASH", label: "Cash" },
-  { value: "BANK_ACCOUNT", label: "Bank account" },
-  { value: "CREDIT_CARD", label: "Credit card" },
-  { value: "DEBIT_CARD", label: "Debit card" },
-  { value: "UPI_WALLET", label: "UPI wallet" },
-  { value: "PAYTM", label: "Paytm" },
-  { value: "PHONEPE", label: "PhonePe" },
-  { value: "GOOGLE_PAY", label: "Google Pay" },
-  { value: "CUSTOM", label: "Other" },
+  { value: "BANK_ACCOUNT", label: "Bank" },
+  { value: "CREDIT_CARD", label: "Credit Card" },
+  { value: "WALLET", label: "Wallet" },
+  { value: "FD", label: "FD" },
+  { value: "MUTUAL_FUND", label: "Mutual Fund" },
+  { value: "STOCKS", label: "Stocks" },
+  { value: "CRYPTO", label: "Crypto" },
 ] as const;

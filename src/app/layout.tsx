@@ -80,8 +80,7 @@ const themeScript = `
 `;
 
 import NextTopLoader from 'nextjs-toploader';
-
-import { CSPostHogProvider } from "@/components/providers/PostHogProvider";
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 export default function RootLayout({
   children,
@@ -99,10 +98,11 @@ export default function RootLayout({
           {themeScript}
         </Script>
         <NextTopLoader color="#10B981" showSpinner={false} height={3} shadow="0 0 10px #10B981,0 0 5px #10B981" />
-        <CSPostHogProvider>
-          {children}
-          <Toaster />
-        </CSPostHogProvider>
+        {children}
+        <Toaster />
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );

@@ -13,6 +13,8 @@ const PAGE_KEYS = [
   "notifications",
   "layout",
   "debts",
+  "import-rules",
+  "calendar",
 ] as const;
 
 export type PageCacheKey = (typeof PAGE_KEYS)[number];

@@ -33,6 +33,7 @@ export default function ReportsView({ initialData }: { initialData: ReportsIniti
   const [mounted, setMounted] = useState(false);
   const [timeframe, setTimeframe] = useState<"weekly" | "monthly" | "quarterly" | "yearly">(initialData.timeframe);
   const [metrics, setMetrics] = useState(initialData.reports);
+  const [netWorth, setNetWorth] = useState(initialData.netWorth);
 
   useEffect(() => {
     setMounted(true);
@@ -53,7 +54,9 @@ export default function ReportsView({ initialData }: { initialData: ReportsIniti
     (async () => {
       try {
         const rep = await getReports(timeframe);
-        if (!cancelled) setMetrics(rep);
+        if (!cancelled) {
+          setMetrics(rep);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -147,22 +150,54 @@ export default function ReportsView({ initialData }: { initialData: ReportsIniti
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="panel-card p-5 space-y-1">
           <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Total Income</span>
-          <p className="text-2xl font-bold font-mono">₹{metrics.totalIncome.toLocaleString()}</p>
+          <p className="text-2xl font-bold font-mono">₹{metrics.totalIncome.toLocaleString('en-IN')}</p>
         </div>
 
         <div className="panel-card p-5 space-y-1">
           <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Total Expenses</span>
-          <p className="text-2xl font-bold font-mono">₹{metrics.totalExpenses.toLocaleString()}</p>
+          <p className="text-2xl font-bold font-mono">₹{metrics.totalExpenses.toLocaleString('en-IN')}</p>
         </div>
 
         <div className="panel-card p-5 space-y-1">
           <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Burn Rate (Per Day)</span>
-          <p className="text-2xl font-bold font-mono">₹{metrics.burnRate.toLocaleString()}</p>
+          <p className="text-2xl font-bold font-mono">₹{metrics.burnRate.toLocaleString('en-IN')}</p>
         </div>
 
         <div className="panel-card p-5 space-y-1">
           <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">Savings Rate</span>
           <p className="text-2xl font-bold font-mono">{metrics.savingsRate}%</p>
+        </div>
+      </div>
+
+      {/* Insights Engine */}
+      <div className="bg-white dark:bg-[#141416] border border-black/[0.04] dark:border-white/[0.04] rounded-[24px] shadow-sm p-6 overflow-hidden">
+        <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-4">
+          <Landmark size={16} />
+          Financial Insights
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-neutral-50 dark:bg-[#1a1a1c] p-4 rounded-xl border border-neutral-100 dark:border-neutral-800/50">
+            <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Spending vs Net Worth</h4>
+            <div className="text-sm">
+              {netWorth > 0 ? (
+                <p>
+                  Your expenses this {timeframe} represent <strong>{((metrics.totalExpenses / netWorth) * 100).toFixed(1)}%</strong> of your total liquid net worth (<strong>₹{netWorth.toLocaleString('en-IN')}</strong>).
+                </p>
+              ) : (
+                <p>Net worth data is unavailable or zero. Add balances to your accounts to see this insight.</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="bg-neutral-50 dark:bg-[#1a1a1c] p-4 rounded-xl border border-neutral-100 dark:border-neutral-800/50">
+            <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Burn Rate Analysis</h4>
+            <div className="text-sm">
+              <p>
+                At your current burn rate of <strong>₹{metrics.burnRate.toLocaleString('en-IN')}</strong> per day, 
+                your net worth would last approximately <strong>{netWorth > 0 && metrics.burnRate > 0 ? Math.floor(netWorth / metrics.burnRate) : 0} days</strong> if all income stopped.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

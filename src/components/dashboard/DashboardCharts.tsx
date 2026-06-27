@@ -85,7 +85,7 @@ export function DashboardCategoryChart({
     <div className="flex flex-col items-center justify-center h-64">
       <div className="h-48 w-full min-h-[192px] relative" style={{ minWidth: 1, minHeight: 1 }}>
         <ResponsiveContainer width="100%" height={192} minWidth={1} minHeight={1}>
-          <PieChart>
+          <PieChart style={{ outline: 'none' }}>
             <Pie
               data={metrics.categoryTrends}
               cx="50%"
@@ -103,16 +103,17 @@ export function DashboardCategoryChart({
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: "rgba(17, 17, 19, 0.9)",
+                backgroundColor: "rgba(20, 20, 22, 0.95)",
                 borderColor: "rgba(255, 255, 255, 0.1)",
                 color: "#fff",
-                borderRadius: "8px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                fontSize: "12px",
-                backdropFilter: "blur(4px)",
+                borderRadius: "12px",
+                boxShadow: "0 8px 16px -4px rgba(0, 0, 0, 0.1)",
+                fontSize: "13px",
+                padding: "8px 12px",
+                backdropFilter: "blur(8px)",
               }}
-              itemStyle={{ color: "#e5e7eb", fontSize: "13px", fontWeight: 500 }}
-              formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, "Spent"]}
+              itemStyle={{ color: "#e5e7eb", fontSize: "14px", fontWeight: 700 }}
+              formatter={(value: any, name: any) => [`₹${Number(value).toLocaleString('en-IN')}`, name]}
             />
           </PieChart>
         </ResponsiveContainer>

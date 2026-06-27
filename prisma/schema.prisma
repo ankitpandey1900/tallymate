@@ -37,6 +37,7 @@ model User {
   auditLogs          AuditLog[]
   expenseSplits      ExpenseSplit[]
   budgetAlerts       BudgetAlert[]
+  importRules        ImportRule[]
 }
 
 model Session {
@@ -114,6 +115,7 @@ model IncomeSource {
   name         String        // 'Salary', 'Freelancing', or custom
   createdAt    DateTime      @default(now())
   transactions Transaction[]
+  importRules  ImportRule[]
 
   @@index([userId])
 }
@@ -138,7 +140,7 @@ model Transaction {
   userId             String
   user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountId          String
-  account            FinancialAccount  @relation(fields: [accountId], references: [id])
+  account            FinancialAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   type               TransactionType
   scope              TransactionScope  @default(PERSONAL)
   amount             Decimal
@@ -182,6 +184,7 @@ model ExpenseCategory {
   createdAt    DateTime      @default(now())
   transactions Transaction[]
   budgets      Budget[]
+  importRules  ImportRule[]
 
   @@index([userId])
 }
@@ -402,6 +405,25 @@ model BudgetAlert {
   budget    Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   percentage Decimal  // 80, 90, 100
   firedAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([budgetId])
+}
+
+model ImportRule {
+  id              String           @id @default(uuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchKeyword    String
+  type            TransactionType
+  categoryId      String?
+  expenseCategory ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  incomeSourceId  String?
+  incomeSource    IncomeSource?    @relation(fields: [incomeSourceId], references: [id], onDelete: SetNull)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([userId])
 }
 
 model RecurringTransaction {

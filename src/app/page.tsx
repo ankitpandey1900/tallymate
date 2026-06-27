@@ -21,8 +21,14 @@ import AnimatedLetters from "@/components/AnimatedLetters";
 import ScrollFadeIn from "@/components/ScrollFadeIn";
 import SplitBillDemo from "@/components/landing/SplitBillDemo";
 import FAQAccordion from "@/components/landing/FAQAccordion";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
-export default function Home() {
+export default async function Home() {
+  const reqHeaders = await headers();
+  const session = await auth.api.getSession({
+    headers: reqHeaders,
+  });
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-[#09090b] text-[#09090b] dark:text-[#fafafa] selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-black">
       {/* Navbar */}
@@ -98,7 +104,7 @@ export default function Home() {
 
         <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center justify-center z-10 animate-in fade-in duration-1000 delay-[1200ms] fill-mode-both">
           <Link
-            href="/dashboard"
+            href={session ? "/dashboard" : "/login"}
             className="group flex items-center gap-2 px-8 py-3.5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-black font-bold text-[15px] transition-all shadow-[0_4px_14px_0_rgb(0,0,0,0.1)] dark:shadow-[0_4px_14px_0_rgb(255,255,255,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_6px_20px_rgba(255,255,255,0.15)] hover:-translate-y-0.5"
           >
             Launch Dashboard

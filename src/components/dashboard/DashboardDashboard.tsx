@@ -37,6 +37,7 @@ import {
   deleteAccount,
   type getDashboardData,
 } from "@/app/actions";
+import { CSVImportModal } from "./CSVImportModal";
 
 const DashboardTrendChart = dynamic(
   () => import("./DashboardCharts").then((m) => m.DashboardTrendChart),
@@ -85,6 +86,7 @@ export default function DashboardDashboard({
   // Modal triggers
   const [showTxModal, setShowTxModal] = useState(false);
   const [showAccModal, setShowAccModal] = useState(false);
+  const [showCSVModal, setShowCSVModal] = useState(false);
 
   // Forms
   const [txForm, setTxForm] = useState({
@@ -258,6 +260,9 @@ export default function DashboardDashboard({
           <p className="text-sm text-neutral-500">Your monthly activity snapshot.</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button type="button" variant="outline-app" onClick={() => setShowCSVModal(true)}>
+            Import CSV
+          </Button>
           <Button type="button" variant="outline-app" onClick={openNewAccount}>
             <Wallet size={14} />
             New Account
@@ -279,7 +284,7 @@ export default function DashboardDashboard({
             <div className="space-y-2">
               <span className="text-sm font-semibold text-neutral-500">Total Net Worth</span>
               <p className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                ₹{netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                ₹{netWorth.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
               </p>
             </div>
             
@@ -298,7 +303,7 @@ export default function DashboardDashboard({
             <ArrowUpRight size={16} strokeWidth={2.5} />
             <span className="text-[12px] font-bold uppercase tracking-wider">Income</span>
           </div>
-          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.totalIncome.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
         </div>
 
         <div className="panel-card p-5 space-y-3 shadow-sm shadow-black/[0.03] dark:shadow-none">
@@ -306,7 +311,7 @@ export default function DashboardDashboard({
             <ArrowDownRight size={16} strokeWidth={2.5} />
             <span className="text-[12px] font-bold uppercase tracking-wider">Expenses</span>
           </div>
-          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.totalExpenses.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
         </div>
 
         <div className="panel-card p-5 space-y-3 shadow-sm shadow-black/[0.03] dark:shadow-none">
@@ -314,7 +319,7 @@ export default function DashboardDashboard({
             <TrendingUp size={16} strokeWidth={2.5} />
             <span className="text-[12px] font-bold uppercase tracking-wider">Saved</span>
           </div>
-          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.savings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">₹{metrics.savings.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
         </div>
 
         <div className="panel-card p-5 space-y-3 shadow-sm shadow-black/[0.03] dark:shadow-none">
@@ -356,7 +361,7 @@ export default function DashboardDashboard({
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Balance</p>
-                  <p className="text-2xl font-bold tracking-tight">₹{acc.balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-bold tracking-tight">₹{acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
                 </div>
               </div>
             </div>
@@ -423,7 +428,7 @@ export default function DashboardDashboard({
                   const acc = accounts.find((a) => a.id === tx.accountId);
                   const cat = categories.find((c) => c.id === tx.categoryId);
                   const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
-                  const formattedAmount = `₹${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                  const formattedAmount = `₹${tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
                   return (
                     <div key={tx.id} className="flex items-center p-3 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors relative group/item rounded-lg">
@@ -513,11 +518,11 @@ export default function DashboardDashboard({
                     
                     <div className="flex items-center justify-between text-[11px]">
                       <div>
-                        <span className="font-bold text-neutral-700 dark:text-neutral-300">₹{g.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                        <span className="font-bold text-neutral-700 dark:text-neutral-300">₹{g.currentAmount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                         <span className="text-neutral-400 font-medium ml-1">saved</span>
                       </div>
                       <div className="text-neutral-400 font-medium">
-                        Target <span className="font-semibold text-neutral-600 dark:text-neutral-400">₹{g.targetAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                        Target <span className="font-semibold text-neutral-600 dark:text-neutral-400">₹{g.targetAmount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                       </div>
                     </div>
                   </div>
@@ -569,11 +574,11 @@ export default function DashboardDashboard({
                   
                   <div className="flex items-center justify-between text-[11px]">
                     <div>
-                      <span className="font-bold text-neutral-700 dark:text-neutral-300">₹{b.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-neutral-700 dark:text-neutral-300">₹{b.spent.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                       <span className="text-neutral-400 font-medium ml-1">spent</span>
                     </div>
                     <div className="text-neutral-400 font-medium">
-                      Target <span className="font-semibold text-neutral-600 dark:text-neutral-400">₹{Number(b.budget.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                      Target <span className="font-semibold text-neutral-600 dark:text-neutral-400">₹{Number(b.budget.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
@@ -582,6 +587,16 @@ export default function DashboardDashboard({
           </div>
         </div>
       )}
+
+      {/* Modals */}
+      <CSVImportModal
+        open={showCSVModal}
+        onOpenChange={setShowCSVModal}
+        accounts={accounts}
+        categories={categories}
+        incomeSources={incomeSources}
+        importRules={initialData.importRules}
+      />
 
       <AppDialog open={showTxModal} onOpenChange={setShowTxModal} title="Add Transaction">
         <form onSubmit={handleTxSubmit} className="space-y-4">

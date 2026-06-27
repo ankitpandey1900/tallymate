@@ -25,6 +25,7 @@ import { toast, toastError } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FieldLabel } from "@/components/ui/field-label";
 import { formatGroupType } from "@/lib/group-labels";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -58,7 +59,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [groupDetails, setGroupDetails] = useState<{
     group: UnifiedGroup;
-    members: { userId: string; role: string; name: string; email: string }[];
+    members: { userId: string; role: string; name: string; email: string; image?: string | null }[];
     expenses: UnifiedGroupExpense[];
     settlements: UnifiedSettlement[];
     balances: { userId: string; userName: string; userEmail: string; netBalance: number }[];
@@ -70,6 +71,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       amount: number;
     }[];
   } | null>(null);
+  const [previewExpenseId, setPreviewExpenseId] = useState<string | null>(null);
 
   const [personalAccounts, setPersonalAccounts] = useState<UnifiedAccount[]>(initialData.accounts);
   const [currentUserId, setCurrentUserId] = useState<string>(initialData.userId);
@@ -91,6 +93,9 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
   // Join Group Form
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
+
+  // Invite Member Form
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Create Expense Form
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -441,13 +446,6 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
           <h2 className="text-xl font-bold tracking-tight">Groups</h2>
           <p className="text-sm text-neutral-500">Split bills with friends, roommates, or family.</p>
         </div>
-        <Link
-          href="/debts"
-          className="inline-flex items-center gap-1.5 px-3 py-2 border border-[#e4e4e7] dark:border-[#27272a] hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md text-xs font-semibold self-start"
-        >
-          <HandCoins size={14} />
-          Debt Tracker
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start h-[calc(100vh-100px)]">
@@ -579,21 +577,18 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             {/* Header info card */}
             <div className="panel-card p-5 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold flex items-center gap-2">
-                    {groupDetails.group.name}
-                    {groupDetails.group.inviteCode && (
-                      <span
-                        className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] font-mono cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors select-all"
-                        title="Copy Invite Code"
-                      >
-                        Code: {groupDetails.group.inviteCode}
-                      </span>
-                    )}
-                  </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    {formatGroupType(groupDetails.group.type)} group · {groupDetails.members.length} members
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 shrink-0 text-xl font-bold shadow-sm">
+                    {groupDetails.group.name[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+                      {groupDetails.group.name}
+                    </h2>
+                    <p className="text-sm text-neutral-500 mt-0.5 font-medium">
+                      {formatGroupType(groupDetails.group.type)} group · {groupDetails.members.length} members
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {groupDetails.members.find((m) => m.userId === currentUserId)?.role !== "OWNER" && (
@@ -614,6 +609,15 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   )}
                   <Button
                     type="button"
+                    variant="outline-app"
+                    onClick={() => setShowInviteModal(true)}
+                    className="px-4 py-2 text-[13px] font-bold shadow-sm"
+                  >
+                    <UserPlus size={14} className="mr-1.5" />
+                    Add Member
+                  </Button>
+                  <Button
+                    type="button"
                     variant="cta"
                     onClick={() => {
                       setExpenseForm((prev) => ({
@@ -631,51 +635,30 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                     <Plus size={14} />
                     Add Expense
                   </Button>
+                  <Button
+                    type="button"
+                    variant="cta"
+                    onClick={() => {
+                       const firstPending = groupDetails.optimizedSettlements.find(s => s.fromUserId === currentUserId || s.toUserId === currentUserId);
+                       if (firstPending) {
+                          setSettlementForm({
+                            payerId: firstPending.fromUserId,
+                            receiverId: firstPending.toUserId,
+                            amount: String(firstPending.amount),
+                            notes: `Settled up in ${groupDetails.group.name}`,
+                            accountId: personalAccounts[0]?.id || "",
+                            receiveAccountId: "",
+                          });
+                       }
+                       setShowSettleModal(true);
+                    }}
+                    className="px-4 py-2 text-[13px] font-bold shadow-sm"
+                  >
+                    Settle up
+                  </Button>
                 </div>
               </div>
 
-              {/* Toggles settings toolbar */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                {[
-                  {
-                    label: "Link Accounts",
-                    hint: "Connect group spending to your personal accounts",
-                    key: "enableSharedFinance" as const,
-                  },
-                  {
-                    label: "Group Budgets",
-                    hint: "Set spending limits for this group",
-                    key: "enableSharedBudgets" as const,
-                  },
-                  {
-                    label: "Repeat Bills",
-                    hint: "Track rent, subscriptions, and other recurring costs",
-                    key: "enableRecurringExpenses" as const,
-                  },
-                  {
-                    label: "Payment History",
-                    hint: "Keep a record of who paid whom",
-                    key: "enableSettlementTracking" as const,
-                  },
-                ].map((s) => (
-                  <Button
-                    key={s.key}
-                    type="button"
-                    variant="unstyled"
-                    title={s.hint}
-                    onClick={() => handleToggleSetting(s.key)}
-                    className={cn(
-                      "flex items-center justify-between px-3 py-2 rounded-md border text-[11px] font-semibold transition-colors",
-                      groupDetails.group[s.key]
-                        ? "border-neutral-900 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-900/60 text-neutral-900 dark:text-neutral-100"
-                        : "border-black/[0.04] text-neutral-500 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                    )}
-                  >
-                    <span>{s.label}</span>
-                    {groupDetails.group[s.key] && <Check size={12} className="ml-1 shrink-0" />}
-                  </Button>
-                ))}
-              </div>
             </div>
 
             {/* Splitwise Layout: Left Column (Timeline) + Right Column (Balances) */}
@@ -683,15 +666,10 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               
               {/* Left Column: Timeline */}
               <div className="lg:col-span-2 space-y-4">
-                <div className="flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.04] pb-4">
+                <div className="flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.04] pb-2">
                   <div>
-                    <h3 className="text-xl font-bold tracking-tight">Timeline</h3>
-                    <p className="text-sm text-neutral-500">Expenses & Settlements</p>
+                    <h3 className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase">{new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h3>
                   </div>
-                  <Button type="button" variant="cta" onClick={() => setShowAddExpense(true)} className="h-9 px-4 gap-2">
-                    <Plus size={14} />
-                    Add Expense
-                  </Button>
                 </div>
 
                 <div className="bg-white dark:bg-[#111113] rounded-xl border border-black/[0.04] dark:border-white/[0.04] divide-y divide-black/[0.04] dark:divide-white/[0.04] overflow-hidden">
@@ -732,11 +710,11 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                         if (netAmount > 0) {
                           shareText = "you lent";
                           shareColor = "text-emerald-600 dark:text-emerald-500";
-                          netStr = `₹${Math.abs(netAmount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                          netStr = `₹${Math.abs(netAmount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
                         } else if (netAmount < 0) {
                           shareText = "you borrowed";
                           shareColor = "text-rose-600 dark:text-rose-500";
-                          netStr = `₹${Math.abs(netAmount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                          netStr = `₹${Math.abs(netAmount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
                         } else if (isPayer && myShare === e.amount) {
                           shareText = "not involved"; // paid for yourself
                         } else if (mySplit) {
@@ -745,66 +723,113 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                           netStr = "₹0";
                         }
 
+                        const isExpanded = previewExpenseId === e.id;
+
                         return (
-                          <div key={`exp-${id}`} className="group/item flex items-center p-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors relative">
-                            {/* Date Block */}
-                            <div className="w-12 shrink-0 flex flex-col items-center justify-center text-center opacity-70">
-                              <span className="text-[10px] uppercase font-bold text-neutral-500">{month}</span>
-                              <span className="text-xl leading-none font-medium text-neutral-900 dark:text-neutral-100">{day}</span>
-                            </div>
-                            
-                            {/* Icon & Title */}
-                            <div className="w-10 h-10 shrink-0 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-500 ml-2">
-                              <DollarSign size={20} />
-                            </div>
-                            <div className="ml-4 flex-1 min-w-0">
-                              <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{e.description}</p>
-                              <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-0.5">
-                                <span className={cn("font-medium", isPayer && "text-neutral-900 dark:text-neutral-300")}>
-                                  {isPayer ? "You" : payer?.name?.split(" ")[0]}
-                                </span>
-                                <span>paid</span>
-                                <span className="font-semibold font-mono text-neutral-700 dark:text-neutral-300">
-                                  ₹{e.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                                </span>
+                          <div key={`exp-${id}`} className="group/item">
+                            <div
+                              className="flex items-center p-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors relative cursor-pointer"
+                              onClick={() => setPreviewExpenseId(isExpanded ? null : e.id)}
+                            >
+                              {/* Date Block */}
+                              <div className="w-12 shrink-0 flex flex-col items-center justify-center text-center opacity-70">
+                                <span className="text-[10px] uppercase font-bold text-neutral-500">{month}</span>
+                                <span className="text-xl leading-none font-medium text-neutral-900 dark:text-neutral-100">{day}</span>
+                              </div>
+                              
+                              {/* Icon & Title */}
+                              <div className="w-10 h-10 shrink-0 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-500 ml-2">
+                                <DollarSign size={20} />
+                              </div>
+                              <div className="ml-4 flex-1 min-w-0">
+                                <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{e.description}</p>
+                                <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-0.5">
+                                  <span className={cn("font-medium", isPayer && "text-neutral-900 dark:text-neutral-300")}>
+                                    {isPayer ? "You" : payer?.name?.split(" ")[0]}
+                                  </span>
+                                  <span>paid</span>
+                                  <span className="font-semibold font-mono text-neutral-700 dark:text-neutral-300">
+                                    ₹{e.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Share & Actions */}
+                              <div className="shrink-0 flex flex-col items-end min-w-[100px]">
+                                <p className="text-xs text-neutral-500 mb-0.5">{shareText}</p>
+                                {netStr && <p className={cn("text-[15px] font-bold font-mono tracking-tight", shareColor)}>{netStr}</p>}
+                                
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-white dark:bg-[#111113] pl-2">
+                                  <Button
+                                    type="button"
+                                    variant="unstyled"
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      setEditingExpenseId(e.id);
+                                      setExpenseForm({
+                                        amount: String(e.amount),
+                                        description: e.description,
+                                        paidByUserId: e.paidByUserId,
+                                        accountId: "",
+                                        customShares: e.splits.reduce((acc, s) => ({ ...acc, [s.userId]: String(s.amount) }), {}),
+                                      });
+                                      setSplitType(e.splits[0]?.type === "EQUAL" ? "EQUAL" : e.splits[0]?.type === "PERCENTAGE" ? "PERCENTAGE" : "UNEQUAL");
+                                      setShowEditExpense(true);
+                                    }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
+                                  >
+                                    <Edit3 size={14} />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="unstyled"
+                                    onClick={(ev) => { ev.stopPropagation(); handleDeleteExpense(e.id); }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
+                                  >
+                                    <Trash2 size={14} />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
 
-                            {/* Share & Actions */}
-                            <div className="shrink-0 flex flex-col items-end min-w-[100px]">
-                              <p className="text-xs text-neutral-500 mb-0.5">{shareText}</p>
-                              {netStr && <p className={cn("text-[15px] font-bold font-mono tracking-tight", shareColor)}>{netStr}</p>}
-                              
-                              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-white dark:bg-[#111113] pl-2">
-                                <Button
-                                  type="button"
-                                  variant="unstyled"
-                                  onClick={() => {
-                                    setEditingExpenseId(e.id);
-                                    setExpenseForm({
-                                      amount: String(e.amount),
-                                      description: e.description,
-                                      paidByUserId: e.paidByUserId,
-                                      accountId: "",
-                                      customShares: e.splits.reduce((acc, s) => ({ ...acc, [s.userId]: String(s.amount) }), {}),
-                                    });
-                                    setSplitType(e.splits[0]?.type === "EQUAL" ? "EQUAL" : e.splits[0]?.type === "PERCENTAGE" ? "PERCENTAGE" : "UNEQUAL");
-                                    setShowEditExpense(true);
-                                  }}
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
-                                >
-                                  <Edit3 size={14} />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="unstyled"
-                                  onClick={() => handleDeleteExpense(e.id)}
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
-                                >
-                                  <Trash2 size={14} />
-                                </Button>
+                            {/* Expandable Preview */}
+                            {isExpanded && (
+                              <div className="px-4 pb-4 pt-1 bg-neutral-50/70 dark:bg-neutral-900/30 border-t border-dashed border-black/[0.06] dark:border-white/[0.06] animate-fade-in-up">
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-neutral-400 font-bold mb-1">Paid by</p>
+                                    <p className="font-semibold text-neutral-900 dark:text-white">{isPayer ? "You" : payer?.name}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-neutral-400 font-bold mb-1">Total</p>
+                                    <p className="font-bold font-mono text-neutral-900 dark:text-white">₹{e.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                                  </div>
+                                  <div className="col-span-2 mt-2">
+                                    <p className="text-[10px] uppercase tracking-wider text-neutral-400 font-bold mb-2">Split breakdown</p>
+                                    <div className="space-y-1.5">
+                                      {e.splits.map((sp) => {
+                                        const member = groupDetails.members.find(m => m.userId === sp.userId);
+                                        return (
+                                          <div key={sp.userId} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden border border-black/5 dark:border-white/5">
+                                                {member?.image ? (
+                                                  <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                  (member?.name?.[0] || "?").toUpperCase()
+                                                )}
+                                              </div>
+                                              <span className="font-medium text-neutral-800 dark:text-neutral-200">{sp.userId === currentUserId ? "You" : member?.name}</span>
+                                            </div>
+                                            <span className="font-mono font-semibold text-neutral-900 dark:text-white">₹{sp.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         );
                       } else {
@@ -830,7 +855,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                 <span className={cn("font-bold", isReceiver && "text-neutral-900 dark:text-white")}>{isReceiver ? "You" : receiver?.name?.split(" ")[0]}</span>
                               </p>
                               <p className="text-xs text-neutral-500 mt-0.5 font-mono font-semibold">
-                                ₹{s.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                ₹{s.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                               </p>
                             </div>
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-opacity">
@@ -870,7 +895,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                           "text-3xl font-bold font-mono tracking-tight",
                           isOwed ? "text-emerald-500" : isDebtor ? "text-rose-500" : "text-neutral-900 dark:text-white"
                         )}>
-                          {isOwed ? "+" : isDebtor ? "-" : ""}₹{Math.abs(myNet).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                          {isOwed ? "+" : isDebtor ? "-" : ""}₹{Math.abs(myNet).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                       <p className="text-sm font-medium text-neutral-500 mt-1">
@@ -880,69 +905,49 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   );
                 })()}
 
-                {/* Who owes who */}
-                <div className="panel-card p-0 border border-black/[0.04] dark:border-white/[0.04] overflow-hidden bg-white dark:bg-[#111113]">
-                  <div className="p-4 border-b border-black/[0.04] dark:border-white/[0.04] bg-neutral-50/50 dark:bg-neutral-900/30">
-                    <h4 className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100">Suggested Repayments</h4>
-                  </div>
+                {/* Group Balances */}
+                <div className="panel-card p-5 border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none bg-white dark:bg-[#111113]">
+                  <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-4">Group Balances</h4>
                   
-                  <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
-                    {groupDetails.optimizedSettlements.length === 0 ? (
-                      <div className="p-6 text-center">
-                        <Check size={24} className="mx-auto text-emerald-500 mb-2" />
-                        <p className="text-sm font-medium text-neutral-500">No pending debts</p>
-                      </div>
-                    ) : (
-                      groupDetails.optimizedSettlements.map((s, idx) => {
-                        const youPay = currentUserId === s.fromUserId;
-                        const youReceive = currentUserId === s.toUserId;
-                        const isInvolved = youPay || youReceive;
-
-                        return (
-                          <div key={`opt-${idx}`} className="p-4 flex flex-col gap-3">
-                            <div className="flex items-center gap-2 text-[14px]">
-                              <span className={cn("font-semibold", youPay ? "text-neutral-900 dark:text-white" : "text-neutral-600 dark:text-neutral-400")}>
-                                {youPay ? "You" : s.fromUserName.split(" ")[0]}
-                              </span>
-                              <span className="text-neutral-400 text-xs mt-0.5">owes</span>
-                              <span className={cn("font-semibold", youReceive ? "text-neutral-900 dark:text-white" : "text-neutral-600 dark:text-neutral-400")}>
-                                {youReceive ? "you" : s.toUserName.split(" ")[0]}
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center justify-between mt-1">
-                              <span className={cn(
-                                "text-lg font-bold font-mono tracking-tight",
-                                youPay ? "text-rose-500" : youReceive ? "text-emerald-500" : "text-neutral-900 dark:text-white"
-                              )}>
-                                ₹{s.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                              </span>
-                              
-                              {isInvolved && (
-                                <Button
-                                  type="button"
-                                  variant="cta"
-                                  onClick={() => {
-                                    setSettlementForm({
-                                      payerId: s.fromUserId,
-                                      receiverId: s.toUserId,
-                                      amount: String(s.amount),
-                                      notes: `Settled up in ${groupDetails.group.name}`,
-                                      accountId: personalAccounts[0]?.id || "",
-                                      receiveAccountId: "",
-                                    });
-                                    setShowSettleModal(true);
-                                  }}
-                                  className="h-8 px-4 text-xs font-semibold rounded-full shadow-sm"
-                                >
-                                  Settle Up
-                                </Button>
-                              )}
-                            </div>
+                  <div className="space-y-3">
+                    {groupDetails.balances.map((b) => {
+                      const net = b.netBalance;
+                      const member = groupDetails.members.find(m => m.userId === b.userId);
+                      const isOwed = net > 0.01;
+                      const isDebtor = net < -0.01;
+                      const isSettled = !isOwed && !isDebtor;
+                      
+                      return (
+                        <div key={b.userId} className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[13px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
+                            {member?.image ? (
+                              <img src={member.image} alt={b.userName} className="w-full h-full object-cover" />
+                            ) : (
+                              b.userName[0].toUpperCase()
+                            )}
                           </div>
-                        );
-                      })
-                    )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100 truncate">
+                              {b.userId === currentUserId ? "You" : b.userName}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            {isSettled ? (
+                              <span className="text-[12px] font-semibold text-neutral-400">settled</span>
+                            ) : (
+                              <>
+                                <p className={cn("text-[10px] font-bold uppercase tracking-wider", isOwed ? "text-emerald-600/70" : "text-rose-600/70")}>
+                                  {isOwed ? "gets back" : "owes"}
+                                </p>
+                                <p className={cn("text-[14px] font-bold font-mono", isOwed ? "text-emerald-500" : "text-rose-500")}>
+                                  ₹{Math.abs(net).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1060,130 +1065,118 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         className="max-h-[90vh] overflow-y-auto"
       >
         {groupDetails && (
-          <form onSubmit={handleAddExpense} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <FieldLabel>Description</FieldLabel>
-                <Input
+          <form onSubmit={handleAddExpense} className="space-y-5">
+            {/* Description & Amount */}
+            <div className="space-y-4 px-1">
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Description</label>
+                <input
                   type="text"
                   required
-                  placeholder="e.g. Dinner, Cab Fare, Hotel Booking"
+                  placeholder="e.g. Dinner, Groceries, Cab"
                   value={expenseForm.description}
                   onChange={(e) => setExpenseForm((prev) => ({ ...prev, description: e.target.value }))}
+                  style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
+                  className="w-full text-lg font-semibold placeholder:text-neutral-400 text-neutral-900 dark:text-white"
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <FieldLabel>Total Amount (INR)</FieldLabel>
-                <Input
-                  type="number"
-                  required
-                  placeholder="0.00"
-                  value={expenseForm.amount}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))}
-                  className="font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <FieldLabel>Paid By</FieldLabel>
-                <NativeSelect
-                  value={expenseForm.paidByUserId}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, paidByUserId: e.target.value }))}
-                >
-                  {groupDetails.members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-
-              <div className="space-y-1.5">
-                <FieldLabel>Link Personal Account (Payer Only)</FieldLabel>
-                <NativeSelect
-                  value={expenseForm.accountId}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, accountId: e.target.value }))}
-                >
-                  <option value="">Skip — don&apos;t update my personal account</option>
-                  {personalAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} (₹{a.balance})
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-            </div>
-
-            {/* Split options tabs */}
-            <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center justify-between">
-                <FieldLabel>Split Method</FieldLabel>
-                <div className="flex items-center gap-1.5">
-                  {(["EQUAL", "PERCENTAGE", "UNEQUAL"] as const).map((m) => (
-                    <Button
-                      key={m}
-                      type="button"
-                      variant="unstyled"
-                      onClick={() => setSplitType(m)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-colors border",
-                        splitType === m
-                          ? "bg-neutral-900 dark:bg-white text-white dark:text-black border-black dark:border-white"
-                          : "border-black/[0.04] dark:border-neutral-800 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                      )}
-                    >
-                      {m}
-                    </Button>
-                  ))}
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Amount</label>
+                <div className="flex items-center gap-1">
+                  <span className="text-lg font-semibold text-neutral-500">₹</span>
+                  <input
+                    type="number"
+                    required
+                    placeholder="0.00"
+                    value={expenseForm.amount}
+                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))}
+                    style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
+                    className="flex-1 text-lg font-semibold font-mono text-neutral-900 dark:text-white placeholder:text-neutral-400"
+                  />
                 </div>
               </div>
-
-              {/* Splits grid values inputs */}
-              <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
-                {groupDetails.members.map((m) => (
-                  <div key={m.userId} className="flex items-center justify-between py-1 text-xs">
-                    <span>{m.name}</span>
-                    <div className="flex items-center gap-2">
-                      {splitType === "EQUAL" ? (
-                        <span className="text-neutral-400 font-mono">
-                          ₹
-                          {expenseForm.amount
-                            ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
-                            : "0.00"}
-                        </span>
-                      ) : (
-                        <div className="relative flex items-center">
-                          <Input
-                            type="number"
-                            placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
-                            value={expenseForm.customShares[m.userId] || ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setExpenseForm((prev) => ({
-                                ...prev,
-                                customShares: {
-                                  ...prev.customShares,
-                                  [m.userId]: val,
-                                },
-                              }));
-                            }}
-                            className="w-24 px-2 py-1 text-xs font-mono text-right"
-                          />
-                          <span className="absolute right-2.5 text-[10px] text-neutral-400 select-none">
-                            {splitType === "PERCENTAGE" ? "%" : "₹"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+            {/* Paid by / Split */}
+            <div className="flex items-center justify-center gap-2 text-[14px] text-neutral-600 dark:text-neutral-400 py-2 px-1">
+              <span>Paid by</span>
+              <Select value={expenseForm.paidByUserId} onValueChange={(val) => setExpenseForm((prev) => ({ ...prev, paidByUserId: val || "" }))}>
+                <SelectTrigger className="w-auto h-auto px-1 py-0.5 border-none shadow-none rounded-none border-b-[1.5px] border-neutral-900 dark:border-white text-[14px] font-bold text-neutral-900 dark:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/5 data-[state=open]:bg-black/5 dark:data-[state=open]:bg-white/5 transition-colors focus:ring-0">
+                  {groupDetails.members.find(m => m.userId === expenseForm.paidByUserId)?.userId === currentUserId 
+                    ? "you" 
+                    : groupDetails.members.find(m => m.userId === expenseForm.paidByUserId)?.name}
+                </SelectTrigger>
+                <SelectContent>
+                  {groupDetails.members.map((m) => (
+                    <SelectItem key={m.userId} value={m.userId}>
+                      {m.userId === currentUserId ? "you" : m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span>· split</span>
+              <Select value={splitType} onValueChange={(val) => setSplitType((val as any) || "EQUAL")}>
+                <SelectTrigger className="w-auto h-auto px-1 py-0.5 border-none shadow-none rounded-none border-b-[1.5px] border-neutral-900 dark:border-white text-[14px] font-bold text-neutral-900 dark:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/5 data-[state=open]:bg-black/5 dark:data-[state=open]:bg-white/5 transition-colors focus:ring-0">
+                  {splitType === "EQUAL" ? "equally" : splitType === "UNEQUAL" ? "unequally" : "by %"}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EQUAL">equally</SelectItem>
+                  <SelectItem value="UNEQUAL">unequally</SelectItem>
+                  <SelectItem value="PERCENTAGE">by %</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Split Grid */}
+            <div className="space-y-0 border-t border-black/[0.06] dark:border-white/[0.06]">
+              {groupDetails.members.map((m) => (
+                <div key={m.userId} className="flex items-center justify-between py-3 px-1 border-b border-black/[0.04] dark:border-white/[0.04] last:border-none">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[12px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
+                      {(m as any).image ? (
+                        <img src={(m as any).image} alt={m.name} className="w-full h-full object-cover" />
+                      ) : (
+                        m.name[0].toUpperCase()
+                      )}
+                    </div>
+                    <span className="text-[14px] font-semibold text-neutral-900 dark:text-white">{m.userId === currentUserId ? "You" : m.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {splitType === "EQUAL" ? (
+                      <span className="text-[14px] text-neutral-700 dark:text-neutral-300 font-mono font-semibold">
+                        ₹{expenseForm.amount
+                          ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
+                          : "0.00"}
+                      </span>
+                    ) : (
+                      <div className="relative flex items-center">
+                        <Input
+                          type="number"
+                          placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
+                          value={expenseForm.customShares[m.userId] || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setExpenseForm((prev) => ({
+                              ...prev,
+                              customShares: {
+                                ...prev.customShares,
+                                [m.userId]: val,
+                              },
+                            }));
+                          }}
+                          className="w-24 px-2 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
+                        />
+                        <span className="absolute right-2.5 text-[11px] text-neutral-400 select-none">
+                          {splitType === "PERCENTAGE" ? "%" : "₹"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
               <Button type="button" variant="cancel" onClick={() => setShowAddExpense(false)}>
                 Cancel
               </Button>
@@ -1195,6 +1188,37 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         )}
       </AppDialog>
 
+      <AppDialog open={showInviteModal} onOpenChange={setShowInviteModal} title="Invite Friends">
+        <div className="space-y-6 text-center py-4">
+          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-500 mb-4">
+            <UserPlus size={28} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold tracking-tight mb-2">Share this invite code</h3>
+            <p className="text-sm text-neutral-500">
+              Anyone with this code can instantly join the <span className="font-semibold text-neutral-900 dark:text-white">"{groupDetails?.group.name}"</span> group.
+            </p>
+          </div>
+          
+          <div className="bg-neutral-50 dark:bg-neutral-900 p-6 rounded-2xl border border-black/5 dark:border-white/5">
+            <p className="text-4xl font-mono font-bold tracking-[0.2em] text-neutral-900 dark:text-white mb-4">
+              {groupDetails?.group.inviteCode}
+            </p>
+            <Button 
+              type="button" 
+              variant="cta" 
+              className="w-full"
+              onClick={() => {
+                navigator.clipboard.writeText(groupDetails?.group.inviteCode || "");
+                toast.success("Invite code copied to clipboard!");
+              }}
+            >
+              Copy Invite Code
+            </Button>
+          </div>
+        </div>
+      </AppDialog>
+
       {/* Edit Expense Modal */}
       <AppDialog
         open={showEditExpense && !!groupDetails}
@@ -1204,115 +1228,118 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         className="max-h-[90vh] overflow-y-auto"
       >
         {groupDetails && (
-          <form onSubmit={handleEditExpenseSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <FieldLabel>Description</FieldLabel>
-                <Input
+          <form onSubmit={handleEditExpenseSubmit} className="space-y-5">
+            {/* Description & Amount */}
+            <div className="space-y-4 px-1">
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Description</label>
+                <input
                   type="text"
                   required
-                  placeholder="e.g. Dinner, Cab Fare, Hotel Booking"
+                  placeholder="e.g. Dinner, Groceries, Cab"
                   value={expenseForm.description}
                   onChange={(e) => setExpenseForm((prev) => ({ ...prev, description: e.target.value }))}
+                  style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
+                  className="w-full text-lg font-semibold placeholder:text-neutral-400 text-neutral-900 dark:text-white"
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <FieldLabel>Total Amount (INR)</FieldLabel>
-                <Input
-                  type="number"
-                  required
-                  placeholder="0.00"
-                  value={expenseForm.amount}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))}
-                  className="font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <FieldLabel>Paid By</FieldLabel>
-                <NativeSelect
-                  value={expenseForm.paidByUserId}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, paidByUserId: e.target.value }))}
-                >
-                  {groupDetails.members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-            </div>
-
-            {/* Split options tabs */}
-            <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center justify-between">
-                <FieldLabel>Split Method</FieldLabel>
-                <div className="flex items-center gap-1.5">
-                  {(["EQUAL", "PERCENTAGE", "UNEQUAL"] as const).map((m) => (
-                    <Button
-                      key={m}
-                      type="button"
-                      variant="unstyled"
-                      onClick={() => setSplitType(m)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-colors border",
-                        splitType === m
-                          ? "bg-neutral-900 dark:bg-white text-white dark:text-black border-black dark:border-white"
-                          : "border-black/[0.04] dark:border-neutral-800 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                      )}
-                    >
-                      {m}
-                    </Button>
-                  ))}
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Amount</label>
+                <div className="flex items-center gap-1">
+                  <span className="text-lg font-semibold text-neutral-500">₹</span>
+                  <input
+                    type="number"
+                    required
+                    placeholder="0.00"
+                    value={expenseForm.amount}
+                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))}
+                    style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
+                    className="flex-1 text-lg font-semibold font-mono text-neutral-900 dark:text-white placeholder:text-neutral-400"
+                  />
                 </div>
               </div>
-
-              {/* Splits grid values inputs */}
-              <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
-                {groupDetails.members.map((m) => (
-                  <div key={m.userId} className="flex items-center justify-between py-1 text-xs">
-                    <span>{m.name}</span>
-                    <div className="flex items-center gap-2">
-                      {splitType === "EQUAL" ? (
-                        <span className="text-neutral-400 font-mono">
-                          ₹
-                          {expenseForm.amount
-                            ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
-                            : "0.00"}
-                        </span>
-                      ) : (
-                        <div className="relative flex items-center">
-                          <Input
-                            type="number"
-                            placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
-                            value={expenseForm.customShares[m.userId] || ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setExpenseForm((prev) => ({
-                                ...prev,
-                                customShares: {
-                                  ...prev.customShares,
-                                  [m.userId]: val,
-                                },
-                              }));
-                            }}
-                            className="w-24 px-2 py-1 text-xs font-mono text-right"
-                          />
-                          <span className="absolute right-2.5 text-[10px] text-neutral-400 select-none">
-                            {splitType === "PERCENTAGE" ? "%" : "₹"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+            {/* Paid by / Split */}
+            <div className="flex items-center justify-center gap-2 text-[14px] text-neutral-600 dark:text-neutral-400 py-2 px-1">
+              <span>Paid by</span>
+              <Select value={expenseForm.paidByUserId} onValueChange={(val) => setExpenseForm((prev) => ({ ...prev, paidByUserId: val || "" }))}>
+                <SelectTrigger className="w-auto h-auto px-1 py-0.5 border-none shadow-none rounded-none border-b-[1.5px] border-neutral-900 dark:border-white text-[14px] font-bold text-neutral-900 dark:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/5 data-[state=open]:bg-black/5 dark:data-[state=open]:bg-white/5 transition-colors focus:ring-0">
+                  {groupDetails.members.find(m => m.userId === expenseForm.paidByUserId)?.userId === currentUserId 
+                    ? "you" 
+                    : groupDetails.members.find(m => m.userId === expenseForm.paidByUserId)?.name}
+                </SelectTrigger>
+                <SelectContent>
+                  {groupDetails.members.map((m) => (
+                    <SelectItem key={m.userId} value={m.userId}>
+                      {m.userId === currentUserId ? "you" : m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span>· split</span>
+              <Select value={splitType} onValueChange={(val) => setSplitType((val as any) || "EQUAL")}>
+                <SelectTrigger className="w-auto h-auto px-1 py-0.5 border-none shadow-none rounded-none border-b-[1.5px] border-neutral-900 dark:border-white text-[14px] font-bold text-neutral-900 dark:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/5 data-[state=open]:bg-black/5 dark:data-[state=open]:bg-white/5 transition-colors focus:ring-0">
+                  {splitType === "EQUAL" ? "equally" : splitType === "UNEQUAL" ? "unequally" : "by %"}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EQUAL">equally</SelectItem>
+                  <SelectItem value="UNEQUAL">unequally</SelectItem>
+                  <SelectItem value="PERCENTAGE">by %</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Split Grid */}
+            <div className="space-y-0 border-t border-black/[0.06] dark:border-white/[0.06]">
+              {groupDetails.members.map((m) => (
+                <div key={m.userId} className="flex items-center justify-between py-3 px-1 border-b border-black/[0.04] dark:border-white/[0.04] last:border-none">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[12px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
+                      {(m as any).image ? (
+                        <img src={(m as any).image} alt={m.name} className="w-full h-full object-cover" />
+                      ) : (
+                        m.name[0].toUpperCase()
+                      )}
+                    </div>
+                    <span className="text-[14px] font-semibold text-neutral-900 dark:text-white">{m.userId === currentUserId ? "You" : m.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {splitType === "EQUAL" ? (
+                      <span className="text-[14px] text-neutral-700 dark:text-neutral-300 font-mono font-semibold">
+                        ₹{expenseForm.amount
+                          ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
+                          : "0.00"}
+                      </span>
+                    ) : (
+                      <div className="relative flex items-center">
+                        <Input
+                          type="number"
+                          placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
+                          value={expenseForm.customShares[m.userId] || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setExpenseForm((prev) => ({
+                              ...prev,
+                              customShares: {
+                                ...prev.customShares,
+                                [m.userId]: val,
+                              },
+                            }));
+                          }}
+                          className="w-24 px-2 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
+                        />
+                        <span className="absolute right-2.5 text-[11px] text-neutral-400 select-none">
+                          {splitType === "PERCENTAGE" ? "%" : "₹"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
               <Button type="button" variant="cancel" onClick={() => setShowEditExpense(false)}>
                 Cancel
               </Button>

@@ -37,4 +37,3 @@ Historically, people have had to use **two completely separate apps** to manage 
 - **Styling:** Tailwind CSS + Lucide Icons
 - **Performance:** `nextjs-toploader` for instant navigation feedback
 
-#

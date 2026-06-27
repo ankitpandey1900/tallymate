@@ -182,10 +182,10 @@ export default function GoalsManager({ initialData }: { initialData: GoalsInitia
                   <div className="space-y-2 mt-4">
                     <div className="flex items-end justify-between mb-1">
                       <span className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                        ₹{g.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        ₹{g.currentAmount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-[13px] font-medium text-neutral-500 mb-1.5">
-                        of ₹{g.targetAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        of ₹{g.targetAmount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     

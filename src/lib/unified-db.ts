@@ -896,6 +896,62 @@ export class UnifiedDB {
     await prisma.transaction.delete({ where: { id: txId, userId } });
   }
 
+  static async bulkCreateTransactions(userId: string, transactions: Omit<UnifiedTransaction, "id" | "userId">[]): Promise<UnifiedTransaction[]> {
+    if (transactions.length === 0) return [];
+    
+    // Calculate net changes per account to optimize db updates
+    const accountDeltas: Record<string, number> = {};
+    
+    const dbTransactions = transactions.map(t => {
+      const amount = Number(t.amount);
+      const modifier = t.type === "INCOME" || t.type === "REFUND" || t.type === "LOAN_TAKEN" ? 1 : -1;
+      
+      accountDeltas[t.accountId] = (accountDeltas[t.accountId] || 0) + (amount * modifier);
+      
+      if (t.type === "TRANSFER" && t.transferToAccountId) {
+        accountDeltas[t.transferToAccountId] = (accountDeltas[t.transferToAccountId] || 0) + amount;
+      }
+      
+      return {
+        userId,
+        accountId: t.accountId,
+        type: t.type as any,
+        scope: t.scope as any,
+        amount: amount,
+        date: new Date(t.date),
+        description: t.description,
+        notes: t.notes,
+        tags: t.tags,
+        receiptUrl: t.receiptUrl,
+        categoryId: t.categoryId,
+        incomeSourceId: t.incomeSourceId,
+        groupId: t.groupId,
+        transferToAccountId: t.transferToAccountId,
+      };
+    });
+
+    // Execute in a transaction to ensure atomic updates
+    await prisma.$transaction(async (tx) => {
+      // 1. Insert all transactions
+      await tx.transaction.createMany({
+        data: dbTransactions,
+      });
+
+      // 2. Update all account balances
+      for (const [accountId, delta] of Object.entries(accountDeltas)) {
+        if (delta === 0) continue;
+        await tx.financialAccount.update({
+          where: { id: accountId },
+          data: { balance: { increment: delta } },
+        });
+      }
+    });
+
+    // createMany doesn't return the inserted records in Prisma, so we'll fetch them back
+    // (This is an approximation, we fetch the most recent ones for the user)
+    return await this.getTransactions(userId, { limit: transactions.length });
+  }
+
   static async updateTransaction(
     userId: string,
     txId: string,

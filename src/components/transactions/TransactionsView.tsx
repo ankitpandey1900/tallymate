@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   Plus,
@@ -16,6 +17,7 @@ import {
   Loader2,
   ArrowDownToLine,
 } from "lucide-react";
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, CartesianGrid } from "recharts";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,8 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
+  bulkDeleteTransactions,
+  bulkUpdateTransactions,
   uploadReceipt,
   type getTransactionsPageData,
 } from "@/app/actions";
@@ -63,16 +67,22 @@ export default function TransactionsView({ initialData }: { initialData: Transac
   const [categories, setCategories] = useState<UnifiedCategory[]>(initialData.categories);
   const [incomeSources, setIncomeSources] = useState<UnifiedIncomeSource[]>(initialData.incomeSources);
 
-  // Filtering
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("ALL");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedAccount, setSelectedAccount] = useState("ALL");
   const [selectedDateRange, setSelectedDateRange] = useState("ALL");
 
-  // Pagination
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 10;
+  // Grouping & Accordion State
+  const [expandedYears, setExpandedYears] = useState<Record<string, boolean>>({});
+  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
+  const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>({});
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+
+  const toggleYear = (key: string) => setExpandedYears(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleMonth = (key: string) => setExpandedMonths(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleWeek = (key: string) => setExpandedWeeks(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleDate = (key: string) => setExpandedDates(prev => ({ ...prev, [key]: !prev[key] }));
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -82,16 +92,28 @@ export default function TransactionsView({ initialData }: { initialData: Transac
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Grouping state
-  const [collapsedDates, setCollapsedDates] = useState<Record<string, boolean>>({});
 
-  const toggleDateGroup = (date: string) => {
-    setCollapsedDates(prev => ({ ...prev, [date]: !prev[date] }));
-  };
 
   // Delete confirm
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Bulk Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const isSelectionMode = selectedIds.size > 0;
+  const [bulkCategorizing, setBulkCategorizing] = useState(false);
+  const [bulkCatId, setBulkCatId] = useState("");
+  const [bulkIncSrcId, setBulkIncSrcId] = useState("");
+
+  const toggleSelection = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
 
   // Form state
   const [txForm, setTxForm] = useState(EMPTY_FORM);
@@ -151,6 +173,67 @@ export default function TransactionsView({ initialData }: { initialData: Transac
     } finally {
       setUploadingReceipt(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} transactions?`)) return;
+    try {
+      setIsLoading(true);
+      await bulkDeleteTransactions(Array.from(selectedIds));
+      toast.success(`Deleted ${selectedIds.size} transactions.`);
+      setTransactions(prev => prev.filter(t => !selectedIds.has(t.id)));
+      clearSelection();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkCategorize = async (isInc: boolean) => {
+    if (selectedIds.size === 0) return;
+    try {
+      setIsLoading(true);
+      const data = isInc ? { incomeSourceId: bulkIncSrcId } : { categoryId: bulkCatId };
+      await bulkUpdateTransactions(Array.from(selectedIds), data);
+      toast.success(`Categorized ${selectedIds.size} transactions.`);
+      
+      setTransactions(prev => prev.map(t => {
+        if (selectedIds.has(t.id)) {
+          return { ...t, ...(isInc ? { incomeSourceId: bulkIncSrcId } : { categoryId: bulkCatId }) };
+        }
+        return t;
+      }));
+      clearSelection();
+      setBulkCategorizing(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getMerchantLogo = (description: string) => {
+    const d = description.toLowerCase();
+    if (d.includes("amazon") || d.includes("amzn")) return "amazon.in";
+    if (d.includes("zomato")) return "zomato.com";
+    if (d.includes("swiggy")) return "swiggy.com";
+    if (d.includes("netflix")) return "netflix.com";
+    if (d.includes("uber")) return "uber.com";
+    if (d.includes("ola")) return "olacabs.com";
+    if (d.includes("spotify")) return "spotify.com";
+    if (d.includes("bookmyshow")) return "bookmyshow.com";
+    if (d.includes("flipkart")) return "flipkart.com";
+    if (d.includes("myntra")) return "myntra.com";
+    if (d.includes("airtel")) return "airtel.in";
+    if (d.includes("jio")) return "jio.com";
+    if (d.includes("blinkit")) return "blinkit.com";
+    if (d.includes("zepto")) return "zeptonow.com";
+    if (d.includes("starbucks")) return "starbucks.in";
+    if (d.includes("mcdonald") || d.includes("mc donald")) return "mcdonalds.com";
+    if (d.includes("irctc")) return "irctc.co.in";
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -232,34 +315,106 @@ export default function TransactionsView({ initialData }: { initialData: Transac
     return matchesSearch && matchesType && matchesCategory && matchesAccount && matchesDate;
   });
 
-  const totalItems = filteredTxs.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const paginatedTxs = filteredTxs.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-
-  const groupedTxs = useMemo(() => {
-    const groups = new Map<string, {
-      date: string;
-      txs: UnifiedTransaction[];
-      totalIncome: number;
-      totalExpense: number;
-    }>();
-    
-    paginatedTxs.forEach(tx => {
-      const dateStr = tx.date.split("T")[0];
-      if (!groups.has(dateStr)) {
-        groups.set(dateStr, { date: dateStr, txs: [], totalIncome: 0, totalExpense: 0 });
-      }
-      const g = groups.get(dateStr)!;
-      g.txs.push(tx);
-      if (tx.type === "INCOME" || tx.type === "REFUND") {
-        g.totalIncome += Number(tx.amount);
-      } else if (tx.type === "EXPENSE") {
-        g.totalExpense += Number(tx.amount);
+  const chartData = useMemo(() => {
+    const days: Record<string, number> = {};
+    filteredTxs.forEach(t => {
+      if (t.type === "EXPENSE") {
+        const d = t.date.split("T")[0];
+        days[d] = (days[d] || 0) + Number(t.amount);
       }
     });
+    return Object.entries(days).sort().map(([date, amount]) => ({
+      date: date.split("-").slice(1).join("/"),
+      amount
+    }));
+  }, [filteredTxs]);
 
-    return Array.from(groups.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [paginatedTxs]);
+  // Helper to get week of month (1-5)
+  const getWeekOfMonth = (date: Date) => {
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    return Math.ceil((date.getDate() + firstDay) / 7);
+  };
+
+  // Interfaces to fix `any` types
+  interface DateNode { dateKey: string; label: string; totalIncome: number; totalExpense: number; txs: UnifiedTransaction[]; }
+  interface WeekNode { weekKey: string; label: string; totalIncome: number; totalExpense: number; dates: Map<string, DateNode>; datesList?: DateNode[]; }
+  interface MonthNode { monthKey: string; label: string; totalIncome: number; totalExpense: number; weeks: Map<string, WeekNode>; weeksList?: WeekNode[]; }
+  interface YearNode { year: string; label: string; totalIncome: number; totalExpense: number; months: Map<string, MonthNode>; monthsList?: MonthNode[]; }
+
+  const groupedTxs = useMemo(() => {
+    // Structure: Year -> Month -> Week -> Date -> txs
+    const yearMap = new Map<string, YearNode>();
+    
+    filteredTxs.forEach(tx => {
+      const d = new Date(tx.date);
+      const year = d.getFullYear().toString();
+      const monthStr = d.toLocaleString("en-US", { month: "long" });
+      const monthKey = `${year}-${d.getMonth()}`;
+      const weekNum = getWeekOfMonth(d);
+      const weekKey = `${monthKey}-W${weekNum}`;
+      const dateKey = tx.date.split("T")[0];
+      
+      const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
+      const amt = Number(tx.amount);
+
+      if (!yearMap.has(year)) {
+        yearMap.set(year, { year, label: year, totalIncome: 0, totalExpense: 0, months: new Map() });
+      }
+      const yNode = yearMap.get(year)!;
+      if (isIncome) {
+        yNode.totalIncome += amt;
+      } else if (tx.type === "EXPENSE") {
+        yNode.totalExpense += amt;
+      }
+
+      if (!yNode.months.has(monthKey)) {
+        yNode.months.set(monthKey, { monthKey, label: monthStr, totalIncome: 0, totalExpense: 0, weeks: new Map() });
+      }
+      const mNode = yNode.months.get(monthKey)!;
+      if (isIncome) {
+        mNode.totalIncome += amt;
+      } else if (tx.type === "EXPENSE") {
+        mNode.totalExpense += amt;
+      }
+
+      if (!mNode.weeks.has(weekKey)) {
+        mNode.weeks.set(weekKey, { weekKey, label: `Week ${weekNum}`, totalIncome: 0, totalExpense: 0, dates: new Map() });
+      }
+      const wNode = mNode.weeks.get(weekKey)!;
+      if (isIncome) {
+        wNode.totalIncome += amt;
+      } else if (tx.type === "EXPENSE") {
+        wNode.totalExpense += amt;
+      }
+
+      if (!wNode.dates.has(dateKey)) {
+        wNode.dates.set(dateKey, { dateKey, label: d.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }), totalIncome: 0, totalExpense: 0, txs: [] });
+      }
+      const dNode = wNode.dates.get(dateKey)!;
+      if (isIncome) {
+        dNode.totalIncome += amt;
+      } else if (tx.type === "EXPENSE") {
+        dNode.totalExpense += amt;
+      }
+      
+      dNode.txs.push(tx);
+    });
+
+    // Sort descending
+    const result: YearNode[] = [];
+    const sortedYears = Array.from(yearMap.values()).sort((a, b) => Number(b.year) - Number(a.year));
+    for (const yNode of sortedYears) {
+      yNode.monthsList = Array.from(yNode.months.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+      for (const mNode of yNode.monthsList) {
+        mNode.weeksList = Array.from(mNode.weeks.values()).sort((a, b) => b.weekKey.localeCompare(a.weekKey));
+        for (const wNode of mNode.weeksList) {
+          wNode.datesList = Array.from(wNode.dates.values()).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+        }
+      }
+      result.push(yNode);
+    }
+    return result;
+  }, [filteredTxs]);
 
   return (
     <div className="space-y-6">
@@ -284,7 +439,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
               type="text"
               placeholder="Search description, notes, or tags..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => { setSearch(e.target.value); }}
               className="pl-9 pr-4"
             />
           </div>
@@ -294,7 +449,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                 key={d.id}
                 type="button"
                 variant="unstyled"
-                onClick={() => { setSelectedDateRange(d.id); setPage(1); }}
+                onClick={() => { setSelectedDateRange(d.id); }}
                 className={cn(
                   "px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-md transition-colors",
                   selectedDateRange === d.id
@@ -311,7 +466,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
           <div>
             <FieldLabel className="text-[9px]">Type</FieldLabel>
-            <NativeSelect value={selectedType} onChange={(e) => { setSelectedType(e.target.value); setPage(1); }} className="mt-1 py-1.5 px-2.5 text-xs">
+            <NativeSelect value={selectedType} onChange={(e) => { setSelectedType(e.target.value); }} className="mt-1 py-1.5 px-2.5 text-xs">
               <option value="ALL">All Types</option>
               <option value="INCOME">Income</option>
               <option value="EXPENSE">Expense</option>
@@ -320,20 +475,70 @@ export default function TransactionsView({ initialData }: { initialData: Transac
           </div>
           <div>
             <FieldLabel className="text-[9px]">Category</FieldLabel>
-            <NativeSelect value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }} className="mt-1 py-1.5 px-2.5 text-xs">
+            <NativeSelect value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); }} className="mt-1 py-1.5 px-2.5 text-xs">
               <option value="ALL">All Categories</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </NativeSelect>
           </div>
           <div>
             <FieldLabel className="text-[9px]">Account</FieldLabel>
-            <NativeSelect value={selectedAccount} onChange={(e) => { setSelectedAccount(e.target.value); setPage(1); }} className="mt-1 py-1.5 px-2.5 text-xs">
+            <NativeSelect value={selectedAccount} onChange={(e) => { setSelectedAccount(e.target.value); }} className="mt-1 py-1.5 px-2.5 text-xs">
               <option value="ALL">All Accounts</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </NativeSelect>
           </div>
         </div>
       </div>
+
+      {/* Sparkline Spending Pulse */}
+      {chartData.length > 1 && (
+        <div className="bg-white dark:bg-[#111113] rounded-xl border border-black/[0.04] dark:border-white/[0.04] p-4 h-36 flex flex-col justify-end overflow-hidden relative group shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="absolute top-4 left-4 z-10 pointer-events-none flex items-center gap-2">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </div>
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Spending Pulse</p>
+          </div>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <Tooltip
+                cursor={{ stroke: 'rgba(16, 185, 129, 0.4)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-white dark:bg-[#1c1c1f] backdrop-blur-md border border-neutral-200 dark:border-white/10 px-3 py-2 rounded-xl shadow-xl flex items-center gap-3">
+                        <div>
+                          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wider mb-0.5">{payload[0].payload.date}</p>
+                          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">₹{Number(payload[0].value).toLocaleString('en-IN')}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="amount"
+                stroke="#10b981"
+                strokeWidth={2.5}
+                fillOpacity={1}
+                fill="url(#colorAmount)"
+                isAnimationActive={true}
+                animationDuration={1500}
+                animationEasing="ease-out"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Table */}
       <div className="panel-card overflow-hidden">
@@ -352,158 +557,270 @@ export default function TransactionsView({ initialData }: { initialData: Transac
             </div>
           ) : (
             <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
-              {groupedTxs.map((group) => {
-                const groupDate = new Date(group.date);
-                const displayDate = groupDate.toLocaleDateString("en-US", { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
-                const isCollapsed = collapsedDates[group.date];
-                
-                return (
-                  <div key={group.date} className="flex flex-col">
-                    {/* Sticky Date Header */}
-                    <div 
-                      className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-white dark:bg-[#111113] border-b border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1c] transition-colors"
-                      onClick={() => toggleDateGroup(group.date)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <ChevronDown 
-                          size={14} 
-                          className={cn("text-neutral-400 transition-transform duration-200", isCollapsed && "-rotate-90")} 
-                        />
-                        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                          {displayDate}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm font-medium">
-                        {group.totalIncome > 0 && <span className="text-emerald-600 dark:text-emerald-500">+₹{group.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
-                        {group.totalExpense > 0 && <span className="text-neutral-500 dark:text-neutral-400">−₹{group.totalExpense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>}
-                      </div>
+              {groupedTxs.map((yNode) => (
+                <div key={yNode.year} className="flex flex-col">
+                  {/* Year Header */}
+                  <div 
+                    className="sticky top-0 z-40 flex items-center justify-between px-5 py-3 bg-neutral-100 dark:bg-neutral-900 border-b border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                    onClick={() => toggleYear(yNode.year)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <ChevronRight size={16} className={cn("text-neutral-500 transition-transform duration-200", expandedYears[yNode.year] && "rotate-90")} />
+                      <span className="text-base font-bold text-neutral-900 dark:text-neutral-100">{yNode.label}</span>
                     </div>
+                    <div className="flex items-center gap-3">
+                      {yNode.totalIncome > 0 && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          <span className="text-[10px] font-bold tracking-wider opacity-80 uppercase">In</span>
+                          <span className="text-xs font-semibold">+₹{yNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      )}
+                      {yNode.totalExpense > 0 && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                          <span className="text-[10px] font-bold tracking-wider opacity-80 uppercase">Out</span>
+                          <span className="text-xs font-semibold">−₹{yNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                    {/* Transactions for this date */}
-                    {!isCollapsed && (
-                      <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
-                        {group.txs.map((tx) => {
-                          const acc = accounts.find((a) => a.id === tx.accountId);
-                          const cat = categories.find((c) => c.id === tx.categoryId);
-                          const isDeleting = deletingId === tx.id;
-                          const isConfirming = confirmDeleteId === tx.id;
-                          
-                          const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
-                          const formattedAmount = `₹${Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-
-                          return (
-                            <div 
-                              key={tx.id} 
-                              className="group/item flex items-center p-4 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors relative cursor-pointer"
-                              onClick={() => setPreviewTx(tx)}
-                            >
-                              {/* Icon */}
-                              <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
-                                {isIncome ? <ArrowDownToLine size={18} /> : getCategoryIcon(cat?.name, 18)}
-                              </div>
-                              
-                              {/* Title & Details */}
-                              <div className="ml-4 flex-1 min-w-0 flex flex-col justify-center">
-                                <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{tx.description}</p>
-                                <div className="flex items-center gap-2 text-xs text-neutral-500 mt-1">
-                                  <span className={cn(
-                                    "font-medium px-2 py-0.5 rounded-full text-[10px]",
-                                    isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                                    : tx.type === "EXPENSE" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
-                                    : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-                                  )}>
-                                    {tx.type}
-                                  </span>
-                                  <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
-                                    {acc?.name || "—"}
-                                  </span>
-                                  {cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
+                  {expandedYears[yNode.year] && (
+                    <div className="flex flex-col pl-4 border-l-2 border-black/[0.02] dark:border-white/[0.02]">
+                      {yNode.monthsList?.map((mNode) => (
+                        <div key={mNode.monthKey} className="flex flex-col border-b border-black/[0.04] dark:border-white/[0.04] last:border-none">
+                          {/* Month Header */}
+                          <div 
+                            className="sticky top-[49px] z-30 flex items-center justify-between px-5 py-2.5 bg-neutral-50 dark:bg-[#151517] cursor-pointer hover:bg-neutral-100 dark:hover:bg-[#1a1a1c] transition-colors"
+                            onClick={() => toggleMonth(mNode.monthKey)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <ChevronRight size={14} className={cn("text-neutral-400 transition-transform duration-200", expandedMonths[mNode.monthKey] && "rotate-90")} />
+                              <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{mNode.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {mNode.totalIncome > 0 && (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 backdrop-blur-sm shadow-sm">
+                                  <span className="text-[10px] font-bold tracking-widest opacity-70 uppercase">IN</span>
+                                  <span className="text-xs font-bold">+₹{mNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                 </div>
-                              </div>
+                              )}
+                              {mNode.totalExpense > 0 && (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-500/10 border border-neutral-500/20 text-neutral-700 dark:text-neutral-300 backdrop-blur-sm shadow-sm">
+                                  <span className="text-[10px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
+                                  <span className="text-xs font-bold">−₹{mNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-                              {/* Amount & Actions */}
-                              <div className="shrink-0 flex flex-col items-end justify-center min-w-[100px] pl-4">
-                                <span className={cn(
-                                  "text-[16px] font-bold font-mono tracking-tight whitespace-nowrap",
-                                  isIncome ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-900 dark:text-white"
-                                )}>
-                                  {isIncome ? "+" : "−"}{formattedAmount}
-                                </span>
-                                
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-white dark:bg-[#111113] pl-2">
-                                  {isConfirming ? (
-                                    <>
-                                      <span className="text-[10px] text-rose-500 font-semibold mr-1">Sure?</span>
-                                      <Button
-                                        type="button"
-                                        variant="destructive-sm"
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }}
-                                        className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
-                                        title="Confirm delete"
-                                      >
-                                        <Check size={14} />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="unstyled"
-                                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                                        className="w-8 h-8 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors shadow-sm"
-                                        title="Cancel"
-                                      >
-                                        <X size={14} />
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button
-                                        type="button"
-                                        variant="unstyled"
-                                        onClick={(e) => { e.stopPropagation(); openEditModal(tx); }}
-                                        className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
-                                        title="Edit transaction"
-                                      >
-                                        <Pencil size={14} />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="unstyled"
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }}
-                                        disabled={isDeleting}
-                                        className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800 disabled:opacity-50"
-                                        title="Delete transaction"
-                                      >
-                                        {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                      </Button>
-                                    </>
+                          {expandedMonths[mNode.monthKey] && (
+                            <div className="flex flex-col pl-4 border-l-2 border-black/[0.02] dark:border-white/[0.02]">
+                              {mNode.weeksList?.map((wNode) => (
+                                <div key={wNode.weekKey} className="flex flex-col">
+                                  {/* Week Header */}
+                                  <div 
+                                    className="sticky top-[93px] z-20 flex items-center justify-between px-5 py-2.5 bg-neutral-50/95 dark:bg-[#161618]/95 backdrop-blur-md border-t border-b border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:bg-neutral-100 dark:hover:bg-[#1a1a1c] transition-colors"
+                                    onClick={() => toggleWeek(wNode.weekKey)}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <ChevronRight size={12} className={cn("text-neutral-400 transition-transform duration-200", expandedWeeks[wNode.weekKey] && "rotate-90")} />
+                                      <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">{wNode.label}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {wNode.totalIncome > 0 && (
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                          <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">IN</span>
+                                          <span className="text-[11px] font-bold">+₹{wNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                        </div>
+                                      )}
+                                      {wNode.totalExpense > 0 && (
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-500/10 border border-neutral-500/20 text-neutral-600 dark:text-neutral-300">
+                                          <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
+                                          <span className="text-[11px] font-bold">−₹{wNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {expandedWeeks[wNode.weekKey] && (
+                                    <div className="flex flex-col divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                                      {wNode.datesList?.map((dNode) => {
+                                        const isCollapsed = !expandedDates[dNode.dateKey];
+                                        return (
+                                          <div key={dNode.dateKey} className="flex flex-col">
+                                            {/* Date Header */}
+                                            <div 
+                                              className="flex items-center justify-between px-6 py-3 bg-[#fafafa] dark:bg-[#131315] border-b border-black/[0.03] dark:border-white/[0.03] cursor-pointer hover:bg-white dark:hover:bg-[#18181a] transition-colors"
+                                              onClick={() => toggleDate(dNode.dateKey)}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-[11px] font-black text-neutral-700 dark:text-neutral-300 uppercase tracking-widest">
+                                                  {dNode.label}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                {dNode.totalIncome > 0 && (
+                                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/5 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                                    <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">IN</span>
+                                                    <span className="text-[11px] font-bold">+₹{dNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                                  </div>
+                                                )}
+                                                {dNode.totalExpense > 0 && (
+                                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-500/5 border border-neutral-500/10 text-neutral-600 dark:text-neutral-400">
+                                                    <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
+                                                    <span className="text-[11px] font-bold">−₹{dNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {/* Transactions */}
+                                            {!isCollapsed && dNode.txs.map((tx: any) => {
+                                              const acc = accounts.find((a) => a.id === tx.accountId);
+                                              const cat = categories.find((c) => c.id === tx.categoryId);
+                                              const inc = incomeSources.find((s) => s.id === tx.incomeSourceId);
+                                              const isDeleting = deletingId === tx.id;
+                                              const isConfirming = confirmDeleteId === tx.id;
+                                              const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
+                                              const formattedAmount = `₹${Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+                                              return (
+                                                <div 
+                                                  key={tx.id} 
+                                                  className={cn(
+                                                    "group/item flex items-center p-4 pl-10 hover:bg-neutral-50/80 dark:hover:bg-[#1a1a1c] transition-colors relative cursor-pointer",
+                                                    selectedIds.has(tx.id) && "bg-blue-50/50 dark:bg-blue-900/10"
+                                                  )}
+                                                  onClick={() => isSelectionMode ? toggleSelection(tx.id) : setPreviewTx(tx)}
+                                                >
+                                                  {/* Selection Checkbox */}
+                                                  <div 
+                                                    className={cn(
+                                                      "absolute left-3 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-all z-10 shadow-sm",
+                                                      isSelectionMode || selectedIds.has(tx.id) ? "opacity-100" : "opacity-0 group-hover/item:opacity-100",
+                                                      selectedIds.has(tx.id) ? "bg-blue-600 border-blue-600 text-white" : "border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#111] hover:border-blue-500"
+                                                    )}
+                                                    onClick={(e) => toggleSelection(tx.id, e)}
+                                                  >
+                                                    {selectedIds.has(tx.id) && <Check size={12} strokeWidth={3} />}
+                                                  </div>
+
+                                                  <motion.div 
+                                                    drag="x"
+                                                    dragConstraints={{ left: 0, right: 0 }}
+                                                    dragElastic={0.05}
+                                                    onDragEnd={(e, info) => {
+                                                      if (info.offset.x > 70) toggleSelection(tx.id);
+                                                      else if (info.offset.x < -70) setConfirmDeleteId(tx.id);
+                                                    }}
+                                                    className="flex-1 flex items-center min-w-0 bg-transparent"
+                                                  >
+                                                    {/* Icon or Logo */}
+                                                    <div className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04] overflow-hidden" style={{ backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
+                                                      {(() => {
+                                                        const domain = getMerchantLogo(tx.description);
+                                                        if (domain) {
+                                                          return <img src={`https://logo.clearbit.com/${domain}?size=32`} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" alt="" />;
+                                                        }
+                                                        return isIncome ? <ArrowDownToLine size={14} /> : getCategoryIcon(cat?.name, 14);
+                                                      })()}
+                                                    </div>
+                                                  
+                                                  {/* Title & Details */}
+                                                  <div className="ml-4 flex-1 min-w-0 flex flex-col justify-center">
+                                                    <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{tx.description}</p>
+                                                    <div className="flex items-center gap-2 text-[10px] text-neutral-500 mt-0.5">
+                                                      <span className={cn(
+                                                        "font-medium px-1.5 py-0.5 rounded text-[9px]",
+                                                        isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                                        : tx.type === "EXPENSE" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+                                                        : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                                                      )}>
+                                                        {tx.type}
+                                                      </span>
+                                                      <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
+                                                        {acc?.name || "—"}
+                                                      </span>
+                                                      {cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
+                                                      {inc && <span className="hidden sm:inline-block">· {inc.name}</span>}
+                                                      {!cat && !inc && (tx.categoryId || tx.incomeSourceId) && <span className="hidden sm:inline-block">· Miscellaneous</span>}
+                                                    </div>
+                                                  </div>
+
+                                                  {/* Amount & Actions */}
+                                                  <div className="shrink-0 flex flex-col items-end justify-center min-w-[100px] pl-4">
+                                                    <span className={cn(
+                                                      "text-[15px] font-bold font-mono tracking-tight whitespace-nowrap",
+                                                      isIncome ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-900 dark:text-white"
+                                                    )}>
+                                                      {isIncome ? "+" : "−"}{formattedAmount}
+                                                    </span>
+                                                    
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity pl-2 pointer-events-auto">
+                                                      {isConfirming ? (
+                                                        <>
+                                                          <span className="text-[10px] text-rose-500 font-semibold mr-1">Sure?</span>
+                                                          <Button
+                                                            type="button"
+                                                            variant="destructive-sm"
+                                                            onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }}
+                                                            className="w-8 h-8 rounded flex items-center justify-center shadow-sm"
+                                                          >
+                                                            <Check size={14} />
+                                                          </Button>
+                                                          <Button
+                                                            type="button"
+                                                            variant="unstyled"
+                                                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                                            className="w-8 h-8 rounded flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 transition-colors shadow-sm"
+                                                          >
+                                                            <X size={14} />
+                                                          </Button>
+                                                        </>
+                                                      ) : (
+                                                        <>
+                                                          <Button
+                                                            type="button"
+                                                            variant="unstyled"
+                                                            onClick={(e) => { e.stopPropagation(); openEditModal(tx); }}
+                                                            className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-[#1a1a1c] border border-black/[0.06] dark:border-white/[0.06] text-neutral-600 dark:text-neutral-400 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm"
+                                                          >
+                                                            <Pencil size={13} />
+                                                          </Button>
+                                                          <Button
+                                                            type="button"
+                                                            variant="unstyled"
+                                                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(tx.id); }}
+                                                            className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-[#1a1a1c] border border-black/[0.06] dark:border-white/[0.06] text-neutral-600 dark:text-neutral-400 hover:text-rose-600 hover:border-rose-200 transition-colors shadow-sm"
+                                                            disabled={isDeleting}
+                                                          >
+                                                            {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                                          </Button>
+                                                        </>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </motion.div>
+                                              </div>
+                                              );
+                                            })}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   )}
                                 </div>
-                              </div>
+                              ))}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
-        </div>
-
-        {/* Pagination */}
-        <div className="h-12 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between px-4 bg-neutral-50/20 dark:bg-neutral-900/10">
-          <span className="text-[10px] font-mono text-neutral-400">
-            {totalItems === 0 ? "0 items" : `${(page - 1) * itemsPerPage + 1}–${Math.min(page * itemsPerPage, totalItems)} of ${totalItems}`}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button type="button" variant="unstyled" onClick={() => setPage(page - 1)} disabled={page === 1} className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-850 disabled:opacity-40">
-              <ChevronLeft size={16} />
-            </Button>
-            <span className="text-xs font-semibold px-2">{page} / {totalPages}</span>
-            <Button type="button" variant="unstyled" onClick={() => setPage(page + 1)} disabled={page === totalPages} className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-850 disabled:opacity-40">
-              <ChevronRight size={16} />
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -538,7 +855,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                   "text-2xl font-bold font-mono tracking-tight",
                   (previewTx.type === "INCOME" || previewTx.type === "REFUND") ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-900 dark:text-white"
                 )}>
-                  {(previewTx.type === "INCOME" || previewTx.type === "REFUND") ? "+" : "−"}₹{Number(previewTx.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  {(previewTx.type === "INCOME" || previewTx.type === "REFUND") ? "+" : "−"}₹{Number(previewTx.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                 </p>
               </div>
               <div className="space-y-1">
@@ -655,7 +972,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                 ) : (
                   accounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} · {formatPaymentMode(a.type)} (₹{a.balance.toLocaleString()})
+                      {a.name} · {formatPaymentMode(a.type)} (₹{a.balance.toLocaleString('en-IN')})
                     </option>
                   ))
                 )}
@@ -781,6 +1098,62 @@ export default function TransactionsView({ initialData }: { initialData: Transac
           </div>
         </form>
       </AppDialog>
+
+      {/* Smart Bulk Action Bar */}
+      <AnimatePresence>
+        {isSelectionMode && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-4 py-3 bg-neutral-900/90 dark:bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl w-[90%] max-w-[500px] overflow-hidden"
+          >
+            <div className="flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-blue-500 text-white text-[11px] font-bold">
+              {selectedIds.size}
+            </div>
+            <span className="text-sm font-semibold text-white mr-2 whitespace-nowrap">Selected</span>
+            
+            <div className="w-px h-6 bg-white/20 mx-1 shrink-0" />
+            
+            {bulkCategorizing ? (
+              <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar w-full">
+                <NativeSelect
+                  value={bulkCatId}
+                  onChange={(e) => setBulkCatId(e.target.value)}
+                  className="bg-white/10 text-white border-white/20 min-w-[120px]"
+                >
+                  <option value="">Category...</option>
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </NativeSelect>
+                <NativeSelect
+                  value={bulkIncSrcId}
+                  onChange={(e) => setBulkIncSrcId(e.target.value)}
+                  className="bg-white/10 text-white border-white/20 min-w-[120px]"
+                >
+                  <option value="">Source...</option>
+                  {incomeSources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </NativeSelect>
+                <Button variant="submit" size="sm" onClick={() => handleBulkCategorize(!!bulkIncSrcId)}>Apply</Button>
+                <Button variant="unstyled" className="text-white opacity-70 hover:opacity-100 shrink-0" onClick={() => setBulkCategorizing(false)}>
+                  <X size={16} />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar w-full">
+                <Button variant="unstyled" className="text-sm font-semibold text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap" onClick={() => setBulkCategorizing(true)}>
+                  Categorize
+                </Button>
+                <Button variant="unstyled" className="text-sm font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap" onClick={handleBulkDelete}>
+                  Delete
+                </Button>
+                <Button variant="unstyled" className="text-white/50 hover:text-white transition-colors ml-auto shrink-0" onClick={clearSelection}>
+                  <X size={18} />
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

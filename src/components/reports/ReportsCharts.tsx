@@ -8,12 +8,42 @@ import {
   YAxis,
   Tooltip,
   Cell,
+  CartesianGrid,
 } from "recharts";
 
-const COLORS = ["#6366f1", "#f43f5e", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"];
-const COLORS_DARK = ["#818cf8", "#fb7185", "#34d399", "#fbbf24", "#a78bfa", "#22d3ee", "#f472b6", "#2dd4bf"];
+const COLORS = ["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#8b5cf6", "#0ea5e9", "#f43f5e", "#14b8a6"];
+const COLORS_DARK = ["#818cf8", "#f472b6", "#34d399", "#fbbf24", "#a78bfa", "#38bdf8", "#fb7185", "#2dd4bf"];
 
 type ChartData = { name: string; value: number; color?: string }[];
+
+const CustomTooltip = ({ active, payload, label, isDark }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div
+        style={{
+          backgroundColor: isDark ? "rgba(24, 24, 27, 0.95)" : "rgba(255, 255, 255, 0.95)",
+          borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)",
+          borderWidth: 1,
+          borderStyle: "solid",
+          color: isDark ? "#fff" : "#000",
+          borderRadius: "12px",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+          fontSize: "13px",
+          backdropFilter: "blur(12px)",
+          padding: "12px 16px",
+        }}
+      >
+        <p style={{ margin: 0, fontWeight: 600, color: isDark ? "#a1a1aa" : "#71717a", marginBottom: "4px" }}>
+          {label}
+        </p>
+        <p style={{ margin: 0, fontWeight: 700, fontSize: "16px" }}>
+          ₹{Number(payload[0].value).toLocaleString("en-IN")}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export function ExpenseCategoryChart({
   data,
@@ -26,33 +56,43 @@ export function ExpenseCategoryChart({
 
   if (data.length === 0) {
     return (
-      <div className="h-64 flex items-center justify-center text-xs text-neutral-400">
-        No expense transactions logged in this range.
+      <div className="h-64 flex items-center justify-center text-sm font-medium text-neutral-400">
+        No expense transactions logged.
       </div>
     );
   }
 
   return (
-    <div className="h-64 w-full" style={{ minWidth: 1, minHeight: 1 }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
-          <Tooltip
-            cursor={{ fill: 'rgba(150, 150, 150, 0.1)' }}
-            contentStyle={{
-              backgroundColor: "rgba(17, 17, 19, 0.9)",
-              borderColor: "rgba(255, 255, 255, 0.1)",
-              color: "#fff",
-              borderRadius: "8px",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-              fontSize: "12px",
-              backdropFilter: "blur(4px)",
-              padding: "8px 12px",
-            }}
-            itemStyle={{ color: "#e5e7eb", fontSize: "13px", fontWeight: 500, padding: "2px 0" }}
+    <div className="h-72 w-full" style={{ minWidth: 1, minHeight: 1 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+          <CartesianGrid 
+            strokeDasharray="3 3" 
+            vertical={false} 
+            stroke={isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"} 
           />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
+          <XAxis 
+            dataKey="name" 
+            stroke={isDark ? "#71717a" : "#a1a1aa"} 
+            fontSize={12} 
+            fontWeight={500}
+            tickLine={false} 
+            axisLine={false} 
+            tickMargin={12}
+            tickFormatter={(val) => (val.length > 12 ? val.substring(0, 12) + "..." : val)}
+          />
+          <YAxis 
+            stroke={isDark ? "#71717a" : "#a1a1aa"} 
+            fontSize={12} 
+            fontWeight={500}
+            tickLine={false} 
+            axisLine={false} 
+            tickFormatter={(val) => `₹${val}`}
+            tickMargin={12}
+            width={60}
+          />
+          <Tooltip content={<CustomTooltip isDark={isDark} />} cursor={{ fill: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }} />
+          <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={48}>
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color || chartColors[index % chartColors.length]} />
             ))}
@@ -74,35 +114,48 @@ export function IncomeSourcesChart({
 
   if (data.length === 0) {
     return (
-      <div className="h-64 flex items-center justify-center text-xs text-neutral-400">
-        No income transactions logged in this range.
+      <div className="h-64 flex items-center justify-center text-sm font-medium text-neutral-400">
+        No income transactions logged.
       </div>
     );
   }
 
+  // Reverse colors for income so it looks distinct from expenses
+  const incomeColors = [...chartColors].reverse();
+
   return (
-    <div className="h-64 w-full" style={{ minWidth: 1, minHeight: 1 }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
-          <Tooltip
-            cursor={{ fill: 'rgba(150, 150, 150, 0.1)' }}
-            contentStyle={{
-              backgroundColor: "rgba(17, 17, 19, 0.9)",
-              borderColor: "rgba(255, 255, 255, 0.1)",
-              color: "#fff",
-              borderRadius: "8px",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-              fontSize: "12px",
-              backdropFilter: "blur(4px)",
-              padding: "8px 12px",
-            }}
-            itemStyle={{ color: "#e5e7eb", fontSize: "13px", fontWeight: 500, padding: "2px 0" }}
+    <div className="h-72 w-full" style={{ minWidth: 1, minHeight: 1 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+          <CartesianGrid 
+            strokeDasharray="3 3" 
+            vertical={false} 
+            stroke={isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"} 
           />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
+          <XAxis 
+            dataKey="name" 
+            stroke={isDark ? "#71717a" : "#a1a1aa"} 
+            fontSize={12} 
+            fontWeight={500}
+            tickLine={false} 
+            axisLine={false} 
+            tickMargin={12}
+            tickFormatter={(val) => (val.length > 12 ? val.substring(0, 12) + "..." : val)}
+          />
+          <YAxis 
+            stroke={isDark ? "#71717a" : "#a1a1aa"} 
+            fontSize={12} 
+            fontWeight={500}
+            tickLine={false} 
+            axisLine={false} 
+            tickFormatter={(val) => `₹${val}`}
+            tickMargin={12}
+            width={60}
+          />
+          <Tooltip content={<CustomTooltip isDark={isDark} />} cursor={{ fill: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }} />
+          <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={48}>
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+              <Cell key={`cell-${index}`} fill={incomeColors[index % incomeColors.length]} />
             ))}
           </Bar>
         </BarChart>

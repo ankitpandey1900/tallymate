@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { UnifiedDB, UnifiedTransaction, UnifiedGroup } from "@/lib/unified-db";
 import { calculateBalances, minimizeDebts } from "@/lib/split-engine";
 import { uploadFile } from "@/lib/storage";
@@ -157,20 +158,18 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
       const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
       const oldestNeededDate = reportStartDate < monthStartDate ? reportStartDate : monthStartDate;
 
-      const [accounts, allTransactions, budgets, goals, groups, catalog] =
-        await Promise.all([
-          UnifiedDB.getAccounts(user.id),
-          UnifiedDB.getTransactions(user.id, { startDate: oldestNeededDate.toISOString() }),
-          UnifiedDB.getBudgets(user.id),
-          UnifiedDB.getGoals(user.id),
-          UnifiedDB.getGroups(user.id),
-          ensureCatalogDefaults(user.id),
-        ]);
+      const accounts = await UnifiedDB.getAccounts(user.id);
+      const allTransactions = await UnifiedDB.getTransactions(user.id, { startDate: oldestNeededDate.toISOString() });
+      const budgets = await UnifiedDB.getBudgets(user.id);
+      const goals = await UnifiedDB.getGoals(user.id);
+      const groups = await UnifiedDB.getGroups(user.id);
+      const catalog = await ensureCatalogDefaults(user.id);
+      const importRules = await prisma.importRule.findMany({ where: { userId: user.id } });
 
-      const transactionsForReports = allTransactions.filter(t => new Date(t.date) >= reportStartDate);
+      const transactionsForReports = allTransactions.filter((t: UnifiedTransaction) => new Date(t.date) >= reportStartDate);
       const reports = computeReports(transactionsForReports, catalog.categories, catalog.incomeSources, timeframe, now);
 
-      const monthTransactions = allTransactions.filter(t => new Date(t.date) >= monthStartDate);
+      const monthTransactions = allTransactions.filter((t: UnifiedTransaction) => new Date(t.date) >= monthStartDate);
       
       const budgetProgress = computeBudgetProgress(
         budgets,
@@ -179,7 +178,7 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
         monthTransactions
       );
 
-      const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+      const netWorth = accounts.reduce((sum: number, a: any) => sum + Number(a.balance), 0);
       const recentTransactions = allTransactions.slice(0, 8);
 
       return {
@@ -193,6 +192,7 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
         netWorth,
         categories: catalog.categories,
         incomeSources: catalog.incomeSources,
+        importRules,
       };
     },
     timeframe
@@ -214,16 +214,18 @@ export async function getLayoutData() {
 export async function getTransactionsPageData() {
   const user = await getCurrentUser();
   return getOrSetPageCache(user.id, "transactions", async () => {
-    const [catalog, accounts, transactions] = await Promise.all([
+    const [catalog, accounts, transactions, importRules] = await Promise.all([
       ensureCatalogDefaults(user.id),
       UnifiedDB.getAccounts(user.id),
-      UnifiedDB.getTransactions(user.id, { limit: 200 }),
+      UnifiedDB.getTransactions(user.id), // Removed limit so the user can see the whole year
+      prisma.importRule.findMany({ where: { userId: user.id } }),
     ]);
     return {
       accounts,
       transactions,
       categories: catalog.categories,
       incomeSources: catalog.incomeSources,
+      importRules,
     };
   });
 }
@@ -297,7 +299,9 @@ export async function getReportsPageData(
     "reports",
     async () => {
       const reports = await getReportsForUser(user.id, timeframe);
-      return { reports, timeframe };
+      const accounts = await UnifiedDB.getAccounts(user.id);
+      const netWorth = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+      return { reports, timeframe, netWorth };
     },
     timeframe
   );
@@ -322,6 +326,7 @@ export async function getDebtTrackerData() {
     const groupSummaries: {
       groupId: string;
       groupName: string;
+      groupImage?: string | null;
       yourBalance: number;
       pendingCount: number;
     }[] = [];
@@ -332,13 +337,15 @@ export async function getDebtTrackerData() {
       fromUserName: string;
       toUserId: string;
       toUserName: string;
+      toUserImage?: string | null;
+      fromUserImage?: string | null;
       amount: number;
       youArePayer: boolean;
       youAreReceiver: boolean;
     }[] = [];
     const peopleMap = new Map<
       string,
-      { name: string; email: string; youOwe: number; owesYou: number; groups: Set<string> }
+      { name: string; email: string; image: string | null; youOwe: number; owesYou: number; groups: Set<string> }
     >();
 
     for (const group of groups) {
@@ -353,22 +360,33 @@ export async function getDebtTrackerData() {
         (s) => s.fromUserId === user.id || s.toUserId === user.id
       );
 
+      let groupImage = null;
+      if (details.members.length === 2) {
+        const otherMember = details.members.find((m) => m.userId !== user.id);
+        groupImage = (otherMember as any)?.image ?? null;
+      }
+
       groupSummaries.push({
         groupId: group.id,
         groupName: group.name,
+        groupImage,
         yourBalance: balance,
         pendingCount: relevantSettlements.length,
       });
 
       for (const s of details.optimizedSettlements) {
         if (s.fromUserId === user.id || s.toUserId === user.id) {
+          const payerMember = details.members.find((m) => m.userId === s.fromUserId);
+          const receiverMember = details.members.find((m) => m.userId === s.toUserId);
           pendingSettlements.push({
             groupId: group.id,
             groupName: group.name,
             fromUserId: s.fromUserId,
             fromUserName: s.fromUserName,
+            fromUserImage: (payerMember as any)?.image || null,
             toUserId: s.toUserId,
             toUserName: s.toUserName,
+            toUserImage: (receiverMember as any)?.image || null,
             amount: s.amount,
             youArePayer: s.fromUserId === user.id,
             youAreReceiver: s.toUserId === user.id,
@@ -380,6 +398,7 @@ export async function getDebtTrackerData() {
           const entry = peopleMap.get(otherId) ?? {
             name: otherName,
             email: otherMember?.email ?? "",
+            image: (otherMember as any)?.image ?? null,
             youOwe: 0,
             owesYou: 0,
             groups: new Set<string>(),
@@ -396,6 +415,7 @@ export async function getDebtTrackerData() {
       userId,
       name: data.name,
       email: data.email,
+      image: data.image,
       youOwe: Math.round(data.youOwe * 100) / 100,
       owesYou: Math.round(data.owesYou * 100) / 100,
       net: Math.round((data.owesYou - data.youOwe) * 100) / 100,
@@ -608,6 +628,110 @@ export async function createTransaction(data: Omit<UnifiedTransaction, "id" | "u
   return tx;
 }
 
+export async function bulkCreateTransactions(dataList: Omit<UnifiedTransaction, "id" | "userId">[]) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "bulkCreateTransactions", 10, 60);
+  const user = await getCurrentUser();
+  
+  let txs;
+  try {
+    txs = await UnifiedDB.bulkCreateTransactions(user.id, dataList);
+  } catch (error: any) {
+    console.error("Bulk transaction import error:", error);
+    if (error.code === 'P2003') {
+      throw new Error("Import failed: The selected account or category does not exist. Please refresh the page and try again.");
+    }
+    throw new Error("An error occurred while importing transactions. Please try again.");
+  }
+
+  // Check budgets if any expenses were created with categories
+  const categoriesToCheck = new Set<string>();
+  for (const data of dataList) {
+    if (data.type === "EXPENSE" && data.categoryId) {
+      categoriesToCheck.add(data.categoryId);
+    }
+  }
+
+  for (const categoryId of categoriesToCheck) {
+    await checkBudgetsForCategory(user.id, categoryId);
+  }
+
+  await bustPageCache(user.id);
+  return txs;
+}
+
+export async function parsePDFStatement(formData: FormData): Promise<{ date: string, description: string, amount: number, type: "EXPENSE" | "INCOME" }[]> {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "parsePDFStatement", 10, 60);
+  const user = await getCurrentUser();
+
+  const file = formData.get("file") as File;
+  if (!file) throw new Error("No file provided");
+
+  const { execSync } = require("child_process");
+  const fs = require("fs");
+  const path = require("path");
+  const os = require("os");
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const tempFilePath = path.join(os.tmpdir(), `upload-${Date.now()}.pdf`);
+  fs.writeFileSync(tempFilePath, buffer);
+
+  let text = "";
+  try {
+    const runnerPath = path.join(process.cwd(), "pdf-runner.js");
+    text = execSync(`node "${runnerPath}" "${tempFilePath}"`, { maxBuffer: 10 * 1024 * 1024 }).toString();
+  } catch (error) {
+    fs.unlinkSync(tempFilePath);
+    throw new Error("Failed to parse PDF document.");
+  }
+
+  fs.unlinkSync(tempFilePath);
+
+  // Extremely basic regex for matching DD/MM/YYYY or DD-MM-YYYY followed by text and an amount
+  // This is highly experimental and depends on the specific bank statement format.
+  // Pattern: Date (DD/MM/YYYY) -> Space -> Description -> Space -> Amount (with or without commas, optional negative or DR/CR)
+  // This matches DD/MM/YYYY, YYYY-MM-DD, or DD MMM YYYY followed by text and an amount
+  const regex = /(?:(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})|(\d{1,2}\s+[a-zA-Z]{3}(?:\s+\d{2,4})?))\s+(.+?)\s+([\d,]+\.\d{2})(?:\s+(Cr|Dr))?/gi;
+  
+  const parsedTxs = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const rawDate = match[1] || match[2];
+    const description = match[3].trim();
+    let rawAmount = match[4];
+    const crDr = match[5];
+
+    if (description.length < 3) continue;
+
+    let amount = parseFloat(rawAmount.replace(/,/g, ""));
+    if (isNaN(amount)) continue;
+
+    let type: "EXPENSE" | "INCOME" = "EXPENSE"; // assume expense by default for safety
+    if (crDr && crDr.toLowerCase() === "cr") {
+      type = "INCOME";
+    }
+
+    // Try to parse the date gracefully using JS Date
+    let parsedDate = new Date(rawDate);
+    if (isNaN(parsedDate.getTime())) {
+      parsedDate = new Date();
+    }
+    const isoDate = parsedDate.toISOString().split("T")[0];
+
+    parsedTxs.push({
+      date: isoDate,
+      description: description.substring(0, 100),
+      amount,
+      type
+    });
+  }
+
+  return parsedTxs;
+}
+
 // Budgets actions
 export async function getBudgets() {
   const user = await getCurrentUser();
@@ -805,6 +929,7 @@ export async function getGroupDetails(groupId: string) {
       role: m.role,
       name: details?.name || details?.email || "Unknown",
       email: details?.email || "",
+      image: details?.image || null,
     };
   });
 
@@ -1061,6 +1186,14 @@ export async function deleteTransaction(txId: string) {
   await bustPageCache(user.id);
 }
 
+export async function bulkDeleteTransactions(txIds: string[]) {
+  const user = await getCurrentUser();
+  for (const txId of txIds) {
+    await UnifiedDB.deleteTransaction(user.id, txId);
+  }
+  await bustPageCache(user.id);
+}
+
 export async function updateTransaction(
   txId: string,
   data: Partial<Omit<UnifiedTransaction, "id" | "userId">>
@@ -1069,6 +1202,17 @@ export async function updateTransaction(
   const tx = await UnifiedDB.updateTransaction(user.id, txId, data);
   await bustPageCache(user.id);
   return tx;
+}
+
+export async function bulkUpdateTransactions(
+  txIds: string[],
+  data: Partial<Omit<UnifiedTransaction, "id" | "userId">>
+) {
+  const user = await getCurrentUser();
+  for (const txId of txIds) {
+    await UnifiedDB.updateTransaction(user.id, txId, data);
+  }
+  await bustPageCache(user.id);
 }
 
 export async function deleteGroup(groupId: string) {
@@ -1095,4 +1239,94 @@ export async function deleteGoal(goalId: string) {
   const user = await getCurrentUser();
   await UnifiedDB.deleteGoal(user.id, goalId);
   await bustPageCache(user.id);
+}
+
+export async function getImportRules() {
+  const user = await getCurrentUser();
+  return prisma.importRule.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+}
+
+export async function createImportRule(data: { matchKeyword: string, type: 'INCOME' | 'EXPENSE', categoryId?: string, incomeSourceId?: string }) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "createImportRule", 30, 60);
+  const user = await getCurrentUser();
+  const keywordLower = data.matchKeyword.toLowerCase().trim();
+  
+  const rule = await prisma.importRule.create({
+    data: {
+      userId: user.id,
+      matchKeyword: keywordLower,
+      type: data.type,
+      categoryId: data.categoryId || null,
+      incomeSourceId: data.incomeSourceId || null
+    }
+  });
+
+  // Retroactively apply this rule to existing transactions!
+  if (data.type === 'EXPENSE' && data.categoryId) {
+    await prisma.transaction.updateMany({
+      where: {
+        userId: user.id,
+        type: 'EXPENSE',
+        description: {
+          contains: keywordLower,
+          mode: 'insensitive'
+        }
+      },
+      data: {
+        categoryId: data.categoryId
+      }
+    });
+  } else if (data.type === 'INCOME' && data.incomeSourceId) {
+    await prisma.transaction.updateMany({
+      where: {
+        userId: user.id,
+        type: 'INCOME',
+        description: {
+          contains: keywordLower,
+          mode: 'insensitive'
+        }
+      },
+      data: {
+        incomeSourceId: data.incomeSourceId
+      }
+    });
+  }
+
+  await bustPageCache(user.id);
+  return rule;
+}
+
+export async function deleteImportRule(id: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "deleteImportRule", 30, 60);
+  const user = await getCurrentUser();
+  await prisma.importRule.deleteMany({
+    where: { id, userId: user.id }
+  });
+  await bustPageCache(user.id);
+}
+
+export async function getImportRulesPageData() {
+  const user = await getCurrentUser();
+  return getOrSetPageCache(user.id, "import-rules", async () => {
+    const [rules, catalog] = await Promise.all([
+      prisma.importRule.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } }),
+      ensureCatalogDefaults(user.id)
+    ]);
+    return { rules, categories: catalog.categories, incomeSources: catalog.incomeSources };
+  });
+}
+
+// Triggering TS refresh
+export async function getCalendarPageData() {
+  const user = await getCurrentUser();
+  return getOrSetPageCache(user.id, "calendar", async () => {
+    const [transactions, catalog, accounts] = await Promise.all([
+      UnifiedDB.getTransactions(user.id),
+      ensureCatalogDefaults(user.id),
+      UnifiedDB.getAccounts(user.id)
+    ]);
+    return { transactions, categories: catalog.categories, incomeSources: catalog.incomeSources, accounts };
+  });
 }
