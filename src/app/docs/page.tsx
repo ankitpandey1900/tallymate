@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ArrowUpDown, PieChart, Target, Users, TrendingUp,
   Bell, Settings, ChevronRight, Menu, X, ArrowLeft, Sun, Moon,
   Sparkles, Shield, Zap, CreditCard, UserPlus, LogIn,
-  BarChart2, AlertTriangle, CheckCircle2, Hash, BookOpen, HandCoins,
+  BarChart2, AlertTriangle, CheckCircle2, Hash, BookOpen, HandCoins, Calendar,
 } from "lucide-react";
 import TallymateLogo from "@/components/TallymateLogo";
 
@@ -14,6 +14,8 @@ const sections = [
   { id: "getting-started", label: "Getting Started", icon: Sparkles },
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "transactions", label: "Transactions", icon: ArrowUpDown },
+  { id: "calendar", label: "Calendar View", icon: Calendar },
+  { id: "import-rules", label: "Smart Imports", icon: Zap },
   { id: "budgets", label: "Budgets", icon: PieChart },
   { id: "goals", label: "Financial Goals", icon: Target },
   { id: "groups", label: "Groups & Bill Splitting", icon: Users },
@@ -80,12 +82,12 @@ function Badge({ children, color = "neutral" }: { children: React.ReactNode; col
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("getting-started");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dark, setDark] = useState(() => {
-    if (typeof document === "undefined") return false;
-    return document.documentElement.classList.contains("dark");
-  });
+  const [dark, setDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setDark(document.documentElement.classList.contains("dark"));
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => { if (e.isIntersecting) setActiveSection(e.target.id); });
@@ -124,9 +126,11 @@ export default function DocsPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={toggleDark} className="p-2 rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 transition-colors">
-            {dark ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
+          {mounted && (
+            <button onClick={toggleDark} className="p-2 rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 transition-colors">
+              {dark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          )}
           <Link href="/login" className="px-4 py-1.5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-black text-xs font-bold hover:bg-neutral-700 dark:hover:bg-neutral-200 transition-colors">
             Open App
           </Link>
@@ -255,6 +259,46 @@ export default function DocsPage() {
             <Step n={3} title="Save it">The transaction instantly appears in your list and updates your Dashboard totals and budget tracking.</Step>
             <Callout type="info">
               <strong>Custom Categories:</strong> The default categories (Food, Transport, Health, etc.) cover most cases. Go to <strong>Settings → Custom Categories</strong> to create your own tags in any color.
+            </Callout>
+          </div>
+
+          {/* ── CALENDAR ── */}
+          <div className="mt-14">
+            <SectionHeading id="calendar" icon={Calendar} title="Calendar View" subtitle="Because sometimes looking at a list of numbers just doesn't cut it." />
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">
+              Ever wonder exactly which days of the month you spend the most? Or when all your subscriptions hit? 
+              The <strong>Calendar</strong> page gives you a literal birds-eye view of your month. It’s honestly the best way to spot patterns you’d otherwise miss.
+            </p>
+            <Step n={1} title="See the big picture">Open the Calendar from the sidebar. You'll instantly see green numbers (money in) and red numbers (money out) mapped to every day of the month.</Step>
+            <Step n={2} title="Click a day to drill down">If you see a random Tuesday where you spent ₹5,000, just click on that day. A sidebar slides out showing you exactly where every rupee went.</Step>
+            <Step n={3} title="Plan your cashflow">It's a great tool to mentally prepare for the rest of the month. If the first two weeks look heavy on the red, you know you need to chill for the last two weeks.</Step>
+          </div>
+
+          {/* ── SMART IMPORTS ── */}
+          <div className="mt-14">
+            <SectionHeading id="import-rules" icon={Zap} title="Smart CSV Imports & Rules" subtitle="Stop typing out every single transaction manually. Let the robots do the heavy lifting." />
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">
+              Let's be real—manually entering every Swiggy order or Uber ride gets old fast. 
+              Tallymate has a seriously powerful CSV importer that actually understands Indian bank statements.
+            </p>
+            
+            <h3 className="font-semibold text-base mb-3 text-neutral-800 dark:text-neutral-200">The Magic Parser</h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4">
+              When you upload a bank statement, you usually get garbage descriptions like <code>UPI/DR/609171394895/ZOMATO /BKID/atharv1132/UPI</code>. 
+              Our parser is smart enough to strip away all that banking jargon (UPI, NEFT, IMPS, reference numbers) and just give you the clean name: <strong>Zomato</strong>.
+            </p>
+
+            <h3 className="font-semibold text-base mb-3 mt-8 text-neutral-800 dark:text-neutral-200">Import Rules (Automating your life)</h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-5">
+              Want Tallymate to automatically know that "Zomato" means Food? That's what Import Rules are for.
+            </p>
+            <Step n={1} title="Create a Rule">Go to <strong>Import Rules</strong> in the sidebar. Click New Rule.</Step>
+            <Step n={2} title="Tell it what to look for">Set a keyword like "Swiggy", "Zomato", or "Blinkit".</Step>
+            <Step n={3} title="Tell it what to do">Set the category to "Food & Dining". Now, every single time you upload a CSV, any transaction matching that keyword is instantly categorized. Zero manual effort.</Step>
+            
+            <Callout type="tip">
+              <strong>Internal Transfers:</strong> When you transfer money between your own accounts (like from HDFC to SBI), you don't want it counted as an "Expense". 
+              When importing, just type keywords like "self" or "transfer" into the Internal Transfers box, and we'll ignore them so they don't mess up your budgets!
             </Callout>
           </div>
 

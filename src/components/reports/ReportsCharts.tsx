@@ -16,6 +16,14 @@ const COLORS_DARK = ["#818cf8", "#f472b6", "#34d399", "#fbbf24", "#a78bfa", "#38
 
 type ChartData = { name: string; value: number; color?: string }[];
 
+const formatYAxis = (val: number) => {
+  if (val === 0) return "₹0";
+  if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+  if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+  if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
+  return `₹${val}`;
+};
+
 const CustomTooltip = ({ active, payload, label, isDark }: any) => {
   if (active && payload && payload.length) {
     return (

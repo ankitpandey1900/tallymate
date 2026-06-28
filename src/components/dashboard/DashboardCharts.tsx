@@ -26,10 +26,18 @@ type ChartMetrics = {
 export function DashboardTrendChart({ metrics }: { metrics: ChartMetrics }) {
   const chartData = metrics.trendData || [];
 
+  const formatYAxis = (val: number) => {
+    if (val === 0) return "₹0";
+    if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+    if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+    if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
+    return `₹${val}`;
+  };
+
   return (
     <div className="h-64 w-full min-h-[256px]" style={{ minWidth: 1, minHeight: 1 }}>
       <ResponsiveContainer width="100%" height={256} minWidth={1} minHeight={1}>
-        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -42,7 +50,7 @@ export function DashboardTrendChart({ metrics }: { metrics: ChartMetrics }) {
           </defs>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-black/5 dark:text-white/5" />
           <XAxis dataKey="name" stroke="currentColor" className="text-neutral-400" fontSize={11} tickLine={false} axisLine={false} dy={10} />
-          <YAxis stroke="currentColor" className="text-neutral-400" fontSize={11} tickLine={false} axisLine={false} dx={-10} tickFormatter={(val) => `₹${val}`} />
+          <YAxis stroke="currentColor" className="text-neutral-400" fontSize={11} tickLine={false} axisLine={false} dx={-5} tickFormatter={formatYAxis} width={45} />
           <Tooltip
             contentStyle={{
               backgroundColor: "rgba(17, 17, 19, 0.9)",

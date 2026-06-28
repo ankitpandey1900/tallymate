@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Tag, Landmark, Plus, Check, Shield, Pencil, Trash2, X, Loader2, LogOut } from "lucide-react";
+import { User, Tag, Landmark, Plus, Check, Shield, Pencil, Trash2, X, Loader2, LogOut, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
 import { signOut } from "@/lib/auth-client";
@@ -195,14 +195,31 @@ export default function SettingsManager({ initialData }: { initialData: Settings
             { id: "categories" as const, label: "Categories", icon: Tag },
             { id: "sources" as const, label: "Income Sources", icon: Landmark },
             { id: "profile" as const, label: "Profile", icon: User },
+            { id: "docs", label: "Documentation", icon: BookOpen, href: "/docs" },
           ].map((tab) => {
             const Icon = tab.icon;
+            
+            if (tab.href) {
+              return (
+                <a
+                  key={tab.id}
+                  href={tab.href}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md text-xs font-semibold text-left transition-all duration-150 justify-start h-auto normal-case tracking-normal text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-[#1c1c20]"
+                  )}
+                >
+                  <Icon size={14} />
+                  <span>{tab.label}</span>
+                </a>
+              );
+            }
+
             return (
               <Button
                 key={tab.id}
                 type="button"
                 variant={activeTab === tab.id ? "toggle-active" : "toggle-inactive"}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md text-xs font-semibold text-left transition-all duration-150 justify-start h-auto normal-case tracking-normal",
                   activeTab === tab.id
@@ -409,7 +426,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
 
               <div className="panel-card p-5 space-y-4">
                 <h3 className="text-sm font-semibold">Your income sources</h3>
-                <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
                   {incomeSources.map((s) => {
                     const isEditing = editingSourceId === s.id;
                     const isConfirmingDelete = confirmDeleteSourceId === s.id;
@@ -447,10 +464,15 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                     return (
                       <div
                         key={s.id}
-                        className="flex items-center justify-between gap-2 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800"
+                        className="group flex items-center gap-3 pl-3 pr-1 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#151518] shadow-sm shrink-0"
                       >
-                        <span className="text-sm font-medium">{s.name}</span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="shrink-0 flex items-center justify-center text-emerald-500">
+                            {getCategoryIcon(s.name, 14)}
+                          </div>
+                          <span className="text-[13px] font-medium truncate">{s.name}</span>
+                        </div>
+                        <div className="flex items-center shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-neutral-100 dark:bg-neutral-800 rounded-full px-1">
                           {isConfirmingDelete ? (
                             <>
                               <Button
@@ -458,14 +480,15 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                                 variant="destructive-sm"
                                 onClick={() => handleDeleteSource(s.id)}
                                 disabled={isBusy}
+                                className="h-6 text-[10px] px-2 rounded-full"
                               >
-                                Delete?
+                                {isBusy ? <Loader2 size={11} className="animate-spin" /> : "Delete?"}
                               </Button>
                               <Button
                                 type="button"
                                 variant="unstyled"
                                 onClick={() => setConfirmDeleteSourceId(null)}
-                                className="p-1.5 text-xs"
+                                className="px-1.5 text-[10px] hover:text-neutral-900 dark:hover:text-white"
                               >
                                 No
                               </Button>
@@ -476,17 +499,19 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                                 type="button"
                                 variant="unstyled"
                                 onClick={() => startEditSource(s)}
-                                className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+                                className="p-1 rounded-full hover:text-neutral-900 dark:hover:text-white text-neutral-500 transition-colors"
+                                title="Edit source"
                               >
-                                <Pencil size={13} />
+                                <Pencil size={11} />
                               </Button>
                               <Button
                                 type="button"
                                 variant="unstyled"
-                                onClick={() => handleDeleteSource(s.id)}
-                                className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 hover:text-red-500"
+                                onClick={() => setConfirmDeleteSourceId(s.id)}
+                                className="p-1 rounded-full hover:text-rose-600 text-neutral-500 transition-colors"
+                                title="Delete source"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={11} />
                               </Button>
                             </>
                           )}
