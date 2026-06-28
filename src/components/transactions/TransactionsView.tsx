@@ -959,33 +959,31 @@ export default function TransactionsView({ initialData }: { initialData: Transac
             />
           </div>
 
-          {!editingTx && (
-            <div className="space-y-1.5">
-              <FieldLabel>Paid from (account)</FieldLabel>
-              <NativeSelect
-                required
-                value={txForm.accountId}
-                onChange={(e) => setTxForm((prev) => ({ ...prev, accountId: e.target.value }))}
-              >
-                {accounts.length === 0 ? (
-                  <option value="">No accounts — create one first</option>
-                ) : (
-                  accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} · {formatPaymentMode(a.type)} (₹{a.balance.toLocaleString('en-IN')})
-                    </option>
-                  ))
-                )}
-              </NativeSelect>
-              {txForm.accountId && (
-                <p className="text-[10px] text-neutral-500">
-                  Payment method: {formatPaymentMode(accounts.find((a) => a.id === txForm.accountId)?.type)}
-                </p>
+          <div className="space-y-1.5">
+            <FieldLabel>Paid from (account)</FieldLabel>
+            <NativeSelect
+              required
+              value={txForm.accountId}
+              onChange={(e) => setTxForm((prev) => ({ ...prev, accountId: e.target.value }))}
+            >
+              {accounts.length === 0 ? (
+                <option value="">No accounts — create one first</option>
+              ) : (
+                accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} · {formatPaymentMode(a.type)} (₹{a.balance.toLocaleString('en-IN')})
+                  </option>
+                ))
               )}
-            </div>
-          )}
+            </NativeSelect>
+            {txForm.accountId && (
+              <p className="text-[10px] text-neutral-500">
+                Payment method: {formatPaymentMode(accounts.find((a) => a.id === txForm.accountId)?.type)}
+              </p>
+            )}
+          </div>
 
-          {txForm.type === "TRANSFER" && !editingTx && (
+          {txForm.type === "TRANSFER" && (
             <div className="space-y-1.5">
               <FieldLabel>Transfer to</FieldLabel>
               {accounts.filter((a) => a.id !== txForm.accountId).length === 0 ? (

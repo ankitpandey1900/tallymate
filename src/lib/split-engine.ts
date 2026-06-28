@@ -125,7 +125,7 @@ export function minimizeDebts(
     const amount = Math.min(debtor.balance, creditor.balance);
     const roundedAmount = Math.round(amount * 100) / 100;
 
-    if (roundedAmount > 0.01) {
+    if (roundedAmount > 0) {
       const debtorMember = memberMap.get(debtor.userId);
       const creditorMember = memberMap.get(creditor.userId);
 
@@ -136,15 +136,15 @@ export function minimizeDebts(
         toUserName: creditorMember?.name || creditorMember?.email || "Unknown",
         amount: roundedAmount,
       });
-
-      debtor.balance -= roundedAmount;
-      creditor.balance -= roundedAmount;
     }
 
-    if (debtor.balance < 0.01) {
+    debtor.balance -= amount;
+    creditor.balance -= amount;
+
+    if (debtor.balance < 0.005) {
       dIndex++;
     }
-    if (creditor.balance < 0.01) {
+    if (creditor.balance < 0.005) {
       cIndex++;
     }
   }

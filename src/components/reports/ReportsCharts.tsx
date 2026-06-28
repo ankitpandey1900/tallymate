@@ -95,7 +95,7 @@ export function ExpenseCategoryChart({
             fontWeight={500}
             tickLine={false} 
             axisLine={false} 
-            tickFormatter={(val) => `₹${val}`}
+            tickFormatter={formatYAxis}
             tickMargin={12}
             width={60}
           />
@@ -156,7 +156,7 @@ export function IncomeSourcesChart({
             fontWeight={500}
             tickLine={false} 
             axisLine={false} 
-            tickFormatter={(val) => `₹${val}`}
+            tickFormatter={formatYAxis}
             tickMargin={12}
             width={60}
           />

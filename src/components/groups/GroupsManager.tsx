@@ -20,6 +20,7 @@ import {
   Loader2,
   Edit3,
 } from "lucide-react";
+import { getCategoryIcon } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
@@ -147,7 +148,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       setExpenseForm((prev) => ({
         ...prev,
         paidByUserId: details.members[0]?.userId || "",
-        accountId: personalAccounts[0]?.id || "",
+        accountId: "",
       }));
     } catch (err) {
       console.error(err);
@@ -375,6 +376,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         description: expenseForm.description,
         paidByUserId: expenseForm.paidByUserId,
         splits,
+        accountId: expenseForm.accountId || undefined,
       });
 
       setShowEditExpense(false);
@@ -427,8 +429,8 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         receiverId: "",
         amount: "",
         notes: "",
-        accountId: "",
-        receiveAccountId: "",
+        accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
+        receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
       });
       loadGroupDetails(groupDetails.group.id);
       toast.success("Payment recorded");
@@ -646,8 +648,17 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                             receiverId: firstPending.toUserId,
                             amount: String(firstPending.amount),
                             notes: `Settled up in ${groupDetails.group.name}`,
-                            accountId: personalAccounts[0]?.id || "",
-                            receiveAccountId: "",
+                            accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
+                            receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
+                          });
+                       } else {
+                          setSettlementForm({
+                            payerId: "",
+                            receiverId: "",
+                            amount: "",
+                            notes: `Settled up in ${groupDetails.group.name}`,
+                            accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
+                            receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
                           });
                        }
                        setShowSettleModal(true);
@@ -739,7 +750,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                               
                               {/* Icon & Title */}
                               <div className="w-10 h-10 shrink-0 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-500 ml-2">
-                                <DollarSign size={20} />
+                                {getCategoryIcon(e.description, 20)}
                               </div>
                               <div className="ml-4 flex-1 min-w-0">
                                 <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{e.description}</p>
@@ -770,7 +781,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                         amount: String(e.amount),
                                         description: e.description,
                                         paidByUserId: e.paidByUserId,
-                                        accountId: "",
+                                        accountId: "keep",
                                         customShares: e.splits.reduce((acc, s) => ({ ...acc, [s.userId]: String(s.amount) }), {}),
                                       });
                                       setSplitType(e.splits[0]?.type === "EQUAL" ? "EQUAL" : e.splits[0]?.type === "PERCENTAGE" ? "PERCENTAGE" : "UNEQUAL");
@@ -1127,6 +1138,24 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               </Select>
             </div>
 
+            {/* Sync settings to payer's accounts */}
+            {expenseForm.paidByUserId === currentUserId && (
+              <div className="space-y-1.5 px-1 pb-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Deduct From Personal Account</label>
+                <NativeSelect
+                  value={expenseForm.accountId}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, accountId: e.target.value }))}
+                >
+                  <option value="">Skip — don&apos;t update my account</option>
+                  {personalAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} (₹{a.balance})
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            )}
+
             {/* Split Grid */}
             <div className="space-y-0 border-t border-black/[0.06] dark:border-white/[0.06]">
               {groupDetails.members.map((m) => (
@@ -1290,6 +1319,25 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               </Select>
             </div>
 
+            {/* Sync settings to payer's accounts */}
+            {expenseForm.paidByUserId === currentUserId && (
+              <div className="space-y-1.5 px-1 pb-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Deduct From Personal Account</label>
+                <NativeSelect
+                  value={expenseForm.accountId}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, accountId: e.target.value }))}
+                >
+                  <option value="keep">Keep existing account (or ignore if none)</option>
+                  <option value="skip">Unlink — don't deduct from my account</option>
+                  {personalAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} (₹{a.balance})
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            )}
+
             {/* Split Grid */}
             <div className="space-y-0 border-t border-black/[0.06] dark:border-white/[0.06]">
               {groupDetails.members.map((m) => (
@@ -1397,7 +1445,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   value={settlementForm.accountId}
                   onChange={(e) => setSettlementForm((prev) => ({ ...prev, accountId: e.target.value }))}
                 >
-                  <option value="">Skip — don&apos;t update my account</option>
+                  <option value="">Skip — will not show in personal Transactions</option>
                   {personalAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} (₹{a.balance})
@@ -1415,7 +1463,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   value={settlementForm.receiveAccountId}
                   onChange={(e) => setSettlementForm((prev) => ({ ...prev, receiveAccountId: e.target.value }))}
                 >
-                  <option value="">Skip — don&apos;t update my account</option>
+                  <option value="">Skip — will not show in personal Transactions</option>
                   {personalAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} (₹{a.balance})

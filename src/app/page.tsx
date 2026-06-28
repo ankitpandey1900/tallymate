@@ -480,12 +480,17 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-black/[0.06] dark:border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4">
-            <span className="text-sm text-neutral-500 dark:text-neutral-400">© 2026 Tallymate. All rights reserved.</span>
-            <span className="text-sm text-neutral-500 dark:text-neutral-400">
-              Built by <span className="text-neutral-900 dark:text-white font-semibold">Ankit Pandey</span> · <a href="https://www.instagram.com/ankit.pandey19/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-500 font-semibold transition-colors">Instagram</a>
-            </span>
-          </div>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-black/[0.05] dark:border-white/[0.05] pt-8">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
+                  T
+                </div>
+                <span className="font-bold text-lg tracking-tight">Tallymate.</span>
+              </div>
+              <p className="text-sm text-neutral-500 font-medium">
+                © {new Date().getFullYear()} Tallymate. All rights reserved.
+              </p>
+            </div>
 
         </div>
       </footer>

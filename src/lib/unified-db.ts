@@ -46,6 +46,7 @@ export interface UnifiedTransaction {
   categoryId?: string;
   incomeSourceId?: string;
   groupId?: string;
+  groupExpenseId?: string;
   transferToAccountId?: string;
 }
 
@@ -167,6 +168,7 @@ function mapTransaction(t: {
   categoryId: string | null;
   incomeSourceId: string | null;
   groupId: string | null;
+  groupExpenseId?: string | null;
   transferToAccountId: string | null;
 }): UnifiedTransaction {
   return {
@@ -175,15 +177,16 @@ function mapTransaction(t: {
     accountId: t.accountId,
     type: t.type,
     scope: t.scope,
-    amount: Number(t.amount),
+    amount: typeof t.amount === "number" ? t.amount : typeof t.amount === "string" ? Number(t.amount) : t.amount.toNumber ? t.amount.toNumber() : 0,
     date: t.date.toISOString(),
     description: t.description || "",
-    notes: t.notes || "",
-    tags: t.tags,
+    notes: t.notes || undefined,
+    tags: t.tags || [],
     receiptUrl: t.receiptUrl || undefined,
     categoryId: t.categoryId || undefined,
     incomeSourceId: t.incomeSourceId || undefined,
     groupId: t.groupId || undefined,
+    groupExpenseId: t.groupExpenseId || undefined,
     transferToAccountId: t.transferToAccountId || undefined,
   };
 }
@@ -957,6 +960,42 @@ export class UnifiedDB {
     txId: string,
     data: Partial<Omit<UnifiedTransaction, "id" | "userId">>
   ): Promise<UnifiedTransaction> {
+    const oldTx = await prisma.transaction.findFirst({ where: { id: txId, userId } });
+    if (!oldTx) throw new Error("Transaction not found");
+
+    // 1. Reverse old transaction effect
+    const oldModifier = oldTx.type === "INCOME" || oldTx.type === "REFUND" || oldTx.type === "LOAN_TAKEN" ? 1 : -1;
+    const oldAmountNum = Number(oldTx.amount);
+    await prisma.financialAccount.update({
+      where: { id: oldTx.accountId },
+      data: { balance: { increment: -(oldAmountNum * oldModifier) } },
+    });
+    if (oldTx.type === "TRANSFER" && oldTx.transferToAccountId) {
+      await prisma.financialAccount.update({
+        where: { id: oldTx.transferToAccountId },
+        data: { balance: { decrement: oldAmountNum } },
+      });
+    }
+
+    // 2. Apply new transaction effect
+    const newAmount = data.amount !== undefined ? Number(data.amount) : Number(oldTx.amount);
+    const newType = data.type !== undefined ? data.type : oldTx.type;
+    const newAccountId = data.accountId !== undefined ? data.accountId : oldTx.accountId;
+    const newTransferTo = data.transferToAccountId !== undefined ? data.transferToAccountId : oldTx.transferToAccountId;
+    
+    const newModifier = newType === "INCOME" || newType === "REFUND" || newType === "LOAN_TAKEN" ? 1 : -1;
+    await prisma.financialAccount.update({
+      where: { id: newAccountId },
+      data: { balance: { increment: newAmount * newModifier } },
+    });
+    if (newType === "TRANSFER" && newTransferTo) {
+      await prisma.financialAccount.update({
+        where: { id: newTransferTo },
+        data: { balance: { increment: newAmount } },
+      });
+    }
+
+    // 3. Update the transaction itself
     const tx = await prisma.transaction.update({
       where: { id: txId, userId },
       data: {
@@ -968,6 +1007,8 @@ export class UnifiedDB {
         ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
         ...(data.incomeSourceId !== undefined && { incomeSourceId: data.incomeSourceId }),
         ...(data.tags !== undefined && { tags: data.tags }),
+        ...(data.accountId !== undefined && { accountId: data.accountId }),
+        ...(data.transferToAccountId !== undefined && { transferToAccountId: data.transferToAccountId }),
       },
     });
     return mapTransaction(tx);

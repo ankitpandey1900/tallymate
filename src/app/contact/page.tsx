@@ -55,7 +55,7 @@ export default function ContactPage() {
             <div className="bg-white dark:bg-[#111113] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 shadow-sm">
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-3">Developer</h2>
               <p className="text-neutral-500 dark:text-neutral-400 mb-6 leading-relaxed">
-                Built and maintained by Ankit Pandey — passionate about making Indian fintech tools accessible to everyone.
+                Built and maintained by the Tallymate Team — passionate about making Indian fintech tools accessible to everyone.
               </p>
               
               <div className="space-y-4">

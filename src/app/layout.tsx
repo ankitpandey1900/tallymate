@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   },
   description: "Track your personal expenses, set monthly budgets, and split bills with friends seamlessly in one unified app.",
   keywords: ["personal finance", "expense tracker", "bill splitting", "budgeting app", "split expenses", "Splitwise alternative", "finance app India"],
-  authors: [{ name: "Ankit Pandey" }],
-  creator: "Ankit Pandey",
+  authors: [{ name: "Tallymate Team" }],
+  creator: "Tallymate Team",
   openGraph: {
     type: "website",
     locale: "en_IN",

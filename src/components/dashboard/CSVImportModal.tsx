@@ -249,39 +249,19 @@ export function CSVImportModal({ open, onOpenChange, accounts, categories, incom
             }
           }
           
-          // Split by common delimiters used in bank statements (slash, dash, asterisk)
-          const tokens = cleaned.split(/[\/\-\*]/);
+          const junkRegex = /\b(UPI|NEFT|IMPS|RTGS|DR|CR|P2A|P2M|BIL|INB|IFT|ACH|ECS|CHQ|TXN|REF|WDL|PUR|INF|REV|CMS|POS|IB|MB|MMT)\b/gi;
+          let name = cleaned.replace(junkRegex, '');
           
-          // If no delimiters were found, or it's a very simple string, just return it
-          if (tokens.length <= 1) {
-            return cleaned.replace(/\s+/g, ' ').trim();
-          }
-          
-          // Jargon commonly found in statement descriptions that aren't the payee name
-          const junkKeywords = new Set([
-            "UPI", "NEFT", "IMPS", "RTGS", "DR", "CR", "P2A", "P2M", "BIL", "INB", 
-            "IFT", "ACH", "ECS", "CHQ", "TXN", "REF", "WDL", "PUR", "INF", "REV", "CMS", "POS", "IB", "MB", "MMT"
-          ]);
-          
-          const validTokens = tokens.filter(token => {
-            const t = token.toUpperCase().trim();
-            if (t.length === 0) return false;
-            if (junkKeywords.has(t)) return false;
-            
-            // Exclude purely numerical strings (likely reference numbers or phone numbers)
-            if (/^\d+$/.test(t)) return false;
-            
-            // Exclude common Bank IFSC codes or alphanumeric TXN IDs (e.g., KKBK0001234, 1132KKBK)
-            // Roughly: if it's 8-18 characters long and contains a mix of letters and numbers with no spaces
-            if (/^[A-Z0-9]{8,18}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t)) return false;
-            
+          const tokens = name.split(/[\/\-\*\s,]+/).filter(t => {
+            const token = t.trim();
+            if (token.length === 0) return false;
+            if (/^\d+$/.test(token)) return false;
+            if (/^[A-Z0-9]{6,25}$/i.test(token) && /\d/.test(token)) return false;
             return true;
           });
           
-          if (validTokens.length > 0) {
-             // Take the first valid token, as it's almost always the payee/merchant name
-             let name = validTokens[0].trim();
-             return name.replace(/\s+/g, ' ');
+          if (tokens.length > 0) {
+             return tokens.join(' ').replace(/\s+/g, ' ').trim();
           }
           
           return cleaned; // Fallback

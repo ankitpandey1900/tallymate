@@ -999,6 +999,7 @@ export async function createGroupExpense(
       }.`,
       tags: ["Group Expense"],
       groupId,
+      groupExpenseId: groupExpense.id,
     });
   }
 
@@ -1063,6 +1064,24 @@ export async function createSettlement(
     notes: data.notes,
   });
 
+  // Resolve names
+  let payerName = "Someone";
+  let receiverName = "Someone";
+
+  if (data.payerId === user.id) {
+    payerName = user.name || user.email || "You";
+  } else {
+    const payerUser = (await UnifiedDB.getUsersByIds([data.payerId]))[0];
+    payerName = payerUser?.name || payerUser?.email || "Someone";
+  }
+
+  if (data.receiverId === user.id) {
+    receiverName = user.name || user.email || "You";
+  } else {
+    const receiverUser = (await UnifiedDB.getUsersByIds([data.receiverId]))[0];
+    receiverName = receiverUser?.name || receiverUser?.email || "Someone";
+  }
+
   // Unified Finance Engine reconcile:
   // Payer records settlement as an expense / out-of-pocket transfer
   if (data.payerId === user.id && data.accountId) {
@@ -1073,8 +1092,8 @@ export async function createSettlement(
       scope: "GROUP",
       amount: data.amount,
       date: new Date().toISOString(),
-      description: `[Settlement Paid]`,
-      notes: data.notes || "Settled balance in group.",
+      description: `Settled with ${receiverName}`,
+      notes: data.notes || `Paid ${receiverName} in group: ${group.name}`,
       tags: ["Settlement"],
       groupId,
     });
@@ -1089,21 +1108,14 @@ export async function createSettlement(
       scope: "GROUP",
       amount: data.amount,
       date: new Date().toISOString(),
-      description: `[Settlement Received]`,
-      notes: data.notes || "Received settlement in group.",
+      description: `Received from ${payerName}`,
+      notes: data.notes || `${payerName} paid you in group: ${group.name}`,
       tags: ["Settlement"],
       groupId,
     });
   }
 
   // Notify receiver
-  let payerName = "Someone";
-  if (data.payerId === user.id) {
-    payerName = user.name || user.email || "Someone";
-  } else {
-    const payerUser = (await UnifiedDB.getUsersByIds([data.payerId]))[0];
-    payerName = payerUser?.name || payerUser?.email || "Someone";
-  }
   await UnifiedDB.createNotification(
     data.receiverId,
     "Payment received",
@@ -1119,16 +1131,62 @@ export async function updateGroupExpense(
   groupId: string,
   expenseId: string,
   data: {
-    amount?: number;
-    description?: string;
-    paidByUserId?: string;
-    splits?: { userId: string; amount: number; type: string }[];
+    amount: number;
+    description: string;
+    paidByUserId: string;
+    splits: { userId: string; amount: number; type: string }[];
+    accountId?: string;
   }
 ) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "updateGroupExpense", 60, 60);
   const user = await getCurrentUser();
   const expense = await UnifiedDB.updateGroupExpense(groupId, expenseId, data);
+
+  // Sync to personal transaction if the active user is the payer
+  if (data.paidByUserId === user.id) {
+    const linkedTx = await prisma.transaction.findFirst({
+      where: { userId: user.id, groupExpenseId: expenseId }
+    });
+
+    if (data.accountId === "keep" || data.accountId === undefined) {
+      if (linkedTx) {
+        await UnifiedDB.updateTransaction(user.id, linkedTx.id, {
+          amount: data.amount,
+          description: `[Group Paid] ${data.description}`,
+          notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
+        });
+      }
+    } else if (data.accountId === "skip" || data.accountId === "") {
+      if (linkedTx) {
+        await UnifiedDB.deleteTransaction(user.id, linkedTx.id);
+      }
+    } else if (data.accountId) {
+      if (linkedTx) {
+        await UnifiedDB.updateTransaction(user.id, linkedTx.id, {
+          amount: data.amount,
+          description: `[Group Paid] ${data.description}`,
+          accountId: data.accountId,
+          notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
+        });
+      } else {
+        await UnifiedDB.createTransaction(user.id, {
+          userId: user.id,
+          accountId: data.accountId,
+          type: "EXPENSE",
+          scope: "GROUP",
+          amount: data.amount,
+          date: new Date().toISOString(),
+          description: `[Group Paid] ${data.description}`,
+          notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
+          tags: ["Group Expense"],
+          groupId,
+          groupExpenseId: expenseId,
+        });
+      }
+    }
+  }
+
   await bustPageCache(user.id);
   return expense;
 }
