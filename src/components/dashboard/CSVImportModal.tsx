@@ -38,7 +38,7 @@ export function CSVImportModal({ open, onOpenChange, accounts, categories, incom
   const [parsedData, setParsedData] = useState<ParsedTransaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [transferKeywords, setTransferKeywords] = useState("pandey mukesh, ankit mukesh, self, credit card");
+  const [transferKeywords, setTransferKeywords] = useState("self, credit card, transfer");
 
   // Keep selectedAccountId in sync if accounts change (e.g. account deleted and recreated)
   useEffect(() => {
@@ -232,23 +232,63 @@ export function CSVImportModal({ open, onOpenChange, accounts, categories, incom
     try {
       const payload = parsedData.map(tx => {
         // Clean up ugly bank/UPI descriptions to make them beautiful and human-readable
+        // Advanced Universal Bank Description Cleaner
         let finalDescription = tx.description;
-        if (finalDescription.toUpperCase().startsWith("UPI/")) {
-          const parts = finalDescription.split("/");
-          if (parts.length >= 2) {
-            finalDescription = parts[1];
-          }
-        } else if (finalDescription.toUpperCase().startsWith("POS ") || finalDescription.toUpperCase().startsWith("POS/")) {
-          const starIdx = finalDescription.indexOf("*");
-          if (starIdx !== -1) {
-            finalDescription = finalDescription.substring(starIdx + 1);
-          } else {
-            const parts = finalDescription.split(" ");
-            if (parts.length > 2) {
-              finalDescription = parts.slice(2).join(" ");
+        
+        const cleanBankDescription = (desc: string) => {
+          let cleaned = desc.trim();
+          
+          // POS handling is somewhat unique
+          if (cleaned.toUpperCase().startsWith("POS ") || cleaned.toUpperCase().startsWith("POS/")) {
+            const starIdx = cleaned.indexOf("*");
+            if (starIdx !== -1) {
+              return cleaned.substring(starIdx + 1).trim();
+            } else {
+              const parts = cleaned.split(" ");
+              return parts.length > 2 ? parts.slice(2).join(" ").trim() : cleaned;
             }
           }
-        }
+          
+          // Split by common delimiters used in bank statements (slash, dash, asterisk)
+          const tokens = cleaned.split(/[\/\-\*]/);
+          
+          // If no delimiters were found, or it's a very simple string, just return it
+          if (tokens.length <= 1) {
+            return cleaned.replace(/\s+/g, ' ').trim();
+          }
+          
+          // Jargon commonly found in statement descriptions that aren't the payee name
+          const junkKeywords = new Set([
+            "UPI", "NEFT", "IMPS", "RTGS", "DR", "CR", "P2A", "P2M", "BIL", "INB", 
+            "IFT", "ACH", "ECS", "CHQ", "TXN", "REF", "WDL", "PUR", "INF", "REV", "CMS", "POS", "IB", "MB", "MMT"
+          ]);
+          
+          const validTokens = tokens.filter(token => {
+            const t = token.toUpperCase().trim();
+            if (t.length === 0) return false;
+            if (junkKeywords.has(t)) return false;
+            
+            // Exclude purely numerical strings (likely reference numbers or phone numbers)
+            if (/^\d+$/.test(t)) return false;
+            
+            // Exclude common Bank IFSC codes or alphanumeric TXN IDs (e.g., KKBK0001234, 1132KKBK)
+            // Roughly: if it's 8-18 characters long and contains a mix of letters and numbers with no spaces
+            if (/^[A-Z0-9]{8,18}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t)) return false;
+            
+            return true;
+          });
+          
+          if (validTokens.length > 0) {
+             // Take the first valid token, as it's almost always the payee/merchant name
+             let name = validTokens[0].trim();
+             return name.replace(/\s+/g, ' ');
+          }
+          
+          return cleaned; // Fallback
+        };
+
+        finalDescription = cleanBankDescription(finalDescription);
+        
         // Convert TO TITLE CASE (e.g., "HOTEL AMANTRAN" -> "Hotel Amantran")
         finalDescription = finalDescription.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ').trim();
 
