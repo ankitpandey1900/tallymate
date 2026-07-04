@@ -18,12 +18,18 @@ export function getReportStartDate(timeframe: ReportTimeframe, now = new Date())
   const startDate = new Date(now);
 
   if (timeframe === "weekly") {
+    // Keep weekly as rolling 7 days, or we could change to start of week.
+    // For now, rolling 7 days is fine.
     startDate.setDate(now.getDate() - 7);
   } else if (timeframe === "monthly") {
-    startDate.setMonth(now.getMonth() - 1);
+    // Current calendar month
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
   } else if (timeframe === "quarterly") {
+    // Last 3 months rolling
     startDate.setMonth(now.getMonth() - 3);
   } else if (timeframe === "yearly") {
+    // Last 12 months rolling
     startDate.setFullYear(now.getFullYear() - 1);
   }
 

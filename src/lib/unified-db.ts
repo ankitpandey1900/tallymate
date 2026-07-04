@@ -96,6 +96,8 @@ export interface UnifiedGroupExpense {
   description: string;
   date: string;
   paidByUserId: string;
+  categoryId?: string;
+  categoryName?: string;
   splits: { userId: string; amount: number; type: string }[];
 }
 
@@ -614,7 +616,7 @@ export class UnifiedDB {
   static async getGroupExpenses(groupId: string): Promise<UnifiedGroupExpense[]> {
     const expenses = await prisma.groupExpense.findMany({
       where: { groupId },
-      include: { splits: true },
+      include: { splits: true, category: true },
       orderBy: { date: "desc" },
     });
     return expenses.map((e) => ({
@@ -624,6 +626,8 @@ export class UnifiedDB {
       description: e.description,
       date: e.date.toISOString(),
       paidByUserId: e.paidByUserId,
+      categoryId: e.categoryId || undefined,
+      categoryName: e.category?.name || undefined,
       splits: e.splits.map((s) => ({
         userId: s.userId,
         amount: Number(s.amount),
@@ -634,7 +638,7 @@ export class UnifiedDB {
 
   static async createGroupExpense(
     groupId: string,
-    data: Omit<UnifiedGroupExpense, "id" | "groupId">
+    data: Omit<UnifiedGroupExpense, "id" | "groupId" | "categoryName">
   ): Promise<UnifiedGroupExpense> {
     const exp = await prisma.groupExpense.create({
       data: {
@@ -643,6 +647,7 @@ export class UnifiedDB {
         description: data.description,
         date: new Date(data.date),
         paidByUserId: data.paidByUserId,
+        categoryId: data.categoryId,
         splits: {
           createMany: {
             data: data.splits.map((s) => ({
@@ -653,7 +658,7 @@ export class UnifiedDB {
           },
         },
       },
-      include: { splits: true },
+      include: { splits: true, category: true },
     });
 
     return {
@@ -663,6 +668,8 @@ export class UnifiedDB {
       description: exp.description,
       date: exp.date.toISOString(),
       paidByUserId: exp.paidByUserId,
+      categoryId: exp.categoryId || undefined,
+      categoryName: exp.category?.name || undefined,
       splits: exp.splits.map((s) => ({
         userId: s.userId,
         amount: Number(s.amount),
@@ -674,15 +681,13 @@ export class UnifiedDB {
   static async updateGroupExpense(
     groupId: string,
     expenseId: string,
-    data: {
-      amount?: number;
-      description?: string;
-      paidByUserId?: string;
-      splits?: { userId: string; amount: number; type: string }[];
-    }
+    data: Partial<Omit<UnifiedGroupExpense, "id" | "groupId" | "categoryName">>
   ): Promise<UnifiedGroupExpense> {
-    const existing = await prisma.groupExpense.findFirst({ where: { id: expenseId, groupId } });
-    if (!existing) throw new Error("Group expense not found.");
+    const existing = await prisma.groupExpense.findFirst({
+      where: { id: expenseId, groupId },
+      include: { splits: true },
+    });
+    if (!existing) throw new Error("Group expense not found");
 
     if (data.splits) {
       await prisma.expenseSplit.deleteMany({ where: { groupExpenseId: expenseId } });
@@ -694,6 +699,7 @@ export class UnifiedDB {
         ...(data.amount !== undefined && { amount: data.amount }),
         ...(data.description !== undefined && { description: data.description }),
         ...(data.paidByUserId !== undefined && { paidByUserId: data.paidByUserId }),
+        ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
         ...(data.splits && {
           splits: {
             createMany: {
@@ -706,7 +712,7 @@ export class UnifiedDB {
           },
         }),
       },
-      include: { splits: true },
+      include: { splits: true, category: true },
     });
 
     return {
@@ -716,6 +722,8 @@ export class UnifiedDB {
       description: exp.description,
       date: exp.date.toISOString(),
       paidByUserId: exp.paidByUserId,
+      categoryId: exp.categoryId || undefined,
+      categoryName: exp.category?.name || undefined,
       splits: exp.splits.map((s) => ({
         userId: s.userId,
         amount: Number(s.amount),

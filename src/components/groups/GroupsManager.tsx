@@ -75,6 +75,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
   const [previewExpenseId, setPreviewExpenseId] = useState<string | null>(null);
 
   const [personalAccounts, setPersonalAccounts] = useState<UnifiedAccount[]>(initialData.accounts);
+  const [categories, setCategories] = useState(initialData.categories);
   const [currentUserId, setCurrentUserId] = useState<string>(initialData.userId);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     description: "",
     paidByUserId: "",
     accountId: "",
+    categoryId: "",
     customShares: {} as Record<string, string>, // customized value (amount or percentage)
   });
 
@@ -127,6 +129,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
   useEffect(() => {
     setGroups(initialData.groups);
     setPersonalAccounts(initialData.accounts);
+    setCategories(initialData.categories);
     setCurrentUserId(initialData.userId);
     setIsLoading(false);
   }, [initialData]);
@@ -309,6 +312,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         amount: totalAmount,
         description: expenseForm.description,
         paidByUserId: expenseForm.paidByUserId,
+        categoryId: expenseForm.categoryId || undefined,
         splits,
         accountId: expenseForm.accountId || undefined,
       });
@@ -375,6 +379,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         amount: totalAmount,
         description: expenseForm.description,
         paidByUserId: expenseForm.paidByUserId,
+        categoryId: expenseForm.categoryId || undefined,
         splits,
         accountId: expenseForm.accountId || undefined,
       });
@@ -450,7 +455,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start h-[calc(100vh-100px)]">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start min-h-screen md:min-h-0 md:h-[calc(100vh-100px)]">
         {/* Left panel: Modern Group list */}
         <div className="flex flex-col h-full bg-white dark:bg-[#111113] border border-black/[0.04] dark:border-white/[0.04] rounded-2xl shadow-sm overflow-hidden panel-card">
           <div className="p-4 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between shrink-0">
@@ -750,7 +755,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                               
                               {/* Icon & Title */}
                               <div className="w-10 h-10 shrink-0 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center text-neutral-500 ml-2">
-                                {getCategoryIcon(e.description, 20)}
+                                {getCategoryIcon(e.categoryName || e.description, 20)}
                               </div>
                               <div className="ml-4 flex-1 min-w-0">
                                 <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{e.description}</p>
@@ -782,6 +787,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                         description: e.description,
                                         paidByUserId: e.paidByUserId,
                                         accountId: "keep",
+                                        categoryId: e.categoryId || "",
                                         customShares: e.splits.reduce((acc, s) => ({ ...acc, [s.userId]: String(s.amount) }), {}),
                                       });
                                       setSplitType(e.splits[0]?.type === "EQUAL" ? "EQUAL" : e.splits[0]?.type === "PERCENTAGE" ? "PERCENTAGE" : "UNEQUAL");
@@ -1092,6 +1098,20 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                 />
               </div>
               <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Category (Optional)</label>
+                <NativeSelect
+                  value={expenseForm.categoryId}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, categoryId: e.target.value }))}
+                >
+                  <option value="">Uncategorized</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+              <div>
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Amount</label>
                 <div className="flex items-center gap-1">
                   <span className="text-lg font-semibold text-neutral-500">₹</span>
@@ -1271,6 +1291,20 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
                   className="w-full text-lg font-semibold placeholder:text-neutral-400 text-neutral-900 dark:text-white"
                 />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Category (Optional)</label>
+                <NativeSelect
+                  value={expenseForm.categoryId}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, categoryId: e.target.value }))}
+                >
+                  <option value="">Uncategorized</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </NativeSelect>
               </div>
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Amount</label>

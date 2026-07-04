@@ -306,6 +306,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Refresh Button (visible only on mobile) */}
+            <Button
+              type="button"
+              variant="unstyled"
+              onClick={() => router.refresh()}
+              className="md:hidden p-2 rounded-md border border-black/[0.04] dark:border-[#27272a] hover:bg-black/[0.02] dark:hover:bg-neutral-900 transition-colors text-neutral-500 dark:text-neutral-400"
+              title="Refresh Data"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M2.13 15.57a10 10 0 1 0 3.43-11.75l-5.32 3.12"></path></svg>
+            </Button>
+
             {/* Theme Toggle */}
             <Button
               type="button"

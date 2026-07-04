@@ -262,11 +262,12 @@ export async function getBudgetsPageData() {
 export async function getGroupsPageData() {
   const user = await getCurrentUser();
   return getOrSetPageCache(user.id, "groups", async () => {
-    const [groups, accounts] = await Promise.all([
+    const [groups, accounts, categories] = await Promise.all([
       UnifiedDB.getGroups(user.id),
       UnifiedDB.getAccounts(user.id),
+      UnifiedDB.getCategories(user.id),
     ]);
-    return { groups, accounts, userId: user.id };
+    return { groups, accounts, categories, userId: user.id };
   });
 }
 
@@ -967,6 +968,7 @@ export async function createGroupExpense(
     paidByUserId: string;
     splits: { userId: string; amount: number; type: string }[];
     accountId?: string; // personal account used to pay
+    categoryId?: string; // personal category used to map
   }
 ) {
   const reqHeaders = await headers();
@@ -980,6 +982,7 @@ export async function createGroupExpense(
     date: new Date().toISOString(),
     paidByUserId: data.paidByUserId,
     splits: data.splits,
+    categoryId: data.categoryId,
   });
 
   // Unified Finance Engine integration:
@@ -1000,6 +1003,7 @@ export async function createGroupExpense(
       tags: ["Group Expense"],
       groupId,
       groupExpenseId: groupExpense.id,
+      categoryId: data.categoryId,
     });
   }
 
@@ -1136,6 +1140,7 @@ export async function updateGroupExpense(
     paidByUserId: string;
     splits: { userId: string; amount: number; type: string }[];
     accountId?: string;
+    categoryId?: string;
   }
 ) {
   const reqHeaders = await headers();
@@ -1155,6 +1160,7 @@ export async function updateGroupExpense(
           amount: data.amount,
           description: `[Group Paid] ${data.description}`,
           notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
+          categoryId: data.categoryId !== undefined ? data.categoryId : linkedTx.categoryId || undefined,
         });
       }
     } else if (data.accountId === "skip" || data.accountId === "") {
@@ -1168,6 +1174,7 @@ export async function updateGroupExpense(
           description: `[Group Paid] ${data.description}`,
           accountId: data.accountId,
           notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
+          categoryId: data.categoryId,
         });
       } else {
         await UnifiedDB.createTransaction(user.id, {
@@ -1182,6 +1189,7 @@ export async function updateGroupExpense(
           tags: ["Group Expense"],
           groupId,
           groupExpenseId: expenseId,
+          categoryId: data.categoryId,
         });
       }
     }

@@ -185,6 +185,7 @@ model ExpenseCategory {
   transactions Transaction[]
   budgets      Budget[]
   importRules  ImportRule[]
+  groupExpenses GroupExpense[]
 
   @@index([userId])
 }
@@ -300,6 +301,9 @@ model GroupExpense {
 
   splits      ExpenseSplit[]
   transactions Transaction[] // Triggers a personal expense for each member's split
+
+  categoryId  String?
+  category    ExpenseCategory? @relation(fields: [categoryId], references: [id])
 }
 
 enum SplitType {
