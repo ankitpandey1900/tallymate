@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { UnifiedDB, UnifiedTransaction, UnifiedGroup } from "@/lib/unified-db";
-import { calculateBalances, minimizeDebts } from "@/lib/split-engine";
+import { calculateBalances, calculateExactDebts } from "@/lib/split-engine";
 import { uploadFile } from "@/lib/storage";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -901,7 +901,7 @@ export async function createGroup(data: { name: string; type: string; memberEmai
   return newGroup;
 }
 
-export async function updateGroupSettings(groupId: string, settings: Partial<Omit<UnifiedGroup, "id" | "name" | "type" | "members">>) {
+export async function updateGroupSettings(groupId: string, settings: Partial<Omit<UnifiedGroup, "id" | "members">>) {
   const user = await getCurrentUser();
   const result = await UnifiedDB.updateGroupSettings(groupId, settings);
   await bustPageCache(user.id);
@@ -948,7 +948,7 @@ export async function getGroupDetails(groupId: string) {
   }));
 
   const balances = calculateBalances(groupMembersWithDetails, engineExpenses, engineSettlements);
-  const optimizedSettlements = minimizeDebts(groupMembersWithDetails, balances);
+  const optimizedSettlements = calculateExactDebts(groupMembersWithDetails, engineExpenses, engineSettlements);
 
   return {
     group,
@@ -1292,6 +1292,22 @@ export async function leaveGroup(groupId: string) {
   await enforceActionRateLimit(reqHeaders, "leaveGroup", 30, 60);
   const user = await getCurrentUser();
   await UnifiedDB.leaveGroup(user.id, groupId);
+  await bustPageCache(user.id);
+}
+
+export async function removeGroupMember(groupId: string, targetUserId: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "removeGroupMember", 30, 60);
+  const user = await getCurrentUser();
+  await UnifiedDB.removeMember(user.id, groupId, targetUserId);
+  await bustPageCache(user.id);
+}
+
+export async function updateGroupMemberRole(groupId: string, targetUserId: string, newRole: "ADMIN" | "MEMBER") {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "updateGroupMemberRole", 30, 60);
+  const user = await getCurrentUser();
+  await UnifiedDB.updateMemberRole(user.id, groupId, targetUserId, newRole);
   await bustPageCache(user.id);
 }
 

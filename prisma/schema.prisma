@@ -237,6 +237,7 @@ model Group {
   id                      String                  @id @default(uuid())
   name                    String
   inviteCode              String?                 @unique
+  image                   String?                 // For group icon/image
   type                    GroupType
   currency                String                  @default("INR")
   createdAt               DateTime                @default(now())

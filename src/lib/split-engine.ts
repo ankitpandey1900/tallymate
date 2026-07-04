@@ -91,63 +91,93 @@ export function calculateBalances(
 }
 
 /**
- * Minimizes the number of settlements required to resolve all debts.
- * Greedy algorithm: match the largest debtor with the largest creditor.
+ * Calculates exact pairwise debts between members instead of simplifying/optimizing.
+ * (Used to replace minimizeDebts so the user sees exactly who owes whom based on raw expenses)
  */
-export function minimizeDebts(
+export function calculateExactDebts(
   members: GroupMemberInput[],
-  balances: MemberBalance[]
+  expenses: GroupExpenseInput[],
+  settlements: { payerId: string; receiverId: string; amount: number }[]
 ): OptimizedSettlement[] {
   const memberMap = new Map(members.map((m) => [m.userId, m]));
+  
+  // owed[debtor][creditor] = amount
+  const owed: Record<string, Record<string, number>> = {};
+  
+  members.forEach(m => {
+    owed[m.userId] = {};
+    members.forEach(m2 => {
+      owed[m.userId][m2.userId] = 0;
+    });
+  });
 
-  // Separate into debtors and creditors
-  const debtors = balances
-    .filter((b) => b.netBalance < -0.01)
-    .map((b) => ({ userId: b.userId, balance: Math.abs(b.netBalance) }));
+  // 1. Add debts from expenses
+  expenses.forEach(expense => {
+    const creditorId = expense.paidByUserId;
+    if (!owed[creditorId]) return;
+    
+    expense.splits.forEach(split => {
+      const debtorId = split.userId;
+      if (debtorId !== creditorId && owed[debtorId]) {
+        owed[debtorId][creditorId] += Number(split.amount);
+      }
+    });
+  });
 
-  const creditors = balances
-    .filter((b) => b.netBalance > 0.01)
-    .map((b) => ({ userId: b.userId, balance: b.netBalance }));
-
-  const optimizedSettlements: OptimizedSettlement[] = [];
-
-  // Sort: Debtors descending by amount owed, Creditors descending by amount owed to them
-  debtors.sort((a, b) => b.balance - a.balance);
-  creditors.sort((a, b) => b.balance - a.balance);
-
-  let dIndex = 0;
-  let cIndex = 0;
-
-  while (dIndex < debtors.length && cIndex < creditors.length) {
-    const debtor = debtors[dIndex];
-    const creditor = creditors[cIndex];
-
-    const amount = Math.min(debtor.balance, creditor.balance);
-    const roundedAmount = Math.round(amount * 100) / 100;
-
-    if (roundedAmount > 0) {
-      const debtorMember = memberMap.get(debtor.userId);
-      const creditorMember = memberMap.get(creditor.userId);
-
-      optimizedSettlements.push({
-        fromUserId: debtor.userId,
-        fromUserName: debtorMember?.name || debtorMember?.email || "Unknown",
-        toUserId: creditor.userId,
-        toUserName: creditorMember?.name || creditorMember?.email || "Unknown",
-        amount: roundedAmount,
-      });
+  // 2. Subtract debts from settlements
+  // If A pays B, A's debt to B decreases.
+  settlements.forEach(s => {
+    const debtorId = s.payerId;
+    const creditorId = s.receiverId;
+    if (owed[debtorId] && owed[debtorId][creditorId] !== undefined) {
+      owed[debtorId][creditorId] -= Number(s.amount);
     }
+  });
 
-    debtor.balance -= amount;
-    creditor.balance -= amount;
+  // 3. Compute net pairwise debts
+  const exactSettlements: OptimizedSettlement[] = [];
+  
+  // To avoid duplicate pairs (A,B) and (B,A), we can iterate with a fixed order or a Set
+  const processedPairs = new Set<string>();
 
-    if (debtor.balance < 0.005) {
-      dIndex++;
-    }
-    if (creditor.balance < 0.005) {
-      cIndex++;
-    }
-  }
+  members.forEach(m1 => {
+    members.forEach(m2 => {
+      if (m1.userId === m2.userId) return;
+      
+      const pairKey = [m1.userId, m2.userId].sort().join("-");
+      if (processedPairs.has(pairKey)) return;
+      processedPairs.add(pairKey);
 
-  return optimizedSettlements;
+      const m1OwesM2 = owed[m1.userId][m2.userId];
+      const m2OwesM1 = owed[m2.userId][m1.userId];
+      
+      const net = m1OwesM2 - m2OwesM1;
+      const roundedNet = Math.round(Math.abs(net) * 100) / 100;
+
+      if (roundedNet > 0) {
+        if (net > 0) {
+          // m1 owes m2
+          exactSettlements.push({
+            fromUserId: m1.userId,
+            fromUserName: m1.name || m1.email || "Unknown",
+            toUserId: m2.userId,
+            toUserName: m2.name || m2.email || "Unknown",
+            amount: roundedNet,
+          });
+        } else {
+          // m2 owes m1
+          exactSettlements.push({
+            fromUserId: m2.userId,
+            fromUserName: m2.name || m2.email || "Unknown",
+            toUserId: m1.userId,
+            toUserName: m1.name || m1.email || "Unknown",
+            amount: roundedNet,
+          });
+        }
+      }
+    });
+  });
+
+  // Sort largest debts first for UI
+  return exactSettlements.sort((a, b) => b.amount - a.amount);
 }

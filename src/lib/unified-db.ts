@@ -81,6 +81,7 @@ export interface UnifiedGroup {
   enableSharedIncome: boolean;
   enableRecurringExpenses: boolean;
   enableSettlementTracking: boolean;
+  image?: string | null;
   members: UnifiedGroupMember[];
 }
 
@@ -204,12 +205,14 @@ function mapGroup(grp: {
   enableSharedIncome: boolean;
   enableRecurringExpenses: boolean;
   enableSettlementTracking: boolean;
+  image?: string | null;
   members: { userId: string; role: string }[];
 }): UnifiedGroup {
   return {
     id: grp.id,
     name: grp.name,
     inviteCode: grp.inviteCode || undefined,
+    image: grp.image,
     type: grp.type,
     currency: grp.currency,
     enableSharedFinance: grp.enableSharedFinance,
@@ -603,11 +606,11 @@ export class UnifiedDB {
 
   static async updateGroupSettings(
     groupId: string,
-    data: Partial<Omit<UnifiedGroup, "id" | "name" | "type" | "members">>
+    data: Partial<Omit<UnifiedGroup, "id" | "members">>
   ): Promise<UnifiedGroup> {
     const grp = await prisma.group.update({
       where: { id: groupId },
-      data,
+      data: data as any,
       include: { members: true },
     });
     return mapGroup(grp);
@@ -1050,14 +1053,47 @@ export class UnifiedDB {
 
   static async deleteGroup(userId: string, groupId: string): Promise<void> {
     const membership = await prisma.groupMember.findFirst({
-      where: { groupId, userId, role: "OWNER" },
+      where: { groupId, userId, role: { in: ["OWNER", "ADMIN"] } },
     });
-    if (!membership) throw new Error("Only the group owner can delete the group.");
+    if (!membership) throw new Error("Only the group owner or admin can delete the group.");
 
     await prisma.groupExpense.deleteMany({ where: { groupId } });
     await prisma.settlement.deleteMany({ where: { groupId } });
     await prisma.groupMember.deleteMany({ where: { groupId } });
     await prisma.group.delete({ where: { id: groupId } });
+  }
+
+  static async removeMember(userId: string, groupId: string, targetUserId: string): Promise<void> {
+    const membership = await prisma.groupMember.findFirst({
+      where: { groupId, userId, role: { in: ["OWNER", "ADMIN"] } },
+    });
+    if (!membership) throw new Error("Only an admin can remove members.");
+
+    const targetMembership = await prisma.groupMember.findFirst({
+      where: { groupId, userId: targetUserId },
+    });
+    if (!targetMembership) throw new Error("User is not in the group.");
+    if (targetMembership.role === "OWNER") throw new Error("Cannot remove the group owner.");
+
+    await prisma.groupMember.delete({ where: { id: targetMembership.id } });
+  }
+
+  static async updateMemberRole(userId: string, groupId: string, targetUserId: string, newRole: "ADMIN" | "MEMBER"): Promise<void> {
+    const membership = await prisma.groupMember.findFirst({
+      where: { groupId, userId, role: { in: ["OWNER", "ADMIN"] } },
+    });
+    if (!membership) throw new Error("Only an admin can update roles.");
+
+    const targetMembership = await prisma.groupMember.findFirst({
+      where: { groupId, userId: targetUserId },
+    });
+    if (!targetMembership) throw new Error("User is not in the group.");
+    if (targetMembership.role === "OWNER") throw new Error("Cannot change the group owner's role.");
+
+    await prisma.groupMember.update({
+      where: { id: targetMembership.id },
+      data: { role: newRole },
+    });
   }
 
   static async getPersonalDebts(userId: string): Promise<UnifiedPersonalDebt[]> {

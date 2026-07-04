@@ -27,10 +27,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FieldLabel } from "@/components/ui/field-label";
 import { formatGroupType } from "@/lib/group-labels";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { AppDialog } from "@/components/ui/app-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createGroup,
   joinGroup,
@@ -40,6 +42,8 @@ import {
   updateGroupSettings,
   deleteGroup,
   leaveGroup,
+  removeGroupMember,
+  updateGroupMemberRole,
   updateGroupExpense,
   deleteGroupExpense,
   deleteSettlement,
@@ -98,9 +102,17 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
 
   // Invite Member Form
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showManageMembers, setShowManageMembers] = useState(false);
+  const [showEditGroup, setShowEditGroup] = useState(false);
+  const [editGroupForm, setEditGroupForm] = useState({
+    name: "",
+    type: "TRIP",
+    image: "",
+  });
 
   // Create Expense Form
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"expenses" | "balances">("expenses");
   const [splitType, setSplitType] = useState<"EQUAL" | "PERCENTAGE" | "UNEQUAL">("EQUAL");
   const [expenseForm, setExpenseForm] = useState({
     amount: "",
@@ -198,6 +210,49 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     }
   };
 
+  const handleDeleteGroup = async (groupId: string) => {
+    if (confirmDeleteGroupId !== groupId) {
+      setConfirmDeleteGroupId(groupId);
+      return;
+    }
+    setDeletingGroupId(groupId);
+    setConfirmDeleteGroupId(null);
+    try {
+      await deleteGroup(groupId);
+      if (selectedGroupId === groupId) setSelectedGroupId(null);
+      toast.success("Group deleted");
+      router.refresh();
+    } catch (err) {
+      toastError(err, "Failed to delete group");
+    } finally {
+      setDeletingGroupId(null);
+    }
+  };
+
+  const handleRemoveMember = async (groupId: string, targetUserId: string) => {
+    if (!confirm("Are you sure you want to remove this member?")) return;
+    try {
+      await removeGroupMember(groupId, targetUserId);
+      toast.success("Member removed");
+      loadGroupDetails(groupId);
+      router.refresh();
+    } catch (err) {
+      toastError(err, "Failed to remove member");
+    }
+  };
+
+  const handlePromoteMember = async (groupId: string, targetUserId: string) => {
+    if (!confirm("Are you sure you want to promote this member to Admin?")) return;
+    try {
+      await updateGroupMemberRole(groupId, targetUserId, "ADMIN");
+      toast.success("Member promoted to Admin");
+      loadGroupDetails(groupId);
+      router.refresh();
+    } catch (err) {
+      toastError(err, "Failed to update role");
+    }
+  };
+
   const handleLeaveGroup = async (groupId: string) => {
     if (confirmLeaveGroupId !== groupId) {
       setConfirmLeaveGroupId(groupId);
@@ -217,24 +272,6 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     }
   };
 
-  const handleDeleteGroup = async (groupId: string) => {
-    if (confirmDeleteGroupId !== groupId) {
-      setConfirmDeleteGroupId(groupId);
-      return;
-    }
-    setDeletingGroupId(groupId);
-    setConfirmDeleteGroupId(null);
-    try {
-      await deleteGroup(groupId);
-      if (selectedGroupId === groupId) setSelectedGroupId(null);
-      toast.success("Group deleted");
-      router.refresh();
-    } catch (err: unknown) {
-      toastError(err, "Failed to delete group");
-    } finally {
-      setDeletingGroupId(null);
-    }
-  };
 
   const handleDeleteSettlement = async (settlementId: string) => {
     if (!selectedGroupId) return;
@@ -328,6 +365,28 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       loadGroupDetails(groupDetails.group.id);
     } catch (err) {
       toastError(err, "Failed to add group expense");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditGroupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGroupId || !editGroupForm.name || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await updateGroupSettings(selectedGroupId, {
+        name: editGroupForm.name,
+        type: editGroupForm.type as any,
+        image: editGroupForm.image || null,
+      });
+      toast.success("Group updated successfully");
+      setShowEditGroup(false);
+      loadGroupDetails(selectedGroupId);
+      router.refresh();
+    } catch (err) {
+      toastError(err, "Failed to update group");
     } finally {
       setIsSubmitting(false);
     }
@@ -581,12 +640,95 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
           </div>
         ) : (
           <>
-            {/* Header info card */}
-            <div className="panel-card p-5 space-y-4">
+            {/* Mobile Layout: Header */}
+            <div className="md:hidden flex flex-col items-center pt-2 pb-6 relative">
+              <div className="absolute top-0 right-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+                    <SettingsIcon size={20} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setShowInviteModal(true)}>
+                      <UserPlus size={14} className="mr-2" /> Add Member
+                    </DropdownMenuItem>
+                    {groupDetails.members.find((m) => m.userId === currentUserId)?.role === "OWNER" || groupDetails.members.find((m) => m.userId === currentUserId)?.role === "ADMIN" ? (
+                      <>
+                        <DropdownMenuItem onClick={() => {
+                          setEditGroupForm({ name: groupDetails.group.name, type: groupDetails.group.type as any, image: groupDetails.group.image || "" });
+                          setShowEditGroup(true);
+                        }}>
+                          <Edit3 size={14} className="mr-2" /> Edit Group
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowManageMembers(true)}>
+                          <Users size={14} className="mr-2" /> Manage Members
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeleteGroup(groupDetails.group.id)} className="text-rose-600 focus:text-rose-600">
+                          <Trash2 size={14} className="mr-2" /> {deletingGroupId === groupDetails.group.id ? "Deleting..." : confirmDeleteGroupId === groupDetails.group.id ? "Confirm Delete" : "Delete Group"}
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
+                    {groupDetails.members.find((m) => m.userId === currentUserId)?.role !== "OWNER" && (
+                      <DropdownMenuItem onClick={() => handleLeaveGroup(groupDetails.group.id)} className="text-rose-600 focus:text-rose-600">
+                        {leavingGroupId === groupDetails.group.id ? <Loader2 size={14} className="animate-spin mr-2" /> : <LogOut size={14} className="mr-2" />}
+                        {confirmLeaveGroupId === groupDetails.group.id ? "Confirm Leave" : "Leave Group"}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="w-16 h-16 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 text-2xl font-bold shadow-sm mb-3 overflow-hidden">
+                {groupDetails.group.image ? (
+                  <img src={groupDetails.group.image} alt={groupDetails.group.name} className="w-full h-full object-cover" />
+                ) : (
+                  groupDetails.group.name[0].toUpperCase()
+                )}
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight mb-1">{groupDetails.group.name}</h2>
+              <p className="text-xs text-neutral-500 font-medium mb-6">
+                {formatGroupType(groupDetails.group.type)} group · {groupDetails.members.length} members
+              </p>
+              
+              <div className="flex w-full gap-3 px-4">
+                <Button
+                  type="button"
+                  variant="cta"
+                  className="flex-1 py-3 text-[14px] shadow-sm font-semibold justify-center"
+                  onClick={() => {
+                    const firstPending = groupDetails.optimizedSettlements.find(s => s.fromUserId === currentUserId || s.toUserId === currentUserId);
+                    if (firstPending) {
+                      setSettlementForm({ payerId: firstPending.fromUserId, receiverId: firstPending.toUserId, amount: String(firstPending.amount), notes: `Settled up in ${groupDetails.group.name}`, accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "", receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "" });
+                    } else {
+                      setSettlementForm({ payerId: "", receiverId: "", amount: "", notes: `Settled up in ${groupDetails.group.name}`, accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "", receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "" });
+                    }
+                    setShowSettleModal(true);
+                  }}
+                >
+                  Settle up
+                </Button>
+                <Button
+                  type="button"
+                  variant="cta"
+                  className="flex-1 py-3 text-[14px] shadow-none bg-neutral-900 text-white dark:bg-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 font-semibold justify-center"
+                  onClick={() => {
+                    setExpenseForm(prev => ({ ...prev, paidByUserId: currentUserId, customShares: groupDetails.members.reduce((acc, m) => ({ ...acc, [m.userId]: "" }), {}) }));
+                    setShowAddExpense(true);
+                  }}
+                >
+                  <Plus size={16} className="mr-1" /> Add Expense
+                </Button>
+              </div>
+            </div>
+
+            {/* Desktop Layout: Header */}
+            <div className="hidden md:block panel-card p-5 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 shrink-0 text-xl font-bold shadow-sm">
-                    {groupDetails.group.name[0].toUpperCase()}
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 shrink-0 text-xl font-bold shadow-sm overflow-hidden">
+                    {groupDetails.group.image ? (
+                      <img src={groupDetails.group.image} alt={groupDetails.group.name} className="w-full h-full object-cover" />
+                    ) : (
+                      groupDetails.group.name[0].toUpperCase()
+                    )}
                   </div>
                   <div>
                     <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
@@ -598,49 +740,49 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {groupDetails.members.find((m) => m.userId === currentUserId)?.role !== "OWNER" && (
-                    <Button
-                      type="button"
-                      variant="outline-app"
-                      onClick={() => handleLeaveGroup(groupDetails.group.id)}
-                      disabled={leavingGroupId === groupDetails.group.id}
-                      className="gap-1 px-3 py-2 text-xs"
-                    >
-                      {leavingGroupId === groupDetails.group.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <LogOut size={14} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,box-shadow] hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-800 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 bg-white dark:bg-[#111113]">
+                      <SettingsIcon size={14} className="mr-1.5" /> Settings
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setShowInviteModal(true)}>
+                        <UserPlus size={14} className="mr-2" /> Add Member
+                      </DropdownMenuItem>
+                      {groupDetails.members.find((m) => m.userId === currentUserId)?.role === "OWNER" || groupDetails.members.find((m) => m.userId === currentUserId)?.role === "ADMIN" ? (
+                        <>
+                          <DropdownMenuItem onClick={() => {
+                            setEditGroupForm({ name: groupDetails.group.name, type: groupDetails.group.type as any, image: groupDetails.group.image || "" });
+                            setShowEditGroup(true);
+                          }}>
+                            <Edit3 size={14} className="mr-2" /> Edit Group
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setShowManageMembers(true)}>
+                            <Users size={14} className="mr-2" /> Manage Members
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteGroup(groupDetails.group.id)} className="text-rose-600 focus:text-rose-600">
+                            <Trash2 size={14} className="mr-2" /> {deletingGroupId === groupDetails.group.id ? "Deleting..." : confirmDeleteGroupId === groupDetails.group.id ? "Confirm Delete" : "Delete Group"}
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                      {groupDetails.members.find((m) => m.userId === currentUserId)?.role !== "OWNER" && (
+                        <DropdownMenuItem onClick={() => handleLeaveGroup(groupDetails.group.id)} className="text-rose-600 focus:text-rose-600">
+                          {leavingGroupId === groupDetails.group.id ? <Loader2 size={14} className="animate-spin mr-2" /> : <LogOut size={14} className="mr-2" />}
+                          {confirmLeaveGroupId === groupDetails.group.id ? "Confirm Leave" : "Leave Group"}
+                        </DropdownMenuItem>
                       )}
-                      {confirmLeaveGroupId === groupDetails.group.id ? "Confirm leave" : "Leave group"}
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline-app"
-                    onClick={() => setShowInviteModal(true)}
-                    className="px-4 py-2 text-[13px] font-bold shadow-sm"
-                  >
-                    <UserPlus size={14} className="mr-1.5" />
-                    Add Member
-                  </Button>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   <Button
                     type="button"
                     variant="cta"
                     onClick={() => {
-                      setExpenseForm((prev) => ({
-                        ...prev,
-                        paidByUserId: currentUserId,
-                        customShares: groupDetails.members.reduce(
-                          (acc, m) => ({ ...acc, [m.userId]: "" }),
-                          {}
-                        ),
-                      }));
+                      setExpenseForm((prev) => ({ ...prev, paidByUserId: currentUserId, customShares: groupDetails.members.reduce((acc, m) => ({ ...acc, [m.userId]: "" }), {}) }));
                       setShowAddExpense(true);
                     }}
                     className="gap-1 px-3 py-2 shadow-none"
                   >
-                    <Plus size={14} />
-                    Add Expense
+                    <Plus size={14} /> Add Expense
                   </Button>
                   <Button
                     type="button"
@@ -648,23 +790,9 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                     onClick={() => {
                        const firstPending = groupDetails.optimizedSettlements.find(s => s.fromUserId === currentUserId || s.toUserId === currentUserId);
                        if (firstPending) {
-                          setSettlementForm({
-                            payerId: firstPending.fromUserId,
-                            receiverId: firstPending.toUserId,
-                            amount: String(firstPending.amount),
-                            notes: `Settled up in ${groupDetails.group.name}`,
-                            accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
-                            receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
-                          });
+                          setSettlementForm({ payerId: firstPending.fromUserId, receiverId: firstPending.toUserId, amount: String(firstPending.amount), notes: `Settled up in ${groupDetails.group.name}`, accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "", receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "" });
                        } else {
-                          setSettlementForm({
-                            payerId: "",
-                            receiverId: "",
-                            amount: "",
-                            notes: `Settled up in ${groupDetails.group.name}`,
-                            accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
-                            receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "",
-                          });
+                          setSettlementForm({ payerId: "", receiverId: "", amount: "", notes: `Settled up in ${groupDetails.group.name}`, accountId: personalAccounts.length > 0 ? personalAccounts[0].id : "", receiveAccountId: personalAccounts.length > 0 ? personalAccounts[0].id : "" });
                        }
                        setShowSettleModal(true);
                     }}
@@ -674,14 +802,43 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   </Button>
                 </div>
               </div>
+            </div>
 
+            {/* Mobile Tabs Switcher */}
+            <div className="md:hidden mt-2 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <div className="flex w-full">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("expenses")}
+                  className={cn(
+                    "flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors",
+                    mobileTab === "expenses"
+                      ? "border-emerald-500 text-emerald-600 dark:text-emerald-500"
+                      : "border-transparent text-neutral-500"
+                  )}
+                >
+                  Expenses
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("balances")}
+                  className={cn(
+                    "flex-1 py-3 text-sm font-semibold text-center border-b-2 transition-colors",
+                    mobileTab === "balances"
+                      ? "border-emerald-500 text-emerald-600 dark:text-emerald-500"
+                      : "border-transparent text-neutral-500"
+                  )}
+                >
+                  Balances
+                </button>
+              </div>
             </div>
 
             {/* Splitwise Layout: Left Column (Timeline) + Right Column (Balances) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mt-6 animate-fade-in-up">
               
               {/* Left Column: Timeline */}
-              <div className="lg:col-span-2 space-y-4">
+              <div className={cn("lg:col-span-2 space-y-4", mobileTab !== "expenses" && "hidden md:block")}>
                 <div className="flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.04] pb-2">
                   <div>
                     <h3 className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase">{new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h3>
@@ -895,7 +1052,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               </div>
 
               {/* Right Column: Balances & Sidebar */}
-              <div className="space-y-6">
+              <div className={cn("space-y-6", mobileTab !== "balances" && "hidden md:block")}>
                 
                 {/* Overall Net Balance */}
                 {(() => {
@@ -1213,7 +1370,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                               },
                             }));
                           }}
-                          className="w-24 px-2 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
+                          className="w-24 pl-2 pr-6 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
                         />
                         <span className="absolute right-2.5 text-[11px] text-neutral-400 select-none">
                           {splitType === "PERCENTAGE" ? "%" : "₹"}
@@ -1235,6 +1392,91 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             </div>
           </form>
         )}
+      </AppDialog>
+
+      {/* Edit Group Modal */}
+      <AppDialog
+        open={showEditGroup}
+        onOpenChange={setShowEditGroup}
+        title="Edit group"
+      >
+        <form onSubmit={handleEditGroupSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <FieldLabel>Group Name</FieldLabel>
+            <Input
+              required
+              placeholder="e.g. Goa Trip"
+              value={editGroupForm.name}
+              onChange={(e) => setEditGroupForm((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldLabel>Group Image URL (Optional)</FieldLabel>
+            <Input
+              placeholder="https://..."
+              value={editGroupForm.image}
+              onChange={(e) => setEditGroupForm((prev) => ({ ...prev, image: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldLabel>Group Type</FieldLabel>
+            <NativeSelect
+              value={editGroupForm.type}
+              onChange={(e) => setEditGroupForm((prev) => ({ ...prev, type: e.target.value as any }))}
+            >
+              <option value="TRIP">Trip</option>
+              <option value="HOME">Home / Apartment</option>
+              <option value="COUPLE">Couple</option>
+              <option value="OTHER">Other</option>
+            </NativeSelect>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="cancel" onClick={() => setShowEditGroup(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </AppDialog>
+
+      <AppDialog open={showManageMembers} onOpenChange={setShowManageMembers} title="Manage Members">
+        <div className="space-y-4 py-2">
+          {groupDetails && groupDetails.members.map((member) => (
+            <div key={member.userId} className="flex items-center justify-between p-3 border border-neutral-100 dark:border-neutral-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                  {member.image ? (
+                    <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-bold text-sm text-neutral-500">{(member.name || member.email)[0].toUpperCase()}</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{member.userId === currentUserId ? "You" : member.name}</p>
+                  <p className="text-xs text-neutral-500">{member.role}</p>
+                </div>
+              </div>
+              
+              {member.userId !== currentUserId && member.role !== "OWNER" && (
+                <div className="flex items-center gap-2">
+                  {member.role === "MEMBER" && (groupDetails.members.find(m => m.userId === currentUserId)?.role === "OWNER" || groupDetails.members.find(m => m.userId === currentUserId)?.role === "ADMIN") && (
+                    <Button variant="outline-app" className="text-xs px-2 py-1" onClick={() => handlePromoteMember(groupDetails.group.id, member.userId)}>
+                      Make Admin
+                    </Button>
+                  )}
+                  <Button variant="unstyled" className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 p-1.5 rounded-md" onClick={() => handleRemoveMember(groupDetails.group.id, member.userId)} title="Remove Member">
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </AppDialog>
 
       <AppDialog open={showInviteModal} onOpenChange={setShowInviteModal} title="Invite Friends">
@@ -1409,7 +1651,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                               },
                             }));
                           }}
-                          className="w-24 px-2 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
+                          className="w-24 pl-2 pr-6 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
                         />
                         <span className="absolute right-2.5 text-[11px] text-neutral-400 select-none">
                           {splitType === "PERCENTAGE" ? "%" : "₹"}
@@ -1440,35 +1682,61 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         title="Mark payment as done"
       >
         {groupDetails && (
-          <form onSubmit={handleSettleSubmit} className="space-y-3">
-            <div className="text-sm border-b border-neutral-100 dark:border-neutral-800 pb-3 text-neutral-600 dark:text-neutral-400">
-              {settlementForm.payerId === currentUserId ? (
-                <p>
-                  You are paying{" "}
-                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                    {groupDetails.members.find((m) => m.userId === settlementForm.receiverId)?.name}
-                  </span>
-                </p>
-              ) : (
-                <p>
-                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                    {groupDetails.members.find((m) => m.userId === settlementForm.payerId)?.name}
-                  </span>{" "}
-                  is paying you
-                </p>
-              )}
+          <form onSubmit={handleSettleSubmit} className="space-y-6 pt-2">
+            
+            {/* Visual Direction (You -> Recipient or Vice Versa) */}
+            <div className="flex items-center justify-center gap-6 py-5 px-4 bg-neutral-50 dark:bg-[#151515] rounded-2xl border border-black/[0.04] dark:border-white/[0.04]">
+              {/* Payer */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold overflow-hidden shadow-sm border border-emerald-200 dark:border-emerald-800/50">
+                  {(groupDetails.members.find(m => m.userId === settlementForm.payerId) as any)?.image ? (
+                    <img src={(groupDetails.members.find(m => m.userId === settlementForm.payerId) as any)?.image!} className="w-full h-full object-cover" />
+                  ) : (
+                    groupDetails.members.find(m => m.userId === settlementForm.payerId)?.name[0].toUpperCase()
+                  )}
+                </div>
+                <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
+                  {settlementForm.payerId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.payerId)?.name?.split(" ")[0]}
+                </span>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex flex-col items-center px-1">
+                <div className="w-8 h-[2px] bg-neutral-300 dark:bg-neutral-700 relative flex items-center justify-center rounded-full">
+                  <ArrowRight size={14} className="absolute text-neutral-400 dark:text-neutral-500 bg-neutral-50 dark:bg-[#151515] px-0.5" />
+                </div>
+              </div>
+
+              {/* Receiver */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold overflow-hidden shadow-sm border border-blue-200 dark:border-blue-800/50">
+                  {(groupDetails.members.find(m => m.userId === settlementForm.receiverId) as any)?.image ? (
+                    <img src={(groupDetails.members.find(m => m.userId === settlementForm.receiverId) as any)?.image!} className="w-full h-full object-cover" />
+                  ) : (
+                    groupDetails.members.find(m => m.userId === settlementForm.receiverId)?.name[0].toUpperCase()
+                  )}
+                </div>
+                <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
+                  {settlementForm.receiverId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.receiverId)?.name?.split(" ")[0]}
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <FieldLabel>Amount (₹)</FieldLabel>
-              <Input
-                type="number"
-                required
-                placeholder="0.00"
-                value={settlementForm.amount}
-                onChange={(e) => setSettlementForm((prev) => ({ ...prev, amount: e.target.value }))}
-                className="font-mono"
-              />
+            {/* Amount */}
+            <div className="flex flex-col items-center justify-center space-y-2 mt-4">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Amount</span>
+              <div className="flex items-center justify-center relative group">
+                <span className="text-3xl font-bold text-neutral-400 dark:text-neutral-500 mr-1 group-focus-within:text-emerald-500 transition-colors">₹</span>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  placeholder="0.00"
+                  value={settlementForm.amount}
+                  onChange={(e) => setSettlementForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  className="w-40 text-5xl font-bold font-mono text-center text-neutral-900 dark:text-white bg-transparent border-b-2 border-neutral-200 dark:border-neutral-800 focus:border-emerald-500 transition-colors outline-none pb-1 placeholder:text-neutral-300 dark:placeholder:text-neutral-700"
+                />
+              </div>
             </div>
 
             {/* Sync settings to payer's accounts */}
