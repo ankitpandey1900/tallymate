@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -678,7 +679,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               </div>
               <div className="w-16 h-16 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 text-2xl font-bold shadow-sm mb-3 overflow-hidden">
                 {groupDetails.group.image ? (
-                  <img src={groupDetails.group.image} alt={groupDetails.group.name} className="w-full h-full object-cover" />
+                  <Image src={groupDetails.group.image} width={80} height={80} alt={groupDetails.group.name} className="w-full h-full object-cover" />
                 ) : (
                   groupDetails.group.name[0].toUpperCase()
                 )}
@@ -725,7 +726,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 shrink-0 text-xl font-bold shadow-sm overflow-hidden">
                     {groupDetails.group.image ? (
-                      <img src={groupDetails.group.image} alt={groupDetails.group.name} className="w-full h-full object-cover" />
+                      <Image src={groupDetails.group.image} width={80} height={80} alt={groupDetails.group.name} className="w-full h-full object-cover" />
                     ) : (
                       groupDetails.group.name[0].toUpperCase()
                     )}
@@ -988,7 +989,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                             <div className="flex items-center gap-2">
                                               <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden border border-black/5 dark:border-white/5">
                                                 {member?.image ? (
-                                                  <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                                                  <Image src={member.image} width={80} height={80} alt={member.name} className="w-full h-full object-cover" />
                                                 ) : (
                                                   (member?.name?.[0] || "?").toUpperCase()
                                                 )}
@@ -1095,7 +1096,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                         <div key={b.userId} className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[13px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
                             {member?.image ? (
-                              <img src={member.image} alt={b.userName} className="w-full h-full object-cover" />
+                              <Image src={member.image} width={80} height={80} alt={b.userName} className="w-full h-full object-cover" />
                             ) : (
                               b.userName[0].toUpperCase()
                             )}
@@ -1156,7 +1157,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <option value="FLATMATES">Roommates / Flatmates</option>
               <option value="COUPLE">Couple / Partners</option>
               <option value="FRIENDS">Friends</option>
-              <option value="CUSTOM">Custom / Others</option>
+              <option value="CUSTOM">Custom / Other</option>
             </NativeSelect>
           </div>
 
@@ -1340,7 +1341,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[12px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
                       {(m as any).image ? (
-                        <img src={(m as any).image} alt={m.name} className="w-full h-full object-cover" />
+                        <Image src={(m as any).image} width={80} height={80} alt={m.name} className="w-full h-full object-cover" />
                       ) : (
                         m.name[0].toUpperCase()
                       )}
@@ -1426,10 +1427,12 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               value={editGroupForm.type}
               onChange={(e) => setEditGroupForm((prev) => ({ ...prev, type: e.target.value as any }))}
             >
-              <option value="TRIP">Trip</option>
-              <option value="HOME">Home / Apartment</option>
-              <option value="COUPLE">Couple</option>
-              <option value="OTHER">Other</option>
+              <option value="TRIP">Trip / Vacation</option>
+              <option value="FAMILY">Family</option>
+              <option value="FLATMATES">Roommates / Flatmates</option>
+              <option value="COUPLE">Couple / Partners</option>
+              <option value="FRIENDS">Friends</option>
+              <option value="CUSTOM">Custom / Other</option>
             </NativeSelect>
           </div>
 
@@ -1451,7 +1454,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
                   {member.image ? (
-                    <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                    <Image src={member.image} width={80} height={80} alt={member.name} className="w-full h-full object-cover" />
                   ) : (
                     <span className="font-bold text-sm text-neutral-500">{(member.name || member.email)[0].toUpperCase()}</span>
                   )}
@@ -1621,7 +1624,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[12px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
                       {(m as any).image ? (
-                        <img src={(m as any).image} alt={m.name} className="w-full h-full object-cover" />
+                        <Image src={(m as any).image} width={80} height={80} alt={m.name} className="w-full h-full object-cover" />
                       ) : (
                         m.name[0].toUpperCase()
                       )}
@@ -1690,7 +1693,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <div className="flex flex-col items-center gap-2">
                 <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold overflow-hidden shadow-sm border border-emerald-200 dark:border-emerald-800/50">
                   {(groupDetails.members.find(m => m.userId === settlementForm.payerId) as any)?.image ? (
-                    <img src={(groupDetails.members.find(m => m.userId === settlementForm.payerId) as any)?.image!} className="w-full h-full object-cover" />
+                    <Image src={(groupDetails.members.find(m => m.userId === settlementForm.payerId) as any)?.image!} width={80} height={80} alt="" className="w-full h-full object-cover" />
                   ) : (
                     groupDetails.members.find(m => m.userId === settlementForm.payerId)?.name[0].toUpperCase()
                   )}
@@ -1711,7 +1714,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <div className="flex flex-col items-center gap-2">
                 <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold overflow-hidden shadow-sm border border-blue-200 dark:border-blue-800/50">
                   {(groupDetails.members.find(m => m.userId === settlementForm.receiverId) as any)?.image ? (
-                    <img src={(groupDetails.members.find(m => m.userId === settlementForm.receiverId) as any)?.image!} className="w-full h-full object-cover" />
+                    <Image src={(groupDetails.members.find(m => m.userId === settlementForm.receiverId) as any)?.image!} width={80} height={80} alt="" className="w-full h-full object-cover" />
                   ) : (
                     groupDetails.members.find(m => m.userId === settlementForm.receiverId)?.name[0].toUpperCase()
                   )}

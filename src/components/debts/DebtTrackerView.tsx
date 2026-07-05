@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -372,7 +373,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-black/5 flex items-center justify-center text-sm font-bold text-neutral-600 dark:text-neutral-300 shrink-0 shadow-sm overflow-hidden">
                         {targetImage ? (
-                          <img src={targetImage} alt={targetName} className="w-full h-full object-cover" />
+                          <Image src={targetImage} width={80} height={80} alt={targetName} className="w-full h-full object-cover" />
                         ) : (
                           initial
                         )}
@@ -437,7 +438,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 font-bold text-xs shrink-0 shadow-sm overflow-hidden">
                       {(p as any).image ? (
-                        <img src={(p as any).image} alt={p.name} className="w-full h-full object-cover" />
+                        <Image src={(p as any).image} width={80} height={80} alt={p.name} className="w-full h-full object-cover" />
                       ) : (
                         p.name.charAt(0).toUpperCase()
                       )}
@@ -491,7 +492,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 font-bold shrink-0 overflow-hidden">
                     {(g as any).groupImage ? (
-                      <img src={(g as any).groupImage} alt={g.groupName} className="w-full h-full object-cover" />
+                      <Image src={(g as any).groupImage} width={80} height={80} alt={g.groupName} className="w-full h-full object-cover" />
                     ) : (
                       g.groupName.charAt(0).toUpperCase()
                     )}

@@ -820,6 +820,8 @@ export async function createGoal(data: { name: string; targetAmount: number; cur
 }
 
 export async function updateGoalProgress(goalId: string, currentAmount: number) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "updateGoalProgress", 60, 60);
   const user = await getCurrentUser();
   const goal = await UnifiedDB.updateGoal(user.id, goalId, { currentAmount });
 
@@ -902,6 +904,8 @@ export async function createGroup(data: { name: string; type: string; memberEmai
 }
 
 export async function updateGroupSettings(groupId: string, settings: Partial<Omit<UnifiedGroup, "id" | "members">>) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "updateGroupSettings", 30, 60);
   const user = await getCurrentUser();
   const result = await UnifiedDB.updateGroupSettings(groupId, settings);
   await bustPageCache(user.id);
@@ -1264,6 +1268,8 @@ export async function updateTransaction(
   txId: string,
   data: Partial<Omit<UnifiedTransaction, "id" | "userId">>
 ) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "updateTransaction", 60, 60);
   const user = await getCurrentUser();
   const tx = await UnifiedDB.updateTransaction(user.id, txId, data);
   await bustPageCache(user.id);

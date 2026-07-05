@@ -7,6 +7,18 @@ export const toast = {
 };
 
 export function toastError(err: unknown, fallback: string) {
-  const message = err instanceof Error ? err.message : fallback;
+  let message = fallback;
+  
+  if (err instanceof Error) {
+    // Mask raw Next.js server digest errors and database errors
+    if (err.message.includes("An error occurred in the Server Components render") || 
+        err.message.includes("NEXT_REDIRECT") ||
+        err.message.includes("PrismaClient")) {
+      message = fallback;
+    } else {
+      message = err.message;
+    }
+  }
+
   sonnerToast.error(message);
 }

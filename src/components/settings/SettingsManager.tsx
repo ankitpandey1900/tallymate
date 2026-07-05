@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { User, Tag, Landmark, Plus, Check, Shield, Pencil, Trash2, X, Loader2, LogOut, BookOpen } from "lucide-react";
@@ -538,7 +539,7 @@ export default function SettingsManager({ initialData }: { initialData: Settings
                     <div className="flex justify-between items-end -mt-12 mb-2 relative z-10">
                       <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111113] bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 shadow-xl flex items-center justify-center shrink-0 text-3xl font-bold text-neutral-400 dark:text-neutral-500 overflow-hidden">
                         {currentUser.image ? (
-                          <img src={currentUser.image} alt={currentUser.name || "Profile"} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <Image src={currentUser.image} width={100} height={100} alt={currentUser.name || "Profile"} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
                           currentUser.name ? currentUser.name.charAt(0).toUpperCase() : (currentUser.email?.charAt(0).toUpperCase() || "?")
                         )}

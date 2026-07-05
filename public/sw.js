@@ -38,6 +38,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api") || url.pathname.startsWith("/_next")) return;
 
+  // Skip non-HTTP schemes (e.g., chrome-extension://, data://) to prevent Cache API errors
+  if (!event.request.url.startsWith("http")) return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {

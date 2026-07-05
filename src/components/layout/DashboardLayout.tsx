@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -208,7 +209,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Link
                 key={item.name}
                 href={item.href}
-                prefetch
+                prefetch={false}
                 onClick={() => {
                   setIsSidebarOpen(false);
                   if (pathname !== item.href) {
@@ -244,7 +245,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 onClick={() => setIsSidebarOpen(false)}
               >
                 {currentUser?.image ? (
-                  <img src={currentUser.image} alt={currentUser.name || "User"} className="w-8 h-8 rounded-full shrink-0 object-cover" />
+                  <Image src={currentUser.image} width={32} height={32} alt={currentUser.name || "User"} className="w-8 h-8 rounded-full shrink-0 object-cover" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center font-bold text-xs text-white dark:text-black shrink-0 select-none">
                     {userInitial}
@@ -310,7 +311,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Button
               type="button"
               variant="unstyled"
-              onClick={() => router.refresh()}
+              onClick={() => window.location.reload()}
               className="md:hidden p-2 rounded-md border border-black/[0.04] dark:border-[#27272a] hover:bg-black/[0.02] dark:hover:bg-neutral-900 transition-colors text-neutral-500 dark:text-neutral-400"
               title="Refresh Data"
             >

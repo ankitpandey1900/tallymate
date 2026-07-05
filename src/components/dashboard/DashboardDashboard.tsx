@@ -259,17 +259,24 @@ export default function DashboardDashboard({
           <h2 className="text-xl font-bold tracking-tight">Overview</h2>
           <p className="text-sm text-neutral-500">Your monthly activity snapshot.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button type="button" variant="outline-app" onClick={() => setShowCSVModal(true)}>
-            Import CSV
+        <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 sm:gap-3 mt-4 sm:mt-0 w-full sm:w-auto">
+          <Link href="/groups" className="w-full sm:w-auto">
+            <Button type="button" variant="outline-app" className="w-full justify-center">
+              <Users size={14} className="mr-1.5" />
+              Groups
+            </Button>
+          </Link>
+          <Button type="button" variant="outline-app" onClick={openNewAccount} className="w-full justify-center">
+            <Wallet size={14} className="mr-1.5" />
+            Account
           </Button>
-          <Button type="button" variant="outline-app" onClick={openNewAccount}>
-            <Wallet size={14} />
-            New Account
+          <Button type="button" variant="outline-app" onClick={() => setShowCSVModal(true)} className="w-full justify-center">
+            <FileText size={14} className="mr-1.5" />
+            CSV
           </Button>
-          <Button type="button" variant="cta" onClick={openTxModal}>
-            <Plus size={14} />
-            Add Transaction
+          <Button type="button" variant="cta" onClick={openTxModal} className="w-full justify-center">
+            <Plus size={14} className="mr-1.5" />
+            Transaction
           </Button>
         </div>
       </div>

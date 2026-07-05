@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -720,7 +721,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                                       {(() => {
                                                         const domain = getMerchantLogo(tx.description);
                                                         if (domain) {
-                                                          return <img src={`https://logo.clearbit.com/${domain}?size=32`} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" alt="" />;
+                                                          return <Image src={`https://logo.clearbit.com/${domain}?size=32`} width={32} height={32} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" alt="" />;
                                                         }
                                                         return isIncome ? <ArrowDownToLine size={14} /> : getCategoryIcon(cat?.name, 14);
                                                       })()}
