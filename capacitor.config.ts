@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Tallymate',
   webDir: 'public',
   server: {
-    url: 'http://10.82.69.109:3000',
+    url: 'https://tallymate.alltracker.online',
     cleartext: true
   }
 };
