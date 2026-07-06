@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "online.alltracker.tallymate",
+    "sha256_cert_fingerprints": [
+      "BB:C2:AF:E5:D5:21:9A:3A:B1:B5:0E:A9:15:CD:D0:50:3E:12:28:34:B0:3B:36:DE:29:56:A0:49:40:DF:F6:CE"
+    ]
+  }
+}]
