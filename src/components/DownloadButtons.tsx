@@ -7,7 +7,7 @@ export default function DownloadButtons() {
   return (
     <div className="mt-8 flex flex-wrap gap-3 items-center justify-center z-10 animate-in fade-in duration-1000 delay-[1400ms] fill-mode-both">
       <a
-        href="https://github.com/ankitpandey1900/tallymate/releases/latest/download/app-debug.apk"
+        href="https://github.com/ankitpandey1900/tallymate/releases/latest/download/tallymate.apk"
         download="tallymate.apk"
         className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold text-sm transition-colors border border-emerald-500/20"
       >

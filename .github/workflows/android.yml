@@ -41,13 +41,16 @@ jobs:
       working-directory: ./android
       run: ./gradlew assembleDebug
       
+    - name: Rename APK
+      run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/tallymate.apk
+      
     - name: Publish APK to GitHub Release
       uses: ncipollo/release-action@v1
       with:
         tag: "latest"
         name: "Latest Android APK"
         body: "Automated Android APK build triggered by GitHub Actions."
-        artifacts: "android/app/build/outputs/apk/debug/app-debug.apk"
+        artifacts: "android/app/build/outputs/apk/debug/tallymate.apk"
         allowUpdates: true
         makeLatest: true
         token: ${{ secrets.GITHUB_TOKEN }}
