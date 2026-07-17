@@ -351,6 +351,8 @@ enum PersonalDebtCategory {
   CREDIT_CARD
   EMI
   PERSONAL
+  FRIEND
+  FAMILY
   OTHER
 }
 
@@ -371,6 +373,7 @@ model PersonalDebt {
   remainingAmount  Decimal
   interestRate     Decimal?
   dueDate          DateTime?
+  startedAt        DateTime             @default(now())
   notes            String?
   status           PersonalDebtStatus   @default(ACTIVE)
   createdAt        DateTime             @default(now())

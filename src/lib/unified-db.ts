@@ -124,6 +124,7 @@ export interface UnifiedPersonalDebt {
   interestRate?: number;
   dueDate?: string;
   notes?: string;
+  startedAt: string;
   status: "ACTIVE" | "SETTLED";
   createdAt: string;
   updatedAt: string;
@@ -1115,6 +1116,7 @@ export class UnifiedDB {
       remainingAmount?: number;
       interestRate?: number;
       dueDate?: string;
+      startedAt?: string;
       notes?: string;
     }
   ): Promise<UnifiedPersonalDebt> {
@@ -1124,11 +1126,12 @@ export class UnifiedDB {
         title: data.title,
         counterpartyName: data.counterpartyName,
         direction: data.direction,
-        category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "OTHER",
+        category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "FRIEND" | "FAMILY" | "OTHER",
         totalAmount: data.totalAmount,
         remainingAmount: data.remainingAmount ?? data.totalAmount,
         interestRate: data.interestRate,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+        startedAt: data.startedAt ? new Date(data.startedAt) : undefined,
         notes: data.notes,
       },
     });
@@ -1146,6 +1149,7 @@ export class UnifiedDB {
       remainingAmount: number;
       interestRate: number | null;
       dueDate: string | null;
+      startedAt: string | null;
       notes: string | null;
       status: "ACTIVE" | "SETTLED";
     }>
@@ -1159,12 +1163,13 @@ export class UnifiedDB {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.counterpartyName !== undefined && { counterpartyName: data.counterpartyName }),
         ...(data.category !== undefined && {
-          category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "OTHER",
+          category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "FRIEND" | "FAMILY" | "OTHER",
         }),
         ...(data.totalAmount !== undefined && { totalAmount: data.totalAmount }),
         ...(data.remainingAmount !== undefined && { remainingAmount: data.remainingAmount }),
         ...(data.interestRate !== undefined && { interestRate: data.interestRate }),
         ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
+        ...(data.startedAt !== undefined && { startedAt: data.startedAt ? new Date(data.startedAt) : new Date() }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.status !== undefined && { status: data.status }),
       },
@@ -1216,6 +1221,22 @@ export class UnifiedDB {
     if (!debt) throw new Error("Debt not found.");
     await prisma.personalDebt.delete({ where: { id: debtId } });
   }
+
+  static async getPersonalDebtPayments(userId: string, debtId: string): Promise<UnifiedPersonalDebtPayment[]> {
+    const debt = await prisma.personalDebt.findFirst({ where: { id: debtId, userId } });
+    if (!debt) throw new Error("Debt not found.");
+    const payments = await prisma.personalDebtPayment.findMany({
+      where: { personalDebtId: debtId },
+      orderBy: { date: "desc" },
+    });
+    return payments.map((p) => ({
+      id: p.id,
+      personalDebtId: p.personalDebtId,
+      amount: Number(p.amount),
+      date: p.date.toISOString(),
+      notes: p.notes ?? undefined,
+    }));
+  }
 }
 
 function mapPersonalDebt(debt: {
@@ -1229,6 +1250,7 @@ function mapPersonalDebt(debt: {
   remainingAmount: unknown;
   interestRate: unknown | null;
   dueDate: Date | null;
+  startedAt: Date;
   notes: string | null;
   status: string;
   createdAt: Date;
@@ -1245,6 +1267,7 @@ function mapPersonalDebt(debt: {
     remainingAmount: Number(debt.remainingAmount),
     interestRate: debt.interestRate != null ? Number(debt.interestRate) : undefined,
     dueDate: debt.dueDate?.toISOString(),
+    startedAt: debt.startedAt.toISOString(),
     notes: debt.notes ?? undefined,
     status: debt.status as "ACTIVE" | "SETTLED",
     createdAt: debt.createdAt.toISOString(),

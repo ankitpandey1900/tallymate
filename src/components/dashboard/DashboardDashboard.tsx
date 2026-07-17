@@ -254,27 +254,27 @@ export default function DashboardDashboard({
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in pb-20 md:pb-0">
       {/* Overview stats header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 mb-6">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Overview</h2>
           <p className="text-sm text-neutral-500">Your monthly activity snapshot.</p>
         </div>
-        <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 sm:gap-3 mt-4 sm:mt-0 w-full sm:w-auto">
-          <Link href="/groups" className="w-full sm:w-auto">
-            <Button type="button" variant="outline-app" className="w-full justify-center">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Link href="/groups">
+            <Button type="button" variant="outline-app">
               <Users size={14} className="mr-1.5" />
               Groups
             </Button>
           </Link>
-          <Button type="button" variant="outline-app" onClick={openNewAccount} className="w-full justify-center">
+          <Button type="button" variant="outline-app" onClick={openNewAccount}>
             <Wallet size={14} className="mr-1.5" />
             Account
           </Button>
-          <Button type="button" variant="outline-app" onClick={() => setShowCSVModal(true)} className="w-full justify-center">
+          <Button type="button" variant="outline-app" onClick={() => setShowCSVModal(true)}>
             <FileText size={14} className="mr-1.5" />
             CSV
           </Button>
-          <Button type="button" variant="cta" onClick={openTxModal} className="w-full justify-center">
+          <Button type="button" variant="cta" onClick={openTxModal}>
             <Plus size={14} className="mr-1.5" />
             Transaction
           </Button>

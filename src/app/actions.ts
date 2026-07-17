@@ -158,13 +158,15 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
       const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
       const oldestNeededDate = reportStartDate < monthStartDate ? reportStartDate : monthStartDate;
 
-      const accounts = await UnifiedDB.getAccounts(user.id);
-      const allTransactions = await UnifiedDB.getTransactions(user.id, { startDate: oldestNeededDate.toISOString() });
-      const budgets = await UnifiedDB.getBudgets(user.id);
-      const goals = await UnifiedDB.getGoals(user.id);
-      const groups = await UnifiedDB.getGroups(user.id);
-      const catalog = await ensureCatalogDefaults(user.id);
-      const importRules = await prisma.importRule.findMany({ where: { userId: user.id } });
+      const [accounts, allTransactions, budgets, goals, groups, catalog, importRules] = await Promise.all([
+        UnifiedDB.getAccounts(user.id),
+        UnifiedDB.getTransactions(user.id, { startDate: oldestNeededDate.toISOString() }),
+        UnifiedDB.getBudgets(user.id),
+        UnifiedDB.getGoals(user.id),
+        UnifiedDB.getGroups(user.id),
+        ensureCatalogDefaults(user.id),
+        prisma.importRule.findMany({ where: { userId: user.id } }),
+      ]);
 
       const transactionsForReports = allTransactions.filter((t: UnifiedTransaction) => new Date(t.date) >= reportStartDate);
       const reports = computeReports(transactionsForReports, catalog.categories, catalog.incomeSources, timeframe, now);
@@ -349,8 +351,11 @@ export async function getDebtTrackerData() {
       { name: string; email: string; image: string | null; youOwe: number; owesYou: number; groups: Set<string> }
     >();
 
-    for (const group of groups) {
-      const details = await getGroupDetails(group.id);
+    const groupDetailsArray = await Promise.all(groups.map(group => getGroupDetails(group.id)));
+
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      const details = groupDetailsArray[i];
       const myBalance = details.balances.find((b) => b.userId === user.id);
       const balance = myBalance?.netBalance ?? 0;
 
@@ -463,6 +468,7 @@ export async function createPersonalDebt(data: {
   remainingAmount?: number;
   interestRate?: number;
   dueDate?: string;
+  startedAt?: string;
   notes?: string;
 }) {
   const reqHeaders = await headers();
@@ -495,6 +501,8 @@ export async function recordPersonalDebtPayment(
 }
 
 export async function markPersonalDebtSettled(debtId: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "markPersonalDebtSettled", 30, 60);
   const user = await getCurrentUser();
   const debt = await UnifiedDB.updatePersonalDebt(user.id, debtId, {
     remainingAmount: 0,
@@ -505,9 +513,52 @@ export async function markPersonalDebtSettled(debtId: string) {
 }
 
 export async function deletePersonalDebt(debtId: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "deletePersonalDebt", 20, 60);
   const user = await getCurrentUser();
   await UnifiedDB.deletePersonalDebt(user.id, debtId);
   await bustPageCache(user.id);
+}
+
+export async function getPersonalDebtPayments(debtId: string) {
+  const user = await getCurrentUser();
+  return await UnifiedDB.getPersonalDebtPayments(user.id, debtId);
+}
+
+export async function updatePersonalDebtDetails(
+  debtId: string,
+  data: { title?: string; counterpartyName?: string; notes?: string | null; dueDate?: string | null; startedAt?: string | null }
+) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "updatePersonalDebtDetails", 30, 60);
+  const user = await getCurrentUser();
+
+  if (data.title !== undefined && !data.title.trim()) {
+    throw new Error("Title cannot be empty.");
+  }
+  if (data.counterpartyName !== undefined && !data.counterpartyName.trim()) {
+    throw new Error("Person or bank name cannot be empty.");
+  }
+
+  const debt = await UnifiedDB.updatePersonalDebt(user.id, debtId, data);
+  await bustPageCache(user.id);
+  return debt;
+}
+
+export async function revokePersonalDebtSettlement(debtId: string) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "revokePersonalDebtSettlement", 20, 60);
+  const user = await getCurrentUser();
+  const debts = await UnifiedDB.getPersonalDebts(user.id);
+  const debt = debts.find((d) => d.id === debtId);
+  if (!debt) throw new Error("Debt not found.");
+  if (debt.status !== "SETTLED") throw new Error("This debt is not settled.");
+  const updated = await UnifiedDB.updatePersonalDebt(user.id, debtId, {
+    status: "ACTIVE",
+    remainingAmount: debt.totalAmount,
+  });
+  await bustPageCache(user.id);
+  return updated;
 }
 
 export async function createAccount(data: { name: string; type: string; balance: number }) {
@@ -919,8 +970,10 @@ export async function getGroupDetails(groupId: string) {
 
   if (!group) throw new Error("Group not found or access denied.");
 
-  const expenses = await UnifiedDB.getGroupExpenses(groupId);
-  const settlements = await UnifiedDB.getSettlements(groupId);
+  const [expenses, settlements] = await Promise.all([
+    UnifiedDB.getGroupExpenses(groupId),
+    UnifiedDB.getSettlements(groupId),
+  ]);
   const memberIds = group.members.map((m) => m.userId);
   const payerIds = expenses.map((e) => e.paidByUserId);
   const userIds = [...new Set([...memberIds, ...payerIds])];
