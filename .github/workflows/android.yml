@@ -45,9 +45,9 @@ jobs:
       uses: ilharp/sign-android-release@v1
       id: sign_app
       with:
-        releaseDirectory: android/app/build/outputs/apk/release
-        signingKeyBase64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-        alias: ${{ secrets.RELEASE_KEY_ALIAS }}
+        releaseDir: android/app/build/outputs/apk/release
+        signingKey: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        keyAlias: ${{ secrets.RELEASE_KEY_ALIAS }}
         keyStorePassword: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         keyPassword: ${{ secrets.RELEASE_KEY_PASSWORD }}
         buildToolsVersion: 34.0.0
