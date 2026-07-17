@@ -10,15 +10,13 @@ import {
   FileText,
   Trash2,
   Pencil,
-  ChevronLeft,
   ChevronRight,
-  ChevronDown,
   X,
   Check,
   Loader2,
   ArrowDownToLine,
 } from "lucide-react";
-import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, CartesianGrid } from "recharts";
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
 import { toast, toastError } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
@@ -28,7 +26,7 @@ import { FieldLabel } from "@/components/ui/field-label";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { fieldInputClass } from "@/components/ui/app-styles";
-import { formatPaymentMode, ACCOUNT_TYPE_OPTIONS } from "@/lib/account-labels";
+import { formatPaymentMode } from "@/lib/account-labels";
 import { getCategoryIcon } from "@/lib/category-icons";
 import {
   createTransaction,

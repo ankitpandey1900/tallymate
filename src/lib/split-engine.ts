@@ -99,8 +99,10 @@ export function calculateExactDebts(
   expenses: GroupExpenseInput[],
   settlements: { payerId: string; receiverId: string; amount: number }[]
 ): OptimizedSettlement[] {
-  const memberMap = new Map(members.map((m) => [m.userId, m]));
+  // Build a member lookup (kept for future use if needed)
+  // const memberMap = new Map(members.map((m) => [m.userId, m]));
   
+
   // owed[debtor][creditor] = amount
   const owed: Record<string, Record<string, number>> = {};
   

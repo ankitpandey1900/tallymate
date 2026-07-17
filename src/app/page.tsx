@@ -14,10 +14,9 @@ export const metadata: Metadata = {
   },
 };
 import Link from "next/link";
-import { ArrowRight, Shield, Sparkles, TrendingUp, Users, CheckCircle2, Target, PieChart, Bell, BookOpen, ChevronDown, Download, Smartphone } from "lucide-react";
+import { ArrowRight, Shield, Sparkles, TrendingUp, Users, CheckCircle2, Target, PieChart, Bell, BookOpen } from "lucide-react";
 import LandingThemeToggle from "@/components/LandingThemeToggle";
 import TallymateLogo from "@/components/TallymateLogo";
-import AnimatedLetters from "@/components/AnimatedLetters";
 import DownloadButtons from "@/components/DownloadButtons";
 import ScrollFadeIn from "@/components/ScrollFadeIn";
 import SplitBillDemo from "@/components/landing/SplitBillDemo";

@@ -9,7 +9,6 @@ import TallymateLogo from "@/components/TallymateLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/ui/field-label";
-import { loginInputClass } from "@/components/ui/app-styles";
 
 function GoogleIcon() {
   return (

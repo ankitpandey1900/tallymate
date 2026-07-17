@@ -2,20 +2,14 @@
 import Image from "next/image";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Users,
   Plus,
   ArrowRight,
   Settings as SettingsIcon,
-  DollarSign,
   HandCoins,
   UserPlus,
-  ArrowDownRight,
-  ArrowUpRight,
-  Check,
-  AlertCircle,
   Trash2,
   LogOut,
   Loader2,
@@ -27,13 +21,12 @@ import { toast, toastError } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FieldLabel } from "@/components/ui/field-label";
 import { formatGroupType } from "@/lib/group-labels";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { AppDialog } from "@/components/ui/app-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
   createGroup,
   joinGroup,
@@ -282,19 +275,6 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       loadGroupDetails(selectedGroupId);
     } catch (err) {
       toastError(err, "Failed to delete payment");
-    }
-  };
-
-  const handleToggleSetting = async (key: keyof UnifiedGroup) => {
-    if (!groupDetails) return;
-    const currentVal = groupDetails.group[key];
-    const updatedVal = !currentVal;
-
-    try {
-      await updateGroupSettings(groupDetails.group.id, { [key]: updatedVal });
-      loadGroupDetails(groupDetails.group.id);
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -1490,7 +1470,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
           <div>
             <h3 className="text-xl font-bold tracking-tight mb-2">Share this invite code</h3>
             <p className="text-sm text-neutral-500">
-              Anyone with this code can instantly join the <span className="font-semibold text-neutral-900 dark:text-white">"{groupDetails?.group.name}"</span> group.
+              Anyone with this code can instantly join the <span className="font-semibold text-neutral-900 dark:text-white">&quot;{groupDetails?.group.name}&quot;</span> group.
             </p>
           </div>
           
@@ -1692,11 +1672,14 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               {/* Payer */}
               <div className="flex flex-col items-center gap-2">
                 <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold overflow-hidden shadow-sm border border-emerald-200 dark:border-emerald-800/50">
-                  {(groupDetails.members.find(m => m.userId === settlementForm.payerId) as any)?.image ? (
-                    <Image src={(groupDetails.members.find(m => m.userId === settlementForm.payerId) as any)?.image!} width={80} height={80} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    groupDetails.members.find(m => m.userId === settlementForm.payerId)?.name[0].toUpperCase()
-                  )}
+                {(() => {
+                    const payer = groupDetails.members.find(m => m.userId === settlementForm.payerId);
+                    return (payer as { image?: string | null })?.image ? (
+                      <Image src={(payer as { image: string }).image} width={80} height={80} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      payer?.name?.[0]?.toUpperCase()
+                    );
+                  })()}
                 </div>
                 <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
                   {settlementForm.payerId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.payerId)?.name?.split(" ")[0]}
@@ -1713,11 +1696,14 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               {/* Receiver */}
               <div className="flex flex-col items-center gap-2">
                 <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold overflow-hidden shadow-sm border border-blue-200 dark:border-blue-800/50">
-                  {(groupDetails.members.find(m => m.userId === settlementForm.receiverId) as any)?.image ? (
-                    <Image src={(groupDetails.members.find(m => m.userId === settlementForm.receiverId) as any)?.image!} width={80} height={80} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    groupDetails.members.find(m => m.userId === settlementForm.receiverId)?.name[0].toUpperCase()
-                  )}
+                {(() => {
+                    const receiver = groupDetails.members.find(m => m.userId === settlementForm.receiverId);
+                    return (receiver as { image?: string | null })?.image ? (
+                      <Image src={(receiver as { image: string }).image} width={80} height={80} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      receiver?.name?.[0]?.toUpperCase()
+                    );
+                  })()}
                 </div>
                 <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
                   {settlementForm.receiverId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.receiverId)?.name?.split(" ")[0]}

@@ -84,7 +84,7 @@ export default function CalendarView({ transactions, categories, incomeSources }
             <div key={`blank-${i}`} className="min-h-[60px] sm:min-h-[100px] rounded-xl sm:rounded-2xl bg-neutral-50/50 dark:bg-[#1a1a1c]/50" />
           ))}
           
-          {daysInMonth.map((day, i) => {
+          {daysInMonth.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayData = txByDay.get(dateKey);
             const isSelected = selectedDate && isSameDay(day, selectedDate);

@@ -35,14 +35,14 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-4">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using Tallymate ("the Service"), you agree to be bound by these Terms of Service. If you disagree with any part of these terms, you may not access the Service.
+              By accessing or using Tallymate (&quot;the Service&quot;), you agree to be bound by these Terms of Service. If you disagree with any part of these terms, you may not access the Service.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-4">2. Description of Service</h2>
             <p>
-              Tallymate is a personal finance and bill-splitting application that allows you to manually track your spending, set budgets, and manage shared group expenses. The Service is provided "as is" and relies on the accuracy of the data you input.
+              Tallymate is a personal finance and bill-splitting application that allows you to manually track your spending, set budgets, and manage shared group expenses. The Service is provided &quot;as is&quot; and relies on the accuracy of the data you input.
             </p>
           </section>
 
@@ -71,7 +71,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-4">6. Changes to Terms</h2>
             <p>
-              We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will try to provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.
+              We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will try to provide at least 30 days&apos; notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.
             </p>
           </section>
           

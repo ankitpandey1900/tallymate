@@ -140,7 +140,7 @@ export default function ImportRulesManager({ initialData }: ImportRulesManagerPr
               <div>
                 <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100 mb-1">Live Match Preview</h4>
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Any future transaction containing "<strong className="bg-blue-200/50 dark:bg-blue-800/50 px-1 rounded">{keyword}</strong>" (not case-sensitive) will automatically be marked as <strong>{type === "EXPENSE" ? initialData.categories.find(c => c.id === categoryId)?.name : initialData.incomeSources.find(s => s.id === incomeSourceId)?.name}</strong>.
+                  Any future transaction containing &quot;<strong className="bg-blue-200/50 dark:bg-blue-800/50 px-1 rounded">{keyword}</strong>&quot; (not case-sensitive) will automatically be marked as <strong>{type === "EXPENSE" ? initialData.categories.find(c => c.id === categoryId)?.name : initialData.incomeSources.find(s => s.id === incomeSourceId)?.name}</strong>.
                 </p>
               </div>
             </div>
@@ -239,7 +239,7 @@ export default function ImportRulesManager({ initialData }: ImportRulesManagerPr
                         <div key={rule.id} className="p-3 sm:px-12 sm:py-3.5 flex items-center justify-between hover:bg-white dark:hover:bg-[#141416] transition-colors group">
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-mono text-neutral-900 dark:text-neutral-100">
-                              "{rule.matchKeyword}"
+                              &quot;{rule.matchKeyword}&quot;
                             </span>
                             <ArrowRight className="hidden sm:block text-neutral-300 dark:text-neutral-700 shrink-0 mx-2" size={14} />
                             <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">

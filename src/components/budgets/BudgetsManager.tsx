@@ -39,6 +39,8 @@ export default function BudgetsManager({ initialData }: { initialData: BudgetsIn
   });
 
   useEffect(() => {
+    // We update state when initialData changes. `budgets` state is maintained even if only
+    // rendered via budgetProgressList, ensuring the component updates properly.
     setBudgets(initialData.budgets);
     setCategories(initialData.categories);
     setGroups(initialData.groups);

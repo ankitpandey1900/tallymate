@@ -90,7 +90,7 @@ export default function NotificationsList({ initialData }: { initialData: Notifi
             <div className="w-12 h-12 rounded-full bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center mb-3">
               <Bell size={20} className="text-neutral-300 dark:text-neutral-600" />
             </div>
-            You're all caught up!
+            You&apos;re all caught up!
           </div>
         ) : (
           <div className="divide-y divide-neutral-100 dark:divide-white/[0.04]">

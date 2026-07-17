@@ -8,7 +8,6 @@ import {
   Plus,
   ArrowUpRight,
   ArrowDownRight,
-  DollarSign,
   Percent,
   Wallet,
   Users,
@@ -73,10 +72,8 @@ export default function DashboardDashboard({
   const {
     accounts,
     transactions,
-    budgets,
     budgetProgress,
     goals,
-    groups,
     categories,
     incomeSources,
     reports: metrics,

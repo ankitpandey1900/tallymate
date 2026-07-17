@@ -9,7 +9,7 @@ import { FieldLabel } from "@/components/ui/field-label";
 import { UnifiedAccount, UnifiedCategory, UnifiedIncomeSource } from "@/lib/unified-db";
 import { bulkCreateTransactions, parsePDFStatement } from "@/app/actions";
 import { toast, toastError } from "@/lib/toast";
-import { UploadCloud, CheckCircle2, AlertCircle, X, FileText } from "lucide-react";
+import { UploadCloud, AlertCircle, X, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 
@@ -236,7 +236,7 @@ export function CSVImportModal({ open, onOpenChange, accounts, categories, incom
         let finalDescription = tx.description;
         
         const cleanBankDescription = (desc: string) => {
-          let cleaned = desc.trim();
+          const cleaned = desc.trim();
           
           // POS handling is somewhat unique
           if (cleaned.toUpperCase().startsWith("POS ") || cleaned.toUpperCase().startsWith("POS/")) {
@@ -250,7 +250,7 @@ export function CSVImportModal({ open, onOpenChange, accounts, categories, incom
           }
           
           const junkRegex = /\b(UPI|NEFT|IMPS|RTGS|DR|CR|P2A|P2M|BIL|INB|IFT|ACH|ECS|CHQ|TXN|REF|WDL|PUR|INF|REV|CMS|POS|IB|MB|MMT)\b/gi;
-          let name = cleaned.replace(junkRegex, '');
+          const name = cleaned.replace(junkRegex, '');
           
           const tokens = name.split(/[\/\-\*\s,]+/).filter(t => {
             const token = t.trim();

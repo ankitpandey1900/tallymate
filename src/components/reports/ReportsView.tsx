@@ -33,7 +33,7 @@ export default function ReportsView({ initialData }: { initialData: ReportsIniti
   const [mounted, setMounted] = useState(false);
   const [timeframe, setTimeframe] = useState<"weekly" | "monthly" | "quarterly" | "yearly">(initialData.timeframe);
   const [metrics, setMetrics] = useState(initialData.reports);
-  const [netWorth, setNetWorth] = useState(initialData.netWorth);
+  const [netWorth] = useState(initialData.netWorth);
 
   useEffect(() => {
     setMounted(true);
