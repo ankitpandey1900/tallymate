@@ -1,4 +1,7 @@
 # Tallymate
+<p align="center">
+  <img src="public/icons/icon-512.webp" width="150" alt="Tallymate Logo" />
+</p>
 
 **Tallymate** is a next-generation, unified personal finance and bill-splitting application designed to seamlessly bridge the gap between individual budget tracking and shared group expenses.
 
