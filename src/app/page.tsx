@@ -490,8 +490,8 @@ export default async function Home() {
                 </div>
                 <span className="font-bold text-lg tracking-tight">Tallymate.</span>
               </div>
-              <p className="text-sm text-neutral-500 font-medium">
-                © {new Date().getFullYear()} Tallymate. All rights reserved.
+              <p className="text-sm text-neutral-500 font-medium text-center md:text-right">
+                © {new Date().getFullYear()} Ankit Pandey.<br className="md:hidden" /> All rights reserved.
               </p>
             </div>
 
