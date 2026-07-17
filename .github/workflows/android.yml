@@ -53,7 +53,9 @@ jobs:
         buildToolsVersion: 34.0.0
       
     - name: Rename APK
-      run: mv ${{steps.sign_app.outputs.signedReleaseFile}} android/app/build/outputs/apk/release/tallymate.apk
+      run: |
+        cd android/app/build/outputs/apk/release
+        mv *-signed.apk tallymate.apk || mv app-release.apk tallymate.apk || echo "Failed to rename"
       
     - name: Publish APK to GitHub Release
       uses: ncipollo/release-action@v1
