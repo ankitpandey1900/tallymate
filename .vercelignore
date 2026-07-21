@@ -1,0 +1,10 @@
+# Ignore documentation and internal resources from Vercel Production Build
+
+/docs
+/diagrams
+/interview
+/learning
+/glossary
+tree_src.txt
+AGENTS.md
+CLAUDE.md

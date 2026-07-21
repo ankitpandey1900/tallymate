@@ -47,3 +47,13 @@ next-env.d.ts
 # ❌ DO NOT commit: generated client or local dev data
 prisma/db.json
 node_modules/.prisma/
+
+# Ignore documentation and internal resources from GitHub
+/docs
+/diagrams
+/interview
+/learning
+/glossary
+tree_src.txt
+AGENTS.md
+CLAUDE.md

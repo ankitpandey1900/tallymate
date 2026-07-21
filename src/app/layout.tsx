@@ -79,14 +79,19 @@ const themeScript = `
 })();
 `;
 
+import { headers } from "next/headers";
 import NextTopLoader from 'nextjs-toploader';
 import { GoogleAnalytics } from '@next/third-parties/google';
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Await headers to prevent synchronous dynamic access warnings in Next.js 15+
+  const headersList = await headers();
+  const nonce = headersList.get("x-nonce") || undefined;
+
   return (
     <html
       lang="en"
@@ -94,12 +99,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
         <NextTopLoader color="#10B981" showSpinner={false} height={3} shadow="0 0 10px #10B981,0 0 5px #10B981" />
         {children}
         <Toaster />
         {process.env.NEXT_PUBLIC_GA_ID && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} nonce={nonce} />
         )}
       </body>
     </html>

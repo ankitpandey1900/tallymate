@@ -81,6 +81,13 @@ export async function uploadFile(
   }
 
   // Local Storage Fallback
+  // If we are on Vercel, the local filesystem is read-only and ephemeral.
+  // Writing to process.cwd() will throw an EACCES error.
+  if (process.env.VERCEL === "1") {
+    console.error("CRITICAL: Cloudflare R2 (or AWS S3) environment variables must be configured in Vercel production environments. Local file uploads are not supported on Serverless architectures.");
+    throw new Error("File uploads are currently unavailable. Please try again later.");
+  }
+
   const uploadsDir = path.join(process.cwd(), "public", "uploads");
   
   // Ensure the directory exists
