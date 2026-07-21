@@ -165,7 +165,15 @@ export default function TransactionsView({ initialData }: { initialData: Transac
       const formData = new FormData();
       formData.append("file", file);
       const result = await uploadReceipt(formData);
-      setUploadedUrl(result.url);
+      
+      if ('error' in result && result.error) {
+        alert(result.error);
+        return;
+      }
+      
+      if ('url' in result && result.url) {
+        setUploadedUrl(result.url);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to upload file";
       alert(message);

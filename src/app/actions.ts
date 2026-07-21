@@ -1295,12 +1295,16 @@ export async function getReports(timeframe: "weekly" | "monthly" | "quarterly" |
 }
 
 export async function uploadReceipt(formData: FormData) {
-  const reqHeaders = await headers();
-  await enforceActionRateLimit(reqHeaders, "uploadReceipt", 30, 60);
-  const file = formData.get("file") as File;
-  if (!file) throw new Error("No file provided");
-  const result = await uploadFile(file);
-  return result;
+  try {
+    const reqHeaders = await headers();
+    await enforceActionRateLimit(reqHeaders, "uploadReceipt", 30, 60);
+    const file = formData.get("file") as File;
+    if (!file) return { error: "No file provided" };
+    const result = await uploadFile(file);
+    return result;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Upload failed" };
+  }
 }
 
 export async function deleteTransaction(txId: string) {
