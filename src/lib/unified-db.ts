@@ -702,6 +702,7 @@ export class UnifiedDB {
       data: {
         ...(data.amount !== undefined && { amount: data.amount }),
         ...(data.description !== undefined && { description: data.description }),
+        ...(data.date !== undefined && { date: new Date(data.date) }),
         ...(data.paidByUserId !== undefined && { paidByUserId: data.paidByUserId }),
         ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
         ...(data.splits && {

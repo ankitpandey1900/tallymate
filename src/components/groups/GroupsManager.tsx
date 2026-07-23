@@ -107,14 +107,16 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
   // Create Expense Form
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [mobileTab, setMobileTab] = useState<"expenses" | "balances">("expenses");
-  const [splitType, setSplitType] = useState<"EQUAL" | "PERCENTAGE" | "UNEQUAL">("EQUAL");
+  const [splitType, setSplitType] = useState<"EQUAL" | "PERCENTAGE" | "UNEQUAL" | "SHARES">("EQUAL");
+  const [involvedMembers, setInvolvedMembers] = useState<Set<string>>(new Set());
   const [expenseForm, setExpenseForm] = useState({
     amount: "",
     description: "",
+    date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
     paidByUserId: "",
     accountId: "",
     categoryId: "",
-    customShares: {} as Record<string, string>, // customized value (amount or percentage)
+    customShares: {} as Record<string, string>, // customized value (amount, percentage, or shares)
   });
 
   // Edit Expense Form
@@ -159,6 +161,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         paidByUserId: details.members[0]?.userId || "",
         accountId: "",
       }));
+      setInvolvedMembers(new Set(details.members.map((m: any) => m.userId)));
     } catch (err) {
       console.error(err);
     }
@@ -293,12 +296,19 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     let splits: { userId: string; amount: number; type: string }[] = [];
 
     if (splitType === "EQUAL") {
-      const equalShare = Math.round((totalAmount / membersCount) * 100) / 100;
-      splits = groupDetails.members.map((m) => ({
-        userId: m.userId,
-        amount: equalShare,
-        type: "EQUAL",
-      }));
+      if (involvedMembers.size === 0) {
+        toast.error("Please select at least one member to split with.");
+        setIsSubmitting(false);
+        return;
+      }
+      const equalShare = Math.round((totalAmount / involvedMembers.size) * 100) / 100;
+      splits = groupDetails.members
+        .filter(m => involvedMembers.has(m.userId))
+        .map((m) => ({
+          userId: m.userId,
+          amount: equalShare,
+          type: "EQUAL",
+        }));
     } else if (splitType === "PERCENTAGE") {
       splits = groupDetails.members.map((m) => {
         const pct = Number(expenseForm.customShares[m.userId] || 0);
@@ -308,6 +318,23 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
           type: "PERCENTAGE",
         };
       });
+    } else if (splitType === "SHARES") {
+      const totalShares = groupDetails.members.reduce((sum, m) => sum + Number(expenseForm.customShares[m.userId] || 0), 0);
+      if (totalShares <= 0) {
+        toast.error("Total shares must be greater than zero.");
+        setIsSubmitting(false);
+        return;
+      }
+      splits = groupDetails.members
+        .filter(m => Number(expenseForm.customShares[m.userId] || 0) > 0)
+        .map((m) => {
+          const shares = Number(expenseForm.customShares[m.userId] || 0);
+          return {
+            userId: m.userId,
+            amount: Math.round(((totalAmount * shares) / totalShares) * 100) / 100,
+            type: "UNEQUAL", 
+          };
+        });
     } else {
       // Unequal
       splits = groupDetails.members.map((m) => ({
@@ -329,6 +356,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       await createGroupExpense(groupDetails.group.id, {
         amount: totalAmount,
         description: expenseForm.description,
+        date: expenseForm.date,
         paidByUserId: expenseForm.paidByUserId,
         categoryId: expenseForm.categoryId || undefined,
         splits,
@@ -340,6 +368,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         ...prev,
         amount: "",
         description: "",
+        date: new Date().toISOString().split('T')[0],
         customShares: {},
       }));
       toast.success("Group expense added");
@@ -384,12 +413,19 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     let splits: { userId: string; amount: number; type: string }[] = [];
 
     if (splitType === "EQUAL") {
-      const equalShare = Math.round((totalAmount / membersCount) * 100) / 100;
-      splits = groupDetails.members.map((m) => ({
-        userId: m.userId,
-        amount: equalShare,
-        type: "EQUAL",
-      }));
+      if (involvedMembers.size === 0) {
+        toast.error("Please select at least one member to split with.");
+        setIsSubmitting(false);
+        return;
+      }
+      const equalShare = Math.round((totalAmount / involvedMembers.size) * 100) / 100;
+      splits = groupDetails.members
+        .filter(m => involvedMembers.has(m.userId))
+        .map((m) => ({
+          userId: m.userId,
+          amount: equalShare,
+          type: "EQUAL",
+        }));
     } else if (splitType === "PERCENTAGE") {
       splits = groupDetails.members.map((m) => {
         const pct = Number(expenseForm.customShares[m.userId] || 0);
@@ -399,6 +435,23 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
           type: "PERCENTAGE",
         };
       });
+    } else if (splitType === "SHARES") {
+      const totalShares = groupDetails.members.reduce((sum, m) => sum + Number(expenseForm.customShares[m.userId] || 0), 0);
+      if (totalShares <= 0) {
+        toast.error("Total shares must be greater than zero.");
+        setIsSubmitting(false);
+        return;
+      }
+      splits = groupDetails.members
+        .filter(m => Number(expenseForm.customShares[m.userId] || 0) > 0)
+        .map((m) => {
+          const shares = Number(expenseForm.customShares[m.userId] || 0);
+          return {
+            userId: m.userId,
+            amount: Math.round(((totalAmount * shares) / totalShares) * 100) / 100,
+            type: "UNEQUAL", 
+          };
+        });
     } else {
       splits = groupDetails.members.map((m) => ({
         userId: m.userId,
@@ -418,6 +471,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       await updateGroupExpense(groupDetails.group.id, editingExpenseId, {
         amount: totalAmount,
         description: expenseForm.description,
+        date: expenseForm.date,
         paidByUserId: expenseForm.paidByUserId,
         categoryId: expenseForm.categoryId || undefined,
         splits,
@@ -430,6 +484,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         ...prev,
         amount: "",
         description: "",
+        date: new Date().toISOString().split('T')[0],
         customShares: {},
       }));
       toast.success("Group expense updated");
@@ -693,6 +748,9 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   onClick={() => {
                     setExpenseForm(prev => ({ ...prev, paidByUserId: currentUserId, customShares: groupDetails.members.reduce((acc, m) => ({ ...acc, [m.userId]: "" }), {}) }));
                     setShowAddExpense(true);
+                    if (groupDetails) {
+                      setInvolvedMembers(new Set(groupDetails.members.map((m: any) => m.userId)));
+                    }
                   }}
                 >
                   <Plus size={16} className="mr-1" /> Add Expense
@@ -760,6 +818,9 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                     onClick={() => {
                       setExpenseForm((prev) => ({ ...prev, paidByUserId: currentUserId, customShares: groupDetails.members.reduce((acc, m) => ({ ...acc, [m.userId]: "" }), {}) }));
                       setShowAddExpense(true);
+                      if (groupDetails) {
+                        setInvolvedMembers(new Set(groupDetails.members.map((m: any) => m.userId)));
+                      }
                     }}
                     className="gap-1 px-3 py-2 shadow-none"
                   >
@@ -909,11 +970,13 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                               </div>
 
                               {/* Share & Actions */}
-                              <div className="shrink-0 flex flex-col items-end min-w-[100px]">
-                                <p className="text-xs text-neutral-500 mb-0.5">{shareText}</p>
-                                {netStr && <p className={cn("text-[15px] font-bold font-mono tracking-tight", shareColor)}>{netStr}</p>}
+                              <div className="shrink-0 flex flex-col items-end justify-center min-w-[100px] relative">
+                                <div className="flex flex-col items-end transition-opacity group-hover/item:opacity-0">
+                                  <p className="text-xs text-neutral-500 mb-0.5">{shareText}</p>
+                                  {netStr && <p className={cn("text-[15px] font-bold font-mono tracking-tight", shareColor)}>{netStr}</p>}
+                                </div>
                                 
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-white dark:bg-[#111113] pl-2">
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
                                   <Button
                                     type="button"
                                     variant="unstyled"
@@ -926,12 +989,14 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                         paidByUserId: e.paidByUserId,
                                         accountId: "keep",
                                         categoryId: e.categoryId || "",
+                                        date: e.date ? new Date(e.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                                         customShares: e.splits.reduce((acc, s) => ({ ...acc, [s.userId]: String(s.amount) }), {}),
                                       });
                                       setSplitType(e.splits[0]?.type === "EQUAL" ? "EQUAL" : e.splits[0]?.type === "PERCENTAGE" ? "PERCENTAGE" : "UNEQUAL");
+                                      setInvolvedMembers(new Set(e.splits.map((s: any) => s.userId)));
                                       setShowEditExpense(true);
                                     }}
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1C1C1E]"
                                   >
                                     <Edit3 size={14} />
                                   </Button>
@@ -939,7 +1004,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                     type="button"
                                     variant="unstyled"
                                     onClick={(ev) => { ev.stopPropagation(); handleDeleteExpense(e.id); }}
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800"
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors shadow-sm border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1C1C1E]"
                                   >
                                     <Trash2 size={14} />
                                   </Button>
@@ -1217,7 +1282,6 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         onOpenChange={setShowAddExpense}
         title="Add shared expense"
         maxWidth="max-w-lg"
-        className="max-h-[90vh] overflow-y-auto"
       >
         {groupDetails && (
           <form onSubmit={handleAddExpense} className="space-y-5">
@@ -1233,6 +1297,17 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   onChange={(e) => setExpenseForm((prev) => ({ ...prev, description: e.target.value }))}
                   style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
                   className="w-full text-lg font-semibold placeholder:text-neutral-400 text-neutral-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={expenseForm.date}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, date: e.target.value }))}
+                  style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
+                  className="w-full text-[15px] font-semibold text-neutral-900 dark:text-white"
                 />
               </div>
               <div>
@@ -1286,12 +1361,13 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <span>· split</span>
               <Select value={splitType} onValueChange={(val) => setSplitType((val as any) || "EQUAL")}>
                 <SelectTrigger className="w-auto h-auto px-1 py-0.5 border-none shadow-none rounded-none border-b-[1.5px] border-neutral-900 dark:border-white text-[14px] font-bold text-neutral-900 dark:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/5 data-[state=open]:bg-black/5 dark:data-[state=open]:bg-white/5 transition-colors focus:ring-0">
-                  {splitType === "EQUAL" ? "equally" : splitType === "UNEQUAL" ? "unequally" : "by %"}
+                  {splitType === "EQUAL" ? "equally" : splitType === "UNEQUAL" ? "unequally" : splitType === "SHARES" ? "by shares" : "by %"}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="EQUAL">equally</SelectItem>
                   <SelectItem value="UNEQUAL">unequally</SelectItem>
                   <SelectItem value="PERCENTAGE">by %</SelectItem>
+                  <SelectItem value="SHARES">by shares</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1314,11 +1390,36 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               </div>
             )}
 
+            {splitType === "EQUAL" && (
+              <div className="flex justify-between items-center text-xs text-neutral-500 mb-2 mt-4 px-1 font-medium">
+                <span>Who was involved?</span>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setInvolvedMembers(new Set(groupDetails.members.map(m => m.userId)))} className="hover:text-emerald-600 transition-colors">Select All</button>
+                  <button type="button" onClick={() => setInvolvedMembers(new Set())} className="hover:text-emerald-600 transition-colors">Select None</button>
+                </div>
+              </div>
+            )}
+
             {/* Split Grid */}
             <div className="space-y-0 border-t border-black/[0.06] dark:border-white/[0.06]">
               {groupDetails.members.map((m) => (
                 <div key={m.userId} className="flex items-center justify-between py-3 px-1 border-b border-black/[0.04] dark:border-white/[0.04] last:border-none">
                   <div className="flex items-center gap-2.5">
+                    {splitType === "EQUAL" && (
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-700 text-emerald-600 focus:ring-emerald-500 accent-emerald-500 cursor-pointer"
+                        checked={involvedMembers.has(m.userId)}
+                        onChange={() => {
+                          setInvolvedMembers(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(m.userId)) newSet.delete(m.userId);
+                            else newSet.add(m.userId);
+                            return newSet;
+                          });
+                        }}
+                      />
+                    )}
                     <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[12px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
                       {(m as any).image ? (
                         <Image src={(m as any).image} width={80} height={80} alt={m.name} className="w-full h-full object-cover" />
@@ -1330,16 +1431,16 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   </div>
                   <div className="flex items-center gap-2">
                     {splitType === "EQUAL" ? (
-                      <span className="text-[14px] text-neutral-700 dark:text-neutral-300 font-mono font-semibold">
-                        ₹{expenseForm.amount
-                          ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
+                      <span className={cn("text-[14px] font-mono font-semibold", involvedMembers.has(m.userId) ? "text-neutral-700 dark:text-neutral-300" : "text-neutral-400 dark:text-neutral-600")}>
+                        ₹{expenseForm.amount && involvedMembers.has(m.userId)
+                          ? (Number(expenseForm.amount) / Math.max(1, involvedMembers.size)).toFixed(2)
                           : "0.00"}
                       </span>
                     ) : (
                       <div className="relative flex items-center">
                         <Input
                           type="number"
-                          placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
+                          placeholder={splitType === "PERCENTAGE" ? "%" : splitType === "SHARES" ? "shares" : "₹"}
                           value={expenseForm.customShares[m.userId] || ""}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -1354,7 +1455,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                           className="w-24 pl-2 pr-6 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
                         />
                         <span className="absolute right-2.5 text-[11px] text-neutral-400 select-none">
-                          {splitType === "PERCENTAGE" ? "%" : "₹"}
+                          {splitType === "PERCENTAGE" ? "%" : splitType === "SHARES" ? "sh" : "₹"}
                         </span>
                       </div>
                     )}
@@ -1497,9 +1598,8 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
       <AppDialog
         open={showEditExpense && !!groupDetails}
         onOpenChange={setShowEditExpense}
-        title="Edit shared expense"
+        title="Edit expense"
         maxWidth="max-w-lg"
-        className="max-h-[90vh] overflow-y-auto"
       >
         {groupDetails && (
           <form onSubmit={handleEditExpenseSubmit} className="space-y-5">
@@ -1515,6 +1615,17 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   onChange={(e) => setExpenseForm((prev) => ({ ...prev, description: e.target.value }))}
                   style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
                   className="w-full text-lg font-semibold placeholder:text-neutral-400 text-neutral-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5 block">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={expenseForm.date}
+                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, date: e.target.value }))}
+                  style={{ border: 'none', borderBottom: '1px solid rgba(128,128,128,0.2)', outline: 'none', background: 'transparent', boxShadow: 'none', borderRadius: 0, padding: '8px 0' }}
+                  className="w-full text-[15px] font-semibold text-neutral-900 dark:text-white"
                 />
               </div>
               <div>
@@ -1568,12 +1679,13 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <span>· split</span>
               <Select value={splitType} onValueChange={(val) => setSplitType((val as any) || "EQUAL")}>
                 <SelectTrigger className="w-auto h-auto px-1 py-0.5 border-none shadow-none rounded-none border-b-[1.5px] border-neutral-900 dark:border-white text-[14px] font-bold text-neutral-900 dark:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/5 data-[state=open]:bg-black/5 dark:data-[state=open]:bg-white/5 transition-colors focus:ring-0">
-                  {splitType === "EQUAL" ? "equally" : splitType === "UNEQUAL" ? "unequally" : "by %"}
+                  {splitType === "EQUAL" ? "equally" : splitType === "UNEQUAL" ? "unequally" : splitType === "SHARES" ? "by shares" : "by %"}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="EQUAL">equally</SelectItem>
                   <SelectItem value="UNEQUAL">unequally</SelectItem>
                   <SelectItem value="PERCENTAGE">by %</SelectItem>
+                  <SelectItem value="SHARES">by shares</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1597,11 +1709,36 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               </div>
             )}
 
+            {splitType === "EQUAL" && (
+              <div className="flex justify-between items-center text-xs text-neutral-500 mb-2 mt-4 px-1 font-medium">
+                <span>Who was involved?</span>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setInvolvedMembers(new Set(groupDetails.members.map(m => m.userId)))} className="hover:text-emerald-600 transition-colors">Select All</button>
+                  <button type="button" onClick={() => setInvolvedMembers(new Set())} className="hover:text-emerald-600 transition-colors">Select None</button>
+                </div>
+              </div>
+            )}
+
             {/* Split Grid */}
             <div className="space-y-0 border-t border-black/[0.06] dark:border-white/[0.06]">
               {groupDetails.members.map((m) => (
                 <div key={m.userId} className="flex items-center justify-between py-3 px-1 border-b border-black/[0.04] dark:border-white/[0.04] last:border-none">
                   <div className="flex items-center gap-2.5">
+                    {splitType === "EQUAL" && (
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-700 text-emerald-600 focus:ring-emerald-500 accent-emerald-500 cursor-pointer"
+                        checked={involvedMembers.has(m.userId)}
+                        onChange={() => {
+                          setInvolvedMembers(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(m.userId)) newSet.delete(m.userId);
+                            else newSet.add(m.userId);
+                            return newSet;
+                          });
+                        }}
+                      />
+                    )}
                     <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[12px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
                       {(m as any).image ? (
                         <Image src={(m as any).image} width={80} height={80} alt={m.name} className="w-full h-full object-cover" />
@@ -1613,16 +1750,16 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                   </div>
                   <div className="flex items-center gap-2">
                     {splitType === "EQUAL" ? (
-                      <span className="text-[14px] text-neutral-700 dark:text-neutral-300 font-mono font-semibold">
-                        ₹{expenseForm.amount
-                          ? (Number(expenseForm.amount) / groupDetails.members.length).toFixed(2)
+                      <span className={cn("text-[14px] font-mono font-semibold", involvedMembers.has(m.userId) ? "text-neutral-700 dark:text-neutral-300" : "text-neutral-400 dark:text-neutral-600")}>
+                        ₹{expenseForm.amount && involvedMembers.has(m.userId)
+                          ? (Number(expenseForm.amount) / Math.max(1, involvedMembers.size)).toFixed(2)
                           : "0.00"}
                       </span>
                     ) : (
                       <div className="relative flex items-center">
                         <Input
                           type="number"
-                          placeholder={splitType === "PERCENTAGE" ? "%" : "₹"}
+                          placeholder={splitType === "PERCENTAGE" ? "%" : splitType === "SHARES" ? "shares" : "₹"}
                           value={expenseForm.customShares[m.userId] || ""}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -1637,7 +1774,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                           className="w-24 pl-2 pr-6 py-1 text-sm font-mono text-right border-neutral-300 dark:border-neutral-700 font-semibold"
                         />
                         <span className="absolute right-2.5 text-[11px] text-neutral-400 select-none">
-                          {splitType === "PERCENTAGE" ? "%" : "₹"}
+                          {splitType === "PERCENTAGE" ? "%" : splitType === "SHARES" ? "sh" : "₹"}
                         </span>
                       </div>
                     )}

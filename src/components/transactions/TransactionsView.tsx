@@ -499,7 +499,7 @@ export default function TransactionsView({ initialData }: { initialData: Transac
 
       {/* Sparkline Spending Pulse */}
       {chartData.length > 1 && (
-        <div className="bg-white dark:bg-[#111113] rounded-xl border border-black/[0.04] dark:border-white/[0.04] p-4 h-36 flex flex-col justify-end overflow-hidden relative group shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+        <div className="bg-white dark:bg-[#111113] rounded-xl border border-black/[0.04] dark:border-white/[0.04] h-36 relative group shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden">
           <div className="absolute top-4 left-4 z-10 pointer-events-none flex items-center gap-2">
             <div className="relative flex h-2 w-2">
               <span className="animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -507,8 +507,11 @@ export default function TransactionsView({ initialData }: { initialData: Transac
             </div>
             <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Spending Pulse</p>
           </div>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+          
+          <div className="w-full h-full overflow-x-auto overflow-y-hidden scrollbar-hide pt-4">
+            <div className="min-w-[600px] md:min-w-full h-full px-4 pb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -544,6 +547,8 @@ export default function TransactionsView({ initialData }: { initialData: Transac
               />
             </AreaChart>
           </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       )}
 
@@ -755,15 +760,15 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                                   </div>
 
                                                   {/* Amount & Actions */}
-                                                  <div className="shrink-0 flex flex-col items-end justify-center min-w-[100px] pl-4">
+                                                  <div className="shrink-0 flex flex-col items-end justify-center min-w-[100px] relative">
                                                     <span className={cn(
-                                                      "text-[15px] font-bold font-mono tracking-tight whitespace-nowrap",
+                                                      "text-[15px] font-bold font-mono tracking-tight whitespace-nowrap transition-opacity group-hover/item:opacity-0",
                                                       isIncome ? "text-emerald-500 dark:text-emerald-400" : "text-neutral-900 dark:text-white"
                                                     )}>
                                                       {isIncome ? "+" : "−"}{formattedAmount}
                                                     </span>
                                                     
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity pl-2 pointer-events-auto">
+                                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity pointer-events-auto">
                                                       {isConfirming ? (
                                                         <>
                                                           <span className="text-[10px] text-rose-500 font-semibold mr-1">Sure?</span>

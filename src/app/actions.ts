@@ -1026,6 +1026,7 @@ export async function createGroupExpense(
     splits: { userId: string; amount: number; type: string }[];
     accountId?: string; // personal account used to pay
     categoryId?: string; // personal category used to map
+    date?: string | Date;
   }
 ) {
   const reqHeaders = await headers();
@@ -1036,7 +1037,7 @@ export async function createGroupExpense(
   const groupExpense = await UnifiedDB.createGroupExpense(groupId, {
     amount: data.amount,
     description: data.description,
-    date: new Date().toISOString(),
+    date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
     paidByUserId: data.paidByUserId,
     splits: data.splits,
     categoryId: data.categoryId,
@@ -1198,23 +1199,30 @@ export async function updateGroupExpense(
     splits: { userId: string; amount: number; type: string }[];
     accountId?: string;
     categoryId?: string;
+    date?: string | Date;
   }
 ) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "updateGroupExpense", 60, 60);
   const user = await getCurrentUser();
-  const expense = await UnifiedDB.updateGroupExpense(groupId, expenseId, data);
+  const expenseData = {
+    ...data,
+    date: data.date ? new Date(data.date).toISOString() : undefined,
+  };
+  const expense = await UnifiedDB.updateGroupExpense(groupId, expenseId, expenseData);
 
   // Sync to personal transaction if the active user is the payer
-  if (data.paidByUserId === user.id) {
-    const linkedTx = await prisma.transaction.findFirst({
-      where: { userId: user.id, groupExpenseId: expenseId }
-    });
+  const linkedTx = await prisma.transaction.findFirst({
+    where: { userId: user.id, groupExpenseId: expenseId }
+  });
 
+  if (data.paidByUserId === user.id) {
+    const txDate = expenseData.date || new Date().toISOString();
     if (data.accountId === "keep" || data.accountId === undefined) {
       if (linkedTx) {
         await UnifiedDB.updateTransaction(user.id, linkedTx.id, {
           amount: data.amount,
+          date: txDate,
           description: `[Group Paid] ${data.description}`,
           notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
           categoryId: data.categoryId !== undefined ? data.categoryId : linkedTx.categoryId || undefined,
@@ -1228,6 +1236,7 @@ export async function updateGroupExpense(
       if (linkedTx) {
         await UnifiedDB.updateTransaction(user.id, linkedTx.id, {
           amount: data.amount,
+          date: txDate,
           description: `[Group Paid] ${data.description}`,
           accountId: data.accountId,
           notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
@@ -1240,7 +1249,7 @@ export async function updateGroupExpense(
           type: "EXPENSE",
           scope: "GROUP",
           amount: data.amount,
-          date: new Date().toISOString(),
+          date: txDate,
           description: `[Group Paid] ${data.description}`,
           notes: `Total group expense was ₹${data.amount}. Your share is ₹${data.splits.find((s) => s.userId === user.id)?.amount || 0}.`,
           tags: ["Group Expense"],
@@ -1250,6 +1259,9 @@ export async function updateGroupExpense(
         });
       }
     }
+  } else if (linkedTx) {
+    // If the user changed the payer to someone else, delete the personal transaction
+    await UnifiedDB.deleteTransaction(user.id, linkedTx.id);
   }
 
   await bustPageCache(user.id);
