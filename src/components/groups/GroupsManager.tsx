@@ -14,6 +14,7 @@ import {
   LogOut,
   Loader2,
   Edit3,
+  ChevronLeft,
 } from "lucide-react";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { cn } from "@/lib/utils";
@@ -552,7 +553,10 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start min-h-screen md:min-h-0 md:h-[calc(100vh-100px)]">
         {/* Left panel: Modern Group list */}
-        <div className="flex flex-col h-full bg-white dark:bg-[#111113] border border-black/[0.04] dark:border-white/[0.04] rounded-2xl shadow-sm overflow-hidden panel-card">
+        <div className={cn(
+          "flex-col h-full bg-white dark:bg-[#111113] border border-black/[0.04] dark:border-white/[0.04] rounded-2xl shadow-sm overflow-hidden panel-card",
+          selectedGroupId ? "hidden md:flex" : "flex"
+        )}>
           <div className="p-4 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between shrink-0">
             <div>
               <h2 className="text-lg font-bold tracking-tight">Your Groups</h2>
@@ -668,7 +672,10 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         </div>
 
       {/* Middle/Right panel: Details & Settlements */}
-      <div className="md:col-span-2 space-y-6">
+      <div className={cn(
+        "md:col-span-2 space-y-6",
+        !selectedGroupId ? "hidden md:block" : "block"
+      )}>
         {!groupDetails ? (
           <div className="panel-card p-12 text-center text-xs text-neutral-400 flex flex-col items-center justify-center h-80">
             <Users size={32} className="text-neutral-300 dark:text-neutral-700 mb-2" />
@@ -678,6 +685,12 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
           <>
             {/* Mobile Layout: Header */}
             <div className="md:hidden flex flex-col items-center pt-2 pb-6 relative">
+              <button 
+                className="absolute top-2 left-0 p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                onClick={() => setSelectedGroupId(null)}
+              >
+                <ChevronLeft size={24} />
+              </button>
               <div className="absolute top-0 right-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
@@ -976,7 +989,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                   {netStr && <p className={cn("text-[15px] font-bold font-mono tracking-tight", shareColor)}>{netStr}</p>}
                                 </div>
                                 
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
                                   <Button
                                     type="button"
                                     variant="unstyled"
@@ -1047,6 +1060,41 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                       })}
                                     </div>
                                   </div>
+
+                                  {/* Mobile Actions */}
+                                  <div className="col-span-2 flex items-center gap-2 mt-4 md:hidden">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className="flex-1 text-xs py-2 bg-white dark:bg-neutral-800"
+                                      onClick={(ev) => {
+                                        ev.stopPropagation();
+                                        setEditingExpenseId(e.id);
+                                        setExpenseForm({
+                                          amount: String(e.amount),
+                                          description: e.description,
+                                          paidByUserId: e.paidByUserId,
+                                          accountId: "keep",
+                                          categoryId: e.categoryId || "",
+                                          date: e.date ? new Date(e.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                                          customShares: e.splits.reduce((acc, s) => ({ ...acc, [s.userId]: String(s.amount) }), {}),
+                                        });
+                                        setSplitType(e.splits[0]?.type === "EQUAL" ? "EQUAL" : e.splits[0]?.type === "PERCENTAGE" ? "PERCENTAGE" : e.splits[0]?.type === "SHARES" ? "SHARES" : "UNEQUAL");
+                                        setInvolvedMembers(new Set(e.splits.map((s: any) => s.userId)));
+                                        setShowEditExpense(true);
+                                      }}
+                                    >
+                                      <Edit3 size={14} className="mr-2" /> Edit Expense
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="destructive-sm"
+                                      className="flex-1 text-xs py-2"
+                                      onClick={(ev) => { ev.stopPropagation(); handleDeleteExpense(e.id); }}
+                                    >
+                                      <Trash2 size={14} className="mr-2" /> Delete
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -1068,7 +1116,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                             <div className="w-10 h-10 shrink-0 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center text-emerald-600 ml-2">
                               <HandCoins size={20} />
                             </div>
-                            <div className="ml-4 flex-1 min-w-0">
+                            <div className="ml-4 flex-1 min-w-0 pr-12">
                               <p className="text-[14px] font-medium text-neutral-800 dark:text-neutral-200">
                                 <span className={cn("font-bold", isPayer && "text-neutral-900 dark:text-white")}>{isPayer ? "You" : payer?.name?.split(" ")[0]}</span>
                                 {" "}paid{" "}
@@ -1078,7 +1126,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                                 ₹{s.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                               </p>
                             </div>
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-100 md:opacity-0 md:group-hover/item:opacity-100 transition-opacity">
                               <Button
                                 type="button"
                                 variant="unstyled"
@@ -1239,7 +1287,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             ))}
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="sticky -bottom-6 left-0 right-0 p-4 bg-white dark:bg-[#18181b] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-end gap-2 mt-4 -mx-6 rounded-b-none sm:rounded-b-xl z-20">
             <Button type="button" variant="cancel" onClick={() => setShowCreateGroup(false)}>
               Cancel
             </Button>
@@ -1265,7 +1313,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="sticky -bottom-6 left-0 right-0 p-4 bg-white dark:bg-[#18181b] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-end gap-2 mt-4 -mx-6 rounded-b-none sm:rounded-b-xl z-20">
             <Button type="button" variant="cancel" onClick={() => setShowJoinGroup(false)}>
               Cancel
             </Button>
@@ -1464,7 +1512,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               ))}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="sticky -bottom-6 left-0 right-0 p-4 bg-white dark:bg-[#18181b] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-end gap-2 mt-4 -mx-6 rounded-b-none sm:rounded-b-xl z-20">
               <Button type="button" variant="cancel" onClick={() => setShowAddExpense(false)}>
                 Cancel
               </Button>
@@ -1517,7 +1565,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
             </NativeSelect>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="sticky -bottom-6 left-0 right-0 p-4 bg-white dark:bg-[#18181b] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-end gap-2 mt-4 -mx-6 rounded-b-none sm:rounded-b-xl z-20">
             <Button type="button" variant="cancel" onClick={() => setShowEditGroup(false)}>
               Cancel
             </Button>
@@ -1783,7 +1831,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               ))}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="sticky -bottom-6 left-0 right-0 p-4 bg-white dark:bg-[#18181b] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-end gap-2 mt-4 -mx-6 rounded-b-none sm:rounded-b-xl z-20">
               <Button type="button" variant="cancel" onClick={() => setShowEditExpense(false)}>
                 Cancel
               </Button>
@@ -1818,9 +1866,30 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                     );
                   })()}
                 </div>
-                <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
-                  {settlementForm.payerId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.payerId)?.name?.split(" ")[0]}
-                </span>
+                
+                <Select
+                  value={settlementForm.payerId}
+                  onValueChange={(val) => {
+                    const newPayerId = val || "";
+                    const debt = groupDetails.optimizedSettlements.find(s => s.fromUserId === newPayerId && s.toUserId === settlementForm.receiverId);
+                    setSettlementForm(prev => ({
+                      ...prev,
+                      payerId: newPayerId,
+                      amount: debt ? String(debt.amount) : "0"
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="w-auto h-auto px-1 py-0 border-none shadow-none text-[13px] font-semibold text-neutral-700 dark:text-neutral-300 bg-transparent focus:ring-0">
+                    {settlementForm.payerId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.payerId)?.name?.split(" ")[0] || "Select Payer"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupDetails.members.map(m => (
+                      <SelectItem key={m.userId} value={m.userId}>
+                        {m.userId === currentUserId ? "You" : m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Arrow */}
@@ -1842,9 +1911,30 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                     );
                   })()}
                 </div>
-                <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
-                  {settlementForm.receiverId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.receiverId)?.name?.split(" ")[0]}
-                </span>
+                
+                <Select
+                  value={settlementForm.receiverId}
+                  onValueChange={(val) => {
+                    const newReceiverId = val || "";
+                    const debt = groupDetails.optimizedSettlements.find(s => s.fromUserId === settlementForm.payerId && s.toUserId === newReceiverId);
+                    setSettlementForm(prev => ({
+                      ...prev,
+                      receiverId: newReceiverId,
+                      amount: debt ? String(debt.amount) : "0"
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="w-auto h-auto px-1 py-0 border-none shadow-none text-[13px] font-semibold text-neutral-700 dark:text-neutral-300 bg-transparent focus:ring-0">
+                    {settlementForm.receiverId === currentUserId ? "You" : groupDetails.members.find(m => m.userId === settlementForm.receiverId)?.name?.split(" ")[0] || "Select Receiver"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupDetails.members.map(m => (
+                      <SelectItem key={m.userId} value={m.userId}>
+                        {m.userId === currentUserId ? "You" : m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1911,7 +2001,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="sticky -bottom-6 left-0 right-0 p-4 bg-white dark:bg-[#18181b] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-end gap-2 mt-4 -mx-6 rounded-b-none sm:rounded-b-xl z-20">
               <Button type="button" variant="cancel" onClick={() => setShowSettleModal(false)}>
                 Cancel
               </Button>
