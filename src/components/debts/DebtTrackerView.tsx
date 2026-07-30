@@ -56,6 +56,7 @@ const emptyDebtForm = {
   startedAt: todayStr(),
   dueDate: "",
   notes: "",
+  accountId: "none",
 };
 
 export default function DebtTrackerView({ initialData }: { initialData: DebtData }) {
@@ -66,6 +67,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
   const [paymentDebtId, setPaymentDebtId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
+  const [paymentAccountId, setPaymentAccountId] = useState("none");
   const [submitting, setSubmitting] = useState(false);
   const [detailDebtId, setDetailDebtId] = useState<string | null>(null);
   const [detailPayments, setDetailPayments] = useState<{ id: string; personalDebtId: string; amount: number; date: string; notes?: string }[]>([]);
@@ -76,6 +78,17 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
   useEffect(() => {
     setData(initialData);
   }, [initialData]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("add") === "true") {
+        setShowAddDebt(true);
+        router.replace("/debts");
+      }
+    }
+  }, [router]);
+
 
   const activePersonal = data.personalDebts.filter((d) => d.status === "ACTIVE");
   const settledPersonal = data.personalDebts.filter((d) => d.status === "SETTLED");
@@ -212,6 +225,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
         totalAmount: Number(debtForm.totalAmount),
         dueDate: debtForm.dueDate || undefined,
         notes: debtForm.notes.trim() || undefined,
+        accountId: debtForm.accountId !== "none" ? debtForm.accountId : undefined,
       });
       setShowAddDebt(false);
       setDebtForm(emptyDebtForm);
@@ -232,10 +246,12 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
       await recordPersonalDebtPayment(paymentDebtId, {
         amount: Number(paymentAmount),
         notes: paymentNotes.trim() || undefined,
+        accountId: paymentAccountId !== "none" ? paymentAccountId : undefined,
       });
       setPaymentDebtId(null);
       setPaymentAmount("");
       setPaymentNotes("");
+      setPaymentAccountId("none");
       toast.success("Payment recorded");
       refresh();
     } catch (err) {
@@ -692,7 +708,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                   <button
                     type="button"
                     onClick={() => setExpandedPerson(isExpanded ? null : g.name)}
-                    className="w-full flex items-center justify-between gap-4 py-3 px-2 text-left hover:bg-neutral-50 dark:hover:bg-neutral-900/40 rounded-lg transition-colors group"
+                    className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 px-2 text-left hover:bg-neutral-50 dark:hover:bg-neutral-900/40 rounded-lg transition-colors group"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Simple monogram */}
@@ -705,8 +721,8 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between w-full sm:w-auto gap-3 shrink-0 pl-11 sm:pl-0">
+                      <div className="text-left sm:text-right">
                         <p className={cn(
                           "text-sm font-semibold font-mono tabular-nums",
                           g.net > 0 ? "text-emerald-600 dark:text-emerald-500" : g.net < 0 ? "text-rose-600 dark:text-rose-500" : "text-neutral-400"
@@ -747,7 +763,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                                   </span>
                                 </div>
 
-                                <div className="flex items-center gap-4 text-[11px] text-neutral-500 mb-2 ml-3.5">
+                                <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] text-neutral-500 mb-2 ml-3.5">
                                   <span>{isOwe ? "You owe" : "Owes you"}</span>
                                   {d.startedAt && <span>Taken {new Date(d.startedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>}
                                   {d.dueDate && <span className="text-amber-600 dark:text-amber-500">Due {new Date(d.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>}
@@ -767,7 +783,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                                 </p>
                                 <p className="text-[10px] text-neutral-400 mb-2">left</p>
 
-                                <div className="flex items-center gap-1.5 justify-end">
+                                <div className="flex flex-wrap items-center gap-1.5 justify-end mt-2">
                                   <button
                                     type="button"
                                     onClick={() => { setPaymentDebtId(d.id); setPaymentAmount(String(d.remainingAmount)); setPaymentNotes(""); }}
@@ -1195,6 +1211,26 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
             />
           </div>
 
+          <div className="space-y-1.5">
+            <FieldLabel>Link to Account (optional)</FieldLabel>
+            <NativeSelect
+              value={debtForm.accountId}
+              onChange={(e) => setDebtForm((p) => ({ ...p, accountId: e.target.value }))}
+            >
+              <option value="none">None (Do not record transaction)</option>
+              {data.accounts?.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name} (₹{acc.balance.toLocaleString("en-IN")})
+                </option>
+              ))}
+            </NativeSelect>
+            <p className="text-xs text-neutral-500">
+              {debtForm.direction === "I_OWE" 
+                ? "If selected, an INCOME transaction will be recorded for the borrowed amount." 
+                : "If selected, an EXPENSE transaction will be recorded for the lent amount."}
+            </p>
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="cancel" onClick={() => { setShowAddDebt(false); setDebtForm(emptyDebtForm); }}>
               Cancel
@@ -1241,6 +1277,25 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                 value={paymentNotes}
                 onChange={(e) => setPaymentNotes(e.target.value)}
               />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel>Link to Account (optional)</FieldLabel>
+              <NativeSelect
+                value={paymentAccountId}
+                onChange={(e) => setPaymentAccountId(e.target.value)}
+              >
+                <option value="none">None (Do not record transaction)</option>
+                {data.accounts?.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} (₹{acc.balance.toLocaleString("en-IN")})
+                  </option>
+                ))}
+              </NativeSelect>
+              <p className="text-xs text-neutral-500">
+                {paymentDebt.direction === "I_OWE" 
+                  ? "If selected, an EXPENSE transaction will be recorded." 
+                  : "If selected, an INCOME transaction will be recorded."}
+              </p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="cancel" onClick={() => setPaymentDebtId(null)}>

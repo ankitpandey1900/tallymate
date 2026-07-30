@@ -113,14 +113,14 @@ export default function ReportsView({ initialData }: { initialData: ReportsIniti
   return (
     <div className="space-y-6">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Spending Reports</h2>
           <p className="text-sm text-neutral-500">Charts and summaries to understand where your money goes.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Timeframe selector */}
-          <div className="flex items-center gap-1 bg-neutral-50 dark:bg-neutral-900 border border-black/[0.04] dark:border-neutral-800 p-1 rounded-lg">
+          <div className="flex items-center gap-1 bg-neutral-50 dark:bg-neutral-900 border border-black/[0.04] dark:border-neutral-800 p-1 rounded-lg overflow-x-auto">
             {(["weekly", "monthly", "quarterly", "yearly"] as const).map((t) => (
               <Button
                 key={t}
@@ -128,7 +128,7 @@ export default function ReportsView({ initialData }: { initialData: ReportsIniti
                 variant="unstyled"
                 onClick={() => setTimeframe(t)}
                 className={cn(
-                  "px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded-md transition-colors",
+                  "px-2 sm:px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded-md transition-colors whitespace-nowrap",
                   timeframe === t
                     ? "bg-[#09090b] text-white dark:bg-[#fafafa] dark:text-black"
                     : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
@@ -139,7 +139,7 @@ export default function ReportsView({ initialData }: { initialData: ReportsIniti
             ))}
           </div>
 
-          <Button type="button" variant="outline-app" onClick={handleExportCSV}>
+          <Button type="button" variant="outline-app" onClick={handleExportCSV} className="w-full sm:w-auto">
             <Download size={14} />
             Export CSV
           </Button>

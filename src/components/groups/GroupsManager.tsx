@@ -38,10 +38,11 @@ import {
   deleteGroup,
   leaveGroup,
   removeGroupMember,
-  updateGroupMemberRole,
   updateGroupExpense,
   deleteGroupExpense,
+  bulkDeleteRecentGroupExpenses,
   deleteSettlement,
+  updateGroupMemberRole,
   type getGroupsPageData,
 } from "@/app/actions";
 import {
@@ -89,6 +90,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     name: "",
     type: "TRIP",
     memberEmails: ["", ""],
+    simplifyDebts: false,
   });
 
   // Join Group Form
@@ -103,6 +105,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
     name: "",
     type: "TRIP",
     image: "",
+    simplifyDebts: false,
   });
 
   // Create Expense Form
@@ -178,9 +181,10 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         name: newGroupForm.name,
         type: newGroupForm.type,
         memberEmails: newGroupForm.memberEmails.filter((email) => email.trim()),
+        simplifyDebts: newGroupForm.simplifyDebts,
       });
       setShowCreateGroup(false);
-      setNewGroupForm({ name: "", type: "TRIP", memberEmails: ["", ""] });
+      setNewGroupForm({ name: "", type: "TRIP", memberEmails: ["", ""], simplifyDebts: false });
       toast.success("Group created successfully");
       router.refresh();
     } catch (err) {
@@ -391,6 +395,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
         name: editGroupForm.name,
         type: editGroupForm.type as any,
         image: editGroupForm.image || null,
+        simplifyDebts: editGroupForm.simplifyDebts,
       });
       toast.success("Group updated successfully");
       setShowEditGroup(false);
@@ -703,7 +708,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                     {groupDetails.members.find((m) => m.userId === currentUserId)?.role === "OWNER" || groupDetails.members.find((m) => m.userId === currentUserId)?.role === "ADMIN" ? (
                       <>
                         <DropdownMenuItem onClick={() => {
-                          setEditGroupForm({ name: groupDetails.group.name, type: groupDetails.group.type as any, image: groupDetails.group.image || "" });
+                          setEditGroupForm({ name: groupDetails.group.name, type: groupDetails.group.type as any, image: groupDetails.group.image || "", simplifyDebts: groupDetails.group.simplifyDebts });
                           setShowEditGroup(true);
                         }}>
                           <Edit3 size={14} className="mr-2" /> Edit Group
@@ -712,7 +717,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                           <Users size={14} className="mr-2" /> Manage Members
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDeleteGroup(groupDetails.group.id)} className="text-rose-600 focus:text-rose-600">
-                          <Trash2 size={14} className="mr-2" /> {deletingGroupId === groupDetails.group.id ? "Deleting..." : confirmDeleteGroupId === groupDetails.group.id ? "Confirm Delete" : "Delete Group"}
+                          <Trash2 size={14} className="mr-2" /> {deletingGroupId === groupDetails.group.id ? "Deleting..." : confirmDeleteGroupId === groupDetails.group.id ? "Confirm Delete Group" : "Delete Group"}
                         </DropdownMenuItem>
                       </>
                     ) : null}
@@ -803,7 +808,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                       {groupDetails.members.find((m) => m.userId === currentUserId)?.role === "OWNER" || groupDetails.members.find((m) => m.userId === currentUserId)?.role === "ADMIN" ? (
                         <>
                           <DropdownMenuItem onClick={() => {
-                            setEditGroupForm({ name: groupDetails.group.name, type: groupDetails.group.type as any, image: groupDetails.group.image || "" });
+                            setEditGroupForm({ name: groupDetails.group.name, type: groupDetails.group.type as any, image: groupDetails.group.image || "", simplifyDebts: groupDetails.group.simplifyDebts });
                             setShowEditGroup(true);
                           }}>
                             <Edit3 size={14} className="mr-2" /> Edit Group
@@ -812,7 +817,7 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                             <Users size={14} className="mr-2" /> Manage Members
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDeleteGroup(groupDetails.group.id)} className="text-rose-600 focus:text-rose-600">
-                            <Trash2 size={14} className="mr-2" /> {deletingGroupId === groupDetails.group.id ? "Deleting..." : confirmDeleteGroupId === groupDetails.group.id ? "Confirm Delete" : "Delete Group"}
+                            <Trash2 size={14} className="mr-2" /> {deletingGroupId === groupDetails.group.id ? "Deleting..." : confirmDeleteGroupId === groupDetails.group.id ? "Confirm Delete Group" : "Delete Group"}
                           </DropdownMenuItem>
                         </>
                       ) : null}
@@ -1175,47 +1180,51 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
 
                 {/* Group Balances */}
                 <div className="panel-card p-5 border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none bg-white dark:bg-[#111113]">
-                  <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-4">Group Balances</h4>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Group Balances</h4>
+                    {groupDetails.group.simplifyDebts && (
+                      <span className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-0.5 rounded-full font-semibold border border-emerald-200 dark:border-emerald-800" title="Debts are minimized to reduce total number of transactions.">
+                        ✨ Simplified
+                      </span>
+                    )}
+                  </div>
                   
                   <div className="space-y-3">
-                    {groupDetails.balances.map((b) => {
-                      const net = b.netBalance;
-                      const member = groupDetails.members.find(m => m.userId === b.userId);
-                      const isOwed = net > 0.01;
-                      const isDebtor = net < -0.01;
-                      const isSettled = !isOwed && !isDebtor;
-                      
-                      return (
-                        <div key={b.userId} className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[13px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
-                            {member?.image ? (
-                              <Image src={member.image} width={80} height={80} alt={b.userName} className="w-full h-full object-cover" />
-                            ) : (
-                              b.userName[0].toUpperCase()
-                            )}
+                    {groupDetails.optimizedSettlements.length === 0 ? (
+                      <div className="text-[13px] text-neutral-500 text-center py-4">All settled up!</div>
+                    ) : (
+                      groupDetails.optimizedSettlements.map((s, idx) => {
+                        const fromMember = groupDetails.members.find(m => m.userId === s.fromUserId);
+                        const toMember = groupDetails.members.find(m => m.userId === s.toUserId);
+                        const fromName = s.fromUserId === currentUserId ? "You" : (fromMember?.name || "Unknown");
+                        const toName = s.toUserId === currentUserId ? "You" : (toMember?.name || "Unknown");
+                        
+                        return (
+                          <div key={idx} className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[13px] font-bold shrink-0 border border-black/5 dark:border-white/5 overflow-hidden">
+                              {fromMember?.image ? (
+                                <Image src={fromMember.image} width={80} height={80} alt={fromName} className="w-full h-full object-cover" />
+                              ) : (
+                                fromName[0]?.toUpperCase() || '?'
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100 truncate" title={fromName}>
+                                {fromName}
+                              </p>
+                              <p className="text-[12px] text-neutral-500 truncate">
+                                owes <span className="font-semibold text-neutral-700 dark:text-neutral-300" title={toName}>{toName}</span>
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-[14px] font-bold font-mono text-rose-500">
+                                ₹{s.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100 truncate">
-                              {b.userId === currentUserId ? "You" : b.userName}
-                            </p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            {isSettled ? (
-                              <span className="text-[12px] font-semibold text-neutral-400">settled</span>
-                            ) : (
-                              <>
-                                <p className={cn("text-[10px] font-bold uppercase tracking-wider", isOwed ? "text-emerald-600/70" : "text-rose-600/70")}>
-                                  {isOwed ? "gets back" : "owes"}
-                                </p>
-                                <p className={cn("text-[14px] font-bold font-mono", isOwed ? "text-emerald-500" : "text-rose-500")}>
-                                  ₹{Math.abs(net).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </p>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
 
@@ -1285,6 +1294,17 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
                 className="py-1.5 text-xs mt-1"
               />
             ))}
+          </div>
+
+          <div className="space-y-1.5 mt-2">
+            <FieldLabel>Simplify Debts</FieldLabel>
+            <NativeSelect
+              value={newGroupForm.simplifyDebts ? "true" : "false"}
+              onChange={(e) => setNewGroupForm((prev) => ({ ...prev, simplifyDebts: e.target.value === "true" }))}
+            >
+              <option value="false">Off (Keep exact 1-to-1 pairwise debts)</option>
+              <option value="true">On (Minimize total number of transactions)</option>
+            </NativeSelect>
           </div>
 
           <div className="sticky -bottom-6 left-0 right-0 p-4 bg-white dark:bg-[#18181b] border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-end gap-2 mt-4 -mx-6 rounded-b-none sm:rounded-b-xl z-20">
@@ -1562,6 +1582,17 @@ export default function GroupsManager({ initialData }: { initialData: GroupsInit
               <option value="COUPLE">Couple / Partners</option>
               <option value="FRIENDS">Friends</option>
               <option value="CUSTOM">Custom / Other</option>
+            </NativeSelect>
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldLabel>Simplify Debts</FieldLabel>
+            <NativeSelect
+              value={editGroupForm.simplifyDebts ? "true" : "false"}
+              onChange={(e) => setEditGroupForm((prev) => ({ ...prev, simplifyDebts: e.target.value === "true" }))}
+            >
+              <option value="false">Off (Keep exact 1-to-1 pairwise debts)</option>
+              <option value="true">On (Minimize total number of transactions)</option>
             </NativeSelect>
           </div>
 

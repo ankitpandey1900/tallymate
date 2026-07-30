@@ -244,6 +244,7 @@ model Group {
   updatedAt               DateTime                @updatedAt
 
   // Toggles / Settings
+  simplifyDebts           Boolean                 @default(false)
   enableSharedFinance     Boolean                 @default(true)
   enableSharedBudgets     Boolean                 @default(true)
   enableSharedIncome      Boolean                 @default(false)

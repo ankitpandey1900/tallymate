@@ -183,3 +183,53 @@ export function calculateExactDebts(
   // Sort largest debts first for UI
   return exactSettlements.sort((a, b) => b.amount - a.amount);
 }
+/**
+ * Minimizes the number of transactions required to settle all debts in a group.
+ * Uses a greedy algorithm matching the largest debtor with the largest creditor.
+ */
+export function minimizeDebts(
+  members: GroupMemberInput[],
+  expenses: GroupExpenseInput[],
+  settlements: { payerId: string; receiverId: string; amount: number }[]
+): OptimizedSettlement[] {
+  // 1. Get net balances
+  const balances = calculateBalances(members, expenses, settlements);
+
+  // 2. Separate into debtors and creditors
+  const debtors = balances.filter((b) => b.netBalance < -0.005).sort((a, b) => a.netBalance - b.netBalance); // most negative first
+  const creditors = balances.filter((b) => b.netBalance > 0.005).sort((a, b) => b.netBalance - a.netBalance); // most positive first
+
+  const minimizedSettlements: OptimizedSettlement[] = [];
+
+  let d = 0; // debtor index
+  let c = 0; // creditor index
+
+  while (d < debtors.length && c < creditors.length) {
+    const debtor = debtors[d];
+    const creditor = creditors[c];
+
+    const owe = Math.abs(debtor.netBalance);
+    const owed = creditor.netBalance;
+
+    const amount = Math.min(owe, owed);
+    const roundedAmount = Math.round(amount * 100) / 100;
+
+    if (roundedAmount > 0) {
+      minimizedSettlements.push({
+        fromUserId: debtor.userId,
+        fromUserName: debtor.userName,
+        toUserId: creditor.userId,
+        toUserName: creditor.userName,
+        amount: roundedAmount,
+      });
+    }
+
+    debtor.netBalance += amount;
+    creditor.netBalance -= amount;
+
+    if (Math.abs(debtor.netBalance) < 0.005) d++;
+    if (Math.abs(creditor.netBalance) < 0.005) c++;
+  }
+
+  return minimizedSettlements;
+}

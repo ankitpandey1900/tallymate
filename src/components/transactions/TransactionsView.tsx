@@ -15,6 +15,9 @@ import {
   Check,
   Loader2,
   ArrowDownToLine,
+  ChevronDown,
+  Filter,
+  Users,
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
@@ -33,6 +36,7 @@ import {
   updateTransaction,
   deleteTransaction,
   bulkDeleteTransactions,
+  bulkDeleteRecentPersonalTransactions,
   bulkUpdateTransactions,
   uploadReceipt,
   type getTransactionsPageData,
@@ -193,6 +197,27 @@ export default function TransactionsView({ initialData }: { initialData: Transac
       clearSelection();
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteWeek = async (e: React.MouseEvent, wNode: any) => {
+    e.stopPropagation();
+    const txIds: string[] = [];
+    wNode.datesList?.forEach((dNode: any) => {
+      dNode.txs.forEach((tx: any) => txIds.push(tx.id));
+    });
+    if (txIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete all ${txIds.length} transactions for ${wNode.label}?`)) return;
+    try {
+      setIsLoading(true);
+      await bulkDeleteTransactions(txIds);
+      toast.success(`Deleted ${txIds.length} transactions.`);
+      setTransactions(prev => prev.filter(t => !txIds.includes(t.id)));
+      clearSelection();
+    } catch (err) {
+      toastError(err, "Failed to delete week transactions");
     } finally {
       setIsLoading(false);
     }
@@ -651,6 +676,15 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                           <span className="text-[11px] font-bold">−₹{wNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                         </div>
                                       )}
+                                      <Button
+                                        type="button"
+                                        variant="unstyled"
+                                        className="w-7 h-7 rounded hover:bg-rose-500/10 hover:text-rose-600 text-neutral-400 flex items-center justify-center transition-colors ml-1"
+                                        onClick={(e) => handleDeleteWeek(e, wNode)}
+                                        title="Delete week transactions"
+                                      >
+                                        <Trash2 size={12} />
+                                      </Button>
                                     </div>
                                   </div>
 
@@ -693,8 +727,26 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                               const inc = incomeSources.find((s) => s.id === tx.incomeSourceId);
                                               const isDeleting = deletingId === tx.id;
                                               const isConfirming = confirmDeleteId === tx.id;
-                                              const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
-                                              const formattedAmount = `₹${Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                                              
+                                              // Handle Group Activities dynamically
+                                              const isGroupAct = (tx as any).isGroupActivity;
+                                              const groupDets = (tx as any).groupDetails;
+                                              
+                                              let isIncome = false;
+                                              let displayType = tx.type;
+                                              let formattedAmount = "";
+                                              
+                                              if (isGroupAct && groupDets) {
+                                                isIncome = tx.type === "INCOME"; // Settlements you received
+                                                if (groupDets.paidByYou && tx.type === "EXPENSE") {
+                                                   isIncome = false; 
+                                                }
+                                                displayType = tx.tags?.includes("Settlement") ? "Settlement" : "Group Expense";
+                                                formattedAmount = `₹${tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                                              } else {
+                                                isIncome = tx.type === "INCOME" || tx.type === "REFUND";
+                                                formattedAmount = `₹${Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                                              }
 
                                               return (
                                                 <div 
@@ -728,8 +780,9 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                                     className="flex-1 flex items-center min-w-0 bg-transparent"
                                                   >
                                                     {/* Icon or Logo */}
-                                                    <div className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04] overflow-hidden" style={{ backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
+                                                    <div className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04] overflow-hidden" style={{ backgroundColor: isGroupAct ? 'rgba(139, 92, 246, 0.1)' : isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isGroupAct ? '#8b5cf6' : isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
                                                       {(() => {
+                                                        if (isGroupAct) return <Users size={14} />;
                                                         const domain = getMerchantLogo(tx.description);
                                                         if (domain) {
                                                           return <Image src={`https://logo.clearbit.com/${domain}?size=32`} width={32} height={32} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" alt="" />;
@@ -744,18 +797,22 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                                     <div className="flex items-center gap-2 text-[10px] text-neutral-500 mt-0.5">
                                                       <span className={cn(
                                                         "font-medium px-1.5 py-0.5 rounded text-[9px]",
-                                                        isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                                        isGroupAct ? "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400"
+                                                        : isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
                                                         : tx.type === "EXPENSE" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
                                                         : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
                                                       )}>
-                                                        {tx.type}
+                                                        {displayType}
                                                       </span>
-                                                      <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
-                                                        {acc?.name || "—"}
-                                                      </span>
-                                                      {cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
-                                                      {inc && <span className="hidden sm:inline-block">· {inc.name}</span>}
-                                                      {!cat && !inc && (tx.categoryId || tx.incomeSourceId) && <span className="hidden sm:inline-block">· Miscellaneous</span>}
+                                                      {!isGroupAct && (
+                                                        <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
+                                                          {acc?.name || "—"}
+                                                        </span>
+                                                      )}
+                                                      {!isGroupAct && cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
+                                                      {!isGroupAct && inc && <span className="hidden sm:inline-block">· {inc.name}</span>}
+                                                      {isGroupAct && groupDets?.otherName && <span className="hidden sm:inline-block">· With {groupDets.otherName}</span>}
+                                                      {!isGroupAct && !cat && !inc && (tx.categoryId || tx.incomeSourceId) && <span className="hidden sm:inline-block">· Miscellaneous</span>}
                                                     </div>
                                                   </div>
 
@@ -944,14 +1001,22 @@ export default function TransactionsView({ initialData }: { initialData: Transac
         title={editingTx ? "Edit Transaction" : "Record Transaction"}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            {["EXPENSE", "INCOME", "TRANSFER"].map((type) => (
+          <div className="grid grid-cols-4 gap-2">
+            {["EXPENSE", "INCOME", "TRANSFER", "DEBT"].map((type) => (
               <Button
                 key={type}
                 type="button"
                 variant={txForm.type === type ? "toggle-active" : "toggle-inactive"}
-                className={cn("w-full", editingTx && txForm.type !== type && "opacity-40 cursor-not-allowed")}
-                onClick={() => !editingTx && setTxForm((prev) => ({ ...prev, type }))}
+                className={cn("w-full text-xs sm:text-sm px-1 sm:px-3", editingTx && txForm.type !== type && "opacity-40 cursor-not-allowed")}
+                onClick={() => {
+                  if (editingTx) return;
+                  if (type === "DEBT") {
+                    router.push("/debts?add=true");
+                    setShowModal(false);
+                    return;
+                  }
+                  setTxForm((prev) => ({ ...prev, type }));
+                }}
               >
                 {type}
               </Button>

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { UnifiedDB, UnifiedTransaction, UnifiedGroup } from "@/lib/unified-db";
-import { calculateBalances, calculateExactDebts } from "@/lib/split-engine";
+import { calculateBalances, calculateExactDebts, minimizeDebts } from "@/lib/split-engine";
 import { uploadFile } from "@/lib/storage";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -158,7 +158,7 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
       const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
       const oldestNeededDate = reportStartDate < monthStartDate ? reportStartDate : monthStartDate;
 
-      const [accounts, allTransactions, budgets, goals, groups, catalog, importRules] = await Promise.all([
+      const [accounts, allTransactions, budgets, goals, groups, catalog, importRules, groupBalance] = await Promise.all([
         UnifiedDB.getAccounts(user.id),
         UnifiedDB.getTransactions(user.id, { startDate: oldestNeededDate.toISOString() }),
         UnifiedDB.getBudgets(user.id),
@@ -166,6 +166,7 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
         UnifiedDB.getGroups(user.id),
         ensureCatalogDefaults(user.id),
         prisma.importRule.findMany({ where: { userId: user.id } }),
+        UnifiedDB.getTotalGroupBalance(user.id),
       ]);
 
       const transactionsForReports = allTransactions.filter((t: UnifiedTransaction) => new Date(t.date) >= reportStartDate);
@@ -192,6 +193,7 @@ export async function getDashboardData(timeframe: "weekly" | "monthly" | "quarte
         groups,
         reports,
         netWorth,
+        groupBalance,
         categories: catalog.categories,
         incomeSources: catalog.incomeSources,
         importRules,
@@ -443,6 +445,8 @@ export async function getDebtTrackerData() {
     totalYouOwe += personalYouOwe;
     totalOwedToYou += personalOwedToYou;
 
+    const accounts = await UnifiedDB.getAccounts(user.id);
+
     return {
       totalYouOwe: Math.round(totalYouOwe * 100) / 100,
       totalOwedToYou: Math.round(totalOwedToYou * 100) / 100,
@@ -455,6 +459,7 @@ export async function getDebtTrackerData() {
       pendingSettlements,
       people: people.sort((a, b) => b.net - a.net),
       personalDebts,
+      accounts,
     };
   });
 }
@@ -470,6 +475,7 @@ export async function createPersonalDebt(data: {
   dueDate?: string;
   startedAt?: string;
   notes?: string;
+  accountId?: string;
 }) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "createPersonalDebt", 40, 60);
@@ -489,15 +495,15 @@ export async function createPersonalDebt(data: {
 
 export async function recordPersonalDebtPayment(
   debtId: string,
-  data: { amount: number; notes?: string; date?: string }
+  data: { amount: number; notes?: string; date?: string; accountId?: string }
 ) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "recordPersonalDebtPayment", 60, 60);
   const user = await getCurrentUser();
 
-  const debt = await UnifiedDB.recordPersonalDebtPayment(user.id, debtId, data);
+  const payment = await UnifiedDB.recordPersonalDebtPayment(user.id, debtId, data);
   await bustPageCache(user.id);
-  return debt;
+  return payment;
 }
 
 export async function markPersonalDebtSettled(debtId: string) {
@@ -910,7 +916,7 @@ export async function joinGroup(inviteCode: string) {
   return group;
 }
 
-export async function createGroup(data: { name: string; type: string; memberEmails: string[] }) {
+export async function createGroup(data: { name: string; type: string; memberEmails: string[]; simplifyDebts?: boolean }) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "createGroup", 20, 60);
   const user = await getCurrentUser();
@@ -937,6 +943,7 @@ export async function createGroup(data: { name: string; type: string; memberEmai
     name: data.name,
     type: data.type,
     members: resolvedMemberIds,
+    simplifyDebts: data.simplifyDebts ?? false,
   });
 
   // Notify other members
@@ -1005,7 +1012,9 @@ export async function getGroupDetails(groupId: string) {
   }));
 
   const balances = calculateBalances(groupMembersWithDetails, engineExpenses, engineSettlements);
-  const optimizedSettlements = calculateExactDebts(groupMembersWithDetails, engineExpenses, engineSettlements);
+  const optimizedSettlements = group.simplifyDebts 
+    ? minimizeDebts(groupMembersWithDetails, engineExpenses, engineSettlements)
+    : calculateExactDebts(groupMembersWithDetails, engineExpenses, engineSettlements);
 
   return {
     group,
@@ -1276,6 +1285,30 @@ export async function deleteGroupExpense(groupId: string, expenseId: string) {
   await bustPageCache(user.id);
 }
 
+export async function bulkDeleteRecentGroupExpenses(groupId: string, days: number = 7) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "bulkDeleteRecentGroupExpenses", 10, 60);
+  const user = await getCurrentUser();
+  
+  const groups = await UnifiedDB.getGroups(user.id);
+  const group = groups.find((g) => g.id === groupId);
+  if (!group) throw new Error("Not a member of this group");
+  
+  const dateThreshold = new Date();
+  dateThreshold.setDate(dateThreshold.getDate() - days);
+
+  const expenses = await UnifiedDB.getGroupExpenses(groupId);
+  const recentExpenses = expenses.filter(e => new Date(e.date) >= dateThreshold);
+
+  // Run sequentially to ensure all cascading transactions delete correctly
+  for (const e of recentExpenses) {
+    await UnifiedDB.deleteGroupExpense(groupId, e.id);
+  }
+
+  await bustPageCache(user.id);
+  return { success: true, deletedCount: recentExpenses.length };
+}
+
 export async function deleteSettlement(groupId: string, settlementId: string) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "deleteSettlement", 60, 60);
@@ -1331,6 +1364,25 @@ export async function bulkDeleteTransactions(txIds: string[]) {
     await UnifiedDB.deleteTransaction(user.id, txId);
   }
   await bustPageCache(user.id);
+}
+
+export async function bulkDeleteRecentPersonalTransactions(days: number = 7) {
+  const reqHeaders = await headers();
+  await enforceActionRateLimit(reqHeaders, "bulkDeleteRecentPersonalTransactions", 10, 60);
+  const user = await getCurrentUser();
+  
+  const dateThreshold = new Date();
+  dateThreshold.setDate(dateThreshold.getDate() - days);
+
+  const transactions = await UnifiedDB.getTransactions(user.id, {});
+  const recentTransactions = transactions.filter(t => new Date(t.date) >= dateThreshold);
+
+  for (const t of recentTransactions) {
+    await UnifiedDB.deleteTransaction(user.id, t.id);
+  }
+
+  await bustPageCache(user.id);
+  return { success: true, deletedCount: recentTransactions.length };
 }
 
 export async function updateTransaction(

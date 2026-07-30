@@ -78,6 +78,7 @@ export default function DashboardDashboard({
     incomeSources,
     reports: metrics,
     netWorth,
+    groupBalance,
   } = initialData;
 
   // Modal triggers
@@ -286,10 +287,28 @@ export default function DashboardDashboard({
           
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-2">
-              <span className="text-sm font-semibold text-neutral-500">Total Net Worth</span>
-              <p className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                ₹{netWorth.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-              </p>
+              <span className="text-sm font-semibold text-neutral-500">True Net Worth</span>
+              <div className="flex flex-col gap-2">
+                <p className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                  ₹{(netWorth + (groupBalance || 0)).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                </p>
+                {groupBalance !== undefined && groupBalance !== 0 && (
+                  <div className="flex items-center gap-2 text-xs sm:text-sm">
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-medium">
+                      Accounts: ₹{netWorth.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-neutral-400">+</span>
+                    <span className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium",
+                      groupBalance > 0 
+                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" 
+                        : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                    )}>
+                      Groups: {groupBalance > 0 ? "+" : ""}₹{groupBalance.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-[#1a1a1c] border border-black/[0.04] dark:border-white/[0.04] rounded-full self-start sm:self-end shrink-0">
@@ -431,14 +450,34 @@ export default function DashboardDashboard({
                 {transactions.map((tx) => {
                   const acc = accounts.find((a) => a.id === tx.accountId);
                   const cat = categories.find((c) => c.id === tx.categoryId);
-                  const isIncome = tx.type === "INCOME" || tx.type === "REFUND";
-                  const formattedAmount = `₹${tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                  
+                  // Handle Group Activities dynamically
+                  const isGroupAct = (tx as any).isGroupActivity;
+                  const groupDets = (tx as any).groupDetails;
+                  
+                  let isIncome = false;
+                  let displayType = tx.type;
+                  let formattedAmount = "";
+                  
+                  if (isGroupAct && groupDets) {
+                    isIncome = tx.type === "INCOME"; // Settlements you received
+                    if (groupDets.paidByYou && tx.type === "EXPENSE") {
+                       // You paid group expense, and you lent money out (or just showing your share). 
+                       // Actually, we set type="EXPENSE" for your share.
+                       isIncome = false; 
+                    }
+                    displayType = tx.tags?.includes("Settlement") ? "Settlement" : "Group Expense";
+                    formattedAmount = `₹${tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                  } else {
+                    isIncome = tx.type === "INCOME" || tx.type === "REFUND";
+                    formattedAmount = `₹${tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                  }
 
                   return (
                     <div key={tx.id} className="flex items-center p-3 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors relative group/item rounded-lg">
                       {/* Icon */}
-                      <div className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
-                        {isIncome ? <ArrowDownToLine size={16} /> : getCategoryIcon(cat?.name, 16)}
+                      <div className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center border border-black/[0.04] dark:border-white/[0.04]" style={{ backgroundColor: isGroupAct ? 'rgba(139, 92, 246, 0.1)' : isIncome ? 'rgba(16, 185, 129, 0.1)' : cat ? `${cat.color}15` : 'rgba(163, 163, 163, 0.1)', color: isGroupAct ? '#8b5cf6' : isIncome ? '#10b981' : cat ? cat.color : '#a3a3a3' }}>
+                        {isGroupAct ? <Users size={16} /> : isIncome ? <ArrowDownToLine size={16} /> : getCategoryIcon(cat?.name, 16)}
                       </div>
                       
                       {/* Title & Details */}
@@ -451,16 +490,20 @@ export default function DashboardDashboard({
                           <span>·</span>
                           <span className={cn(
                             "font-medium px-2 py-0.5 rounded-full text-[10px]",
-                            isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                            isGroupAct ? "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400"
+                            : isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
                             : tx.type === "EXPENSE" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
                             : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
                           )}>
-                            {tx.type}
+                            {displayType}
                           </span>
-                          <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
-                            {acc?.name || "—"}
-                          </span>
-                          {cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
+                          {!isGroupAct && (
+                            <span className="font-medium text-neutral-600 dark:text-neutral-400 truncate hidden sm:inline-block max-w-[120px]">
+                              {acc?.name || "—"}
+                            </span>
+                          )}
+                          {!isGroupAct && cat && <span className="hidden sm:inline-block">· {cat.name}</span>}
+                          {isGroupAct && groupDets?.otherName && <span className="hidden sm:inline-block">· With {groupDets.otherName}</span>}
                         </div>
                       </div>
 
@@ -604,14 +647,21 @@ export default function DashboardDashboard({
 
       <AppDialog open={showTxModal} onOpenChange={setShowTxModal} title="Add Transaction">
         <form onSubmit={handleTxSubmit} className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            {["EXPENSE", "INCOME", "TRANSFER"].map((type) => (
+          <div className="grid grid-cols-4 gap-2">
+            {["EXPENSE", "INCOME", "TRANSFER", "DEBT"].map((type) => (
               <Button
                 key={type}
                 type="button"
                 variant={txForm.type === type ? "toggle-active" : "toggle-inactive"}
-                className="w-full"
-                onClick={() => setTxForm((prev) => ({ ...prev, type }))}
+                className="w-full text-xs sm:text-sm px-1 sm:px-3"
+                onClick={() => {
+                  if (type === "DEBT") {
+                    router.push("/debts?add=true");
+                    setShowTxModal(false);
+                    return;
+                  }
+                  setTxForm((prev) => ({ ...prev, type }));
+                }}
               >
                 {type}
               </Button>

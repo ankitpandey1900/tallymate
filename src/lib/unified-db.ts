@@ -47,6 +47,14 @@ export interface UnifiedTransaction {
   incomeSourceId?: string;
   groupId?: string;
   groupExpenseId?: string;
+  // Used for rendering group expenses that are NOT linked to a personal account in the main feed
+  isGroupActivity?: boolean;
+  groupDetails?: {
+    paidByYou: boolean;
+    yourShare: number;
+    totalAmount: number;
+    otherName?: string; // name of who paid or who you settled with
+  };
   transferToAccountId?: string;
 }
 
@@ -81,6 +89,7 @@ export interface UnifiedGroup {
   enableSharedIncome: boolean;
   enableRecurringExpenses: boolean;
   enableSettlementTracking: boolean;
+  simplifyDebts: boolean;
   image?: string | null;
   members: UnifiedGroupMember[];
 }
@@ -195,20 +204,8 @@ function mapTransaction(t: {
   };
 }
 
-function mapGroup(grp: {
-  id: string;
-  name: string;
-  inviteCode: string | null;
-  type: string;
-  currency: string;
-  enableSharedFinance: boolean;
-  enableSharedBudgets: boolean;
-  enableSharedIncome: boolean;
-  enableRecurringExpenses: boolean;
-  enableSettlementTracking: boolean;
-  image?: string | null;
-  members: { userId: string; role: string }[];
-}): UnifiedGroup {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapGroup(grp: any): UnifiedGroup {
   return {
     id: grp.id,
     name: grp.name,
@@ -221,7 +218,8 @@ function mapGroup(grp: {
     enableSharedIncome: grp.enableSharedIncome,
     enableRecurringExpenses: grp.enableRecurringExpenses,
     enableSettlementTracking: grp.enableSettlementTracking,
-    members: grp.members.map((m) => ({ userId: m.userId, role: m.role })),
+    simplifyDebts: grp.simplifyDebts ?? false,
+    members: (grp.members || []).map((m: any) => ({ userId: m.userId, role: m.role })),
   };
 }
 
@@ -413,7 +411,127 @@ export class UnifiedDB {
       orderBy: { date: "desc" },
       take: filters?.limit,
     });
-    return txs.map(mapTransaction);
+    const mappedTxs = txs.map(mapTransaction);
+
+    if (filters?.type === "INCOME" || filters?.type === "TRANSFER") {
+      // Return early if specifically filtering for standard incomes/transfers where group debt doesn't apply cleanly
+      return mappedTxs;
+    }
+
+    // Fetch Group Expenses involving the user
+    const groupExpenses = await prisma.groupExpense.findMany({
+      where: {
+        OR: [{ paidByUserId: userId }, { splits: { some: { userId } } }],
+        ...(filters?.groupId ? { groupId: filters.groupId } : {}),
+        ...(where.date ? { date: where.date } : {}),
+      },
+      include: { splits: true, group: { include: { members: { include: { user: true } } } } },
+    });
+
+    // Fetch Settlements involving the user
+    const settlements = await prisma.settlement.findMany({
+      where: {
+        OR: [{ payerId: userId }, { receiverId: userId }],
+        ...(filters?.groupId ? { groupId: filters.groupId } : {}),
+        ...(where.date ? { date: where.date } : {}),
+      },
+      include: { group: true, payer: true, receiver: true },
+    });
+
+    const linkedExpenseIds = new Set(mappedTxs.map((t) => t.groupExpenseId).filter(Boolean));
+    const mergedTxs: UnifiedTransaction[] = [...mappedTxs];
+
+    for (const ge of groupExpenses) {
+      if (linkedExpenseIds.has(ge.id)) continue; // Already linked to a personal account
+      
+      const isPayer = ge.paidByUserId === userId;
+      const userSplit = ge.splits.find((s: any) => s.userId === userId);
+      const userShare = userSplit ? Number(userSplit.amount) : 0;
+      const totalAmount = Number(ge.amount);
+      
+      let txAmount = 0;
+      let txType = "EXPENSE"; // default
+      
+      if (isPayer) {
+        // You paid. You lent out (total - your share)
+        txAmount = userShare; // From a budget perspective, your expense is just your share!
+        // But wait, if they didn't link an account, we just want to show their share as the expense.
+      } else {
+        // Someone else paid. You borrowed your share.
+        txAmount = userShare;
+      }
+
+      if (txAmount > 0) {
+        const otherMember = isPayer 
+          ? ge.splits.find((s: any) => s.userId !== userId) 
+          : (ge.group as any).members.find((m: any) => m.userId === ge.paidByUserId);
+        
+        const otherName = isPayer 
+          ? "Someone" 
+          : otherMember?.user?.name || "Someone";
+
+        mergedTxs.push({
+          id: `group-exp-${ge.id}`,
+          userId,
+          accountId: "group-unlinked",
+          type: txType,
+          scope: "GROUP",
+          amount: txAmount,
+          date: ge.date.toISOString(),
+          description: ge.description,
+          notes: `Total: ₹${totalAmount}. Your share: ₹${userShare}.`,
+          tags: ["Group Expense"],
+          categoryId: ge.categoryId || undefined,
+          groupId: ge.groupId,
+          groupExpenseId: ge.id,
+          isGroupActivity: true,
+          groupDetails: {
+            paidByYou: isPayer,
+            yourShare: userShare,
+            totalAmount: totalAmount,
+            otherName: otherName,
+          }
+        });
+      }
+    }
+
+    // Settlements
+    for (const s of settlements) {
+      // Check if there is a linked settlement transaction (fuzzy match by amount and date)
+      const amountStr = Number(s.amount).toString();
+      const hasLinkedTx = mappedTxs.some(t => t.groupId === s.groupId && t.tags.includes("Settlement") && Math.abs(t.amount - Number(s.amount)) < 0.1);
+      if (hasLinkedTx) continue;
+
+      const isPayer = s.payerId === userId;
+      mergedTxs.push({
+        id: `settlement-${s.id}`,
+        userId,
+        accountId: "group-unlinked",
+        type: isPayer ? "EXPENSE" : "INCOME",
+        scope: "GROUP",
+        amount: Number(s.amount),
+        date: s.date.toISOString(),
+        description: `Settled up`,
+        notes: s.notes || (isPayer ? `You paid ${s.receiver?.name}` : `${s.payer?.name} paid you`),
+        tags: ["Settlement"],
+        groupId: s.groupId,
+        isGroupActivity: true,
+        groupDetails: {
+          paidByYou: isPayer,
+          yourShare: Number(s.amount),
+          totalAmount: Number(s.amount),
+          otherName: isPayer ? s.receiver?.name || "Someone" : s.payer?.name || "Someone",
+        }
+      });
+    }
+
+    // Sort combined by date descending
+    mergedTxs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    if (filters?.limit) {
+      return mergedTxs.slice(0, filters.limit);
+    }
+    return mergedTxs;
   }
 
   static async createTransaction(userId: string, data: Omit<UnifiedTransaction, "id">): Promise<UnifiedTransaction> {
@@ -560,12 +678,58 @@ export class UnifiedDB {
     return memberships.map((m) => mapGroup(m.group));
   }
 
-  static async createGroup(userId: string, data: { name: string; type: string; members: string[] }): Promise<UnifiedGroup> {
+  static async getTotalGroupBalance(userId: string): Promise<number> {
+    const groupExpenses = await prisma.groupExpense.findMany({
+      where: {
+        OR: [{ paidByUserId: userId }, { splits: { some: { userId } } }],
+      },
+      include: { splits: true },
+    });
+
+    const settlements = await prisma.settlement.findMany({
+      where: {
+        OR: [{ payerId: userId }, { receiverId: userId }],
+      },
+    });
+
+    let balance = 0;
+
+    for (const ge of groupExpenses) {
+      const isPayer = ge.paidByUserId === userId;
+      const userSplit = ge.splits.find((s) => s.userId === userId);
+      const userShare = userSplit ? Number(userSplit.amount) : 0;
+      const totalAmount = Number(ge.amount);
+
+      if (isPayer) {
+        // You paid. You get back the portion you didn't consume.
+        balance += (totalAmount - userShare);
+      } else {
+        // You didn't pay. You owe your share.
+        balance -= userShare;
+      }
+    }
+
+    for (const s of settlements) {
+      if (s.payerId === userId) {
+        // You paid someone, so your debt goes down (balance goes up)
+        balance += Number(s.amount);
+      } else if (s.receiverId === userId) {
+        // Someone paid you, so what they owe you goes down (balance goes down)
+        balance -= Number(s.amount);
+      }
+    }
+
+    return balance;
+  }
+
+  static async createGroup(userId: string, data: { name: string; type: string; members: string[]; simplifyDebts?: boolean }): Promise<UnifiedGroup> {
     const inviteCode = generateInviteCode();
     const grp = await prisma.group.create({
       data: {
         name: data.name,
         type: data.type as "TRIP" | "FAMILY" | "FLATMATES" | "COUPLE" | "FRIENDS" | "CUSTOM",
+        // @ts-ignore - Prisma types are stale until regenerated
+        simplifyDebts: data.simplifyDebts ?? false,
         inviteCode,
         members: {
           createMany: {
@@ -1119,23 +1283,46 @@ export class UnifiedDB {
       dueDate?: string;
       startedAt?: string;
       notes?: string;
+      accountId?: string;
     }
   ): Promise<UnifiedPersonalDebt> {
-    const debt = await prisma.personalDebt.create({
-      data: {
-        userId,
-        title: data.title,
-        counterpartyName: data.counterpartyName,
-        direction: data.direction,
-        category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "FRIEND" | "FAMILY" | "OTHER",
-        totalAmount: data.totalAmount,
-        remainingAmount: data.remainingAmount ?? data.totalAmount,
-        interestRate: data.interestRate,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        startedAt: data.startedAt ? new Date(data.startedAt) : undefined,
-        notes: data.notes,
-      },
+    const debt = await prisma.$transaction(async (tx) => {
+      const d = await tx.personalDebt.create({
+        data: {
+          userId,
+          title: data.title,
+          counterpartyName: data.counterpartyName,
+          direction: data.direction,
+          category: data.category as "LOAN" | "CREDIT_CARD" | "EMI" | "PERSONAL" | "FRIEND" | "FAMILY" | "OTHER",
+          totalAmount: data.totalAmount,
+          remainingAmount: data.remainingAmount ?? data.totalAmount,
+          interestRate: data.interestRate,
+          dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+          startedAt: data.startedAt ? new Date(data.startedAt) : undefined,
+          notes: data.notes,
+        },
+      });
+
+      if (data.accountId) {
+        // If I owe them (I borrowed), I got money -> INCOME
+        // If they owe me (I lent), I sent money -> EXPENSE
+        const isIncome = data.direction === "I_OWE";
+        await tx.transaction.create({
+          data: {
+            userId,
+            accountId: data.accountId,
+            type: isIncome ? "INCOME" : "EXPENSE",
+            amount: data.totalAmount,
+            description: `Loan: ${data.title} (${data.counterpartyName})`,
+            date: data.startedAt ? new Date(data.startedAt) : new Date(),
+            notes: data.notes,
+            tags: ["Debt", isIncome ? "Borrowed" : "Lent"],
+          },
+        });
+      }
+      return d;
     });
+
     return mapPersonalDebt(debt);
   }
 
@@ -1181,7 +1368,7 @@ export class UnifiedDB {
   static async recordPersonalDebtPayment(
     userId: string,
     debtId: string,
-    data: { amount: number; notes?: string; date?: string }
+    data: { amount: number; notes?: string; date?: string; accountId?: string }
   ): Promise<UnifiedPersonalDebt> {
     const debt = await prisma.personalDebt.findFirst({ where: { id: debtId, userId } });
     if (!debt) throw new Error("Debt not found.");
@@ -1197,24 +1384,46 @@ export class UnifiedDB {
 
     const newRemaining = Math.round((remaining - paymentAmount) * 100) / 100;
 
-    await prisma.personalDebtPayment.create({
-      data: {
-        personalDebtId: debtId,
-        amount: paymentAmount,
-        date: data.date ? new Date(data.date) : new Date(),
-        notes: data.notes,
-      },
-    });
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.personalDebtPayment.create({
+        data: {
+          personalDebtId: debtId,
+          amount: paymentAmount,
+          notes: data.notes,
+          date: data.date ? new Date(data.date) : undefined,
+        },
+      });
 
-    return mapPersonalDebt(
-      await prisma.personalDebt.update({
+      const d = await tx.personalDebt.update({
         where: { id: debtId },
         data: {
           remainingAmount: newRemaining,
           status: newRemaining <= 0.01 ? "SETTLED" : "ACTIVE",
         },
-      })
-    );
+      });
+
+      if (data.accountId) {
+        // If paying off "I owe them", money leaves account -> EXPENSE
+        // If they pay off "They owe me", money comes into account -> INCOME
+        const isExpense = debt.direction === "I_OWE";
+        await tx.transaction.create({
+          data: {
+            userId,
+            accountId: data.accountId,
+            type: isExpense ? "EXPENSE" : "INCOME",
+            amount: paymentAmount,
+            description: `Repayment: ${debt.title} (${debt.counterpartyName})`,
+            date: data.date ? new Date(data.date) : new Date(),
+            notes: data.notes,
+            tags: ["Debt Repayment"],
+          },
+        });
+      }
+
+      return d;
+    });
+
+    return mapPersonalDebt(updated);
   }
 
   static async deletePersonalDebt(userId: string, debtId: string): Promise<void> {
