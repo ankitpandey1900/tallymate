@@ -17,7 +17,7 @@ const PAGE_KEYS = [
   "calendar",
 ] as const;
 
-export type PageCacheKey = (typeof PAGE_KEYS)[number];
+export type PageCacheKey = (typeof PAGE_KEYS)[number] | (string & {});
 
 function pageCacheKey(userId: string, page: PageCacheKey, extra = "") {
   return `page:${page}:${userId}${extra ? `:${extra}` : ""}`;

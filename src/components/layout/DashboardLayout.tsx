@@ -147,14 +147,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Transactions", href: "/transactions", icon: Receipt },
-    { name: "Calendar", href: "/calendar", icon: CalendarDays },
     { name: "Budgets", href: "/budgets", icon: PieChart },
     { name: "Goals", href: "/goals", icon: Target },
     { name: "Groups", href: "/groups", icon: Users },
     { name: "Debts", href: "/debts", icon: HandCoins },
+    { name: "Calendar", href: "/calendar", icon: CalendarDays },
     { name: "Reports", href: "/reports", icon: TrendingUp },
-    { name: "Import Rules", href: "/import-rules", icon: FileText },
     { name: "Notifications", href: "/notifications", icon: Bell },
+    { name: "Import Rules", href: "/import-rules", icon: FileText },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 

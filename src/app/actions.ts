@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { UnifiedDB, UnifiedTransaction, UnifiedGroup } from "@/lib/unified-db";
+import { UnifiedDB, UnifiedTransaction, UnifiedGroup, UnifiedBudget } from "@/lib/unified-db";
 import { calculateBalances, calculateExactDebts, minimizeDebts } from "@/lib/split-engine";
 import { uploadFile } from "@/lib/storage";
 import { redirect } from "next/navigation";
@@ -85,7 +85,37 @@ function computeBudgetProgress(
       })
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
-    const limit = Number(budget.amount);
+    let limit = Number(budget.amount);
+    
+    // Process rollover if enabled
+    if (budget.rollover) {
+      const pastBudgets = budgets.filter((b) => 
+        b.rollover && 
+        b.categoryId === budget.categoryId && 
+        b.groupId === budget.groupId && 
+        new Date(b.endDate) < new Date(budget.startDate)
+      );
+
+      // Only count immediate preceding budgets for simplicity, or all if preferred.
+      // We will sum the unspent amounts of all past contiguous rollover budgets.
+      pastBudgets.forEach(pb => {
+        const pbSpent = transactions
+          .filter((t) => {
+            const isMatchCategory = !pb.categoryId || t.categoryId === pb.categoryId;
+            const isMatchGroup = !pb.groupId || t.groupId === pb.groupId;
+            const isExpense = t.type === "EXPENSE";
+            const isDateInRange =
+              new Date(t.date) >= new Date(pb.startDate) &&
+              new Date(t.date) <= new Date(pb.endDate);
+            return isMatchCategory && isMatchGroup && isExpense && isDateInRange;
+          })
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        const unspent = Math.max(Number(pb.amount) - pbSpent, 0);
+        limit += unspent;
+      });
+    }
+
     const percentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
     const remaining = Math.max(limit - spent, 0);
 
@@ -102,18 +132,41 @@ function computeBudgetProgress(
 
 async function getReportsForUser(
   userId: string,
-  timeframe: "weekly" | "monthly" | "quarterly" | "yearly"
+  timeframe: "weekly" | "monthly" | "quarterly" | "yearly" | "custom",
+  scopeFilter: "ALL" | "PERSONAL" | "GROUP" = "ALL",
+  typeFilter: "ALL" | "INCOME" | "EXPENSE" = "ALL",
+  customStartDate?: string,
+  customEndDate?: string
 ): Promise<ReportMetrics> {
   const now = new Date();
-  const startDate = getReportStartDate(timeframe, now);
+  
+  let startISO = new Date(0).toISOString();
+  let endISO = now.toISOString();
 
-  const [txs, categories, incomeSources] = await Promise.all([
-    UnifiedDB.getTransactions(userId, { startDate: startDate.toISOString(), endDate: now.toISOString() }),
+  if (timeframe === "custom" && customStartDate && customEndDate) {
+    startISO = new Date(customStartDate).toISOString();
+    endISO = new Date(customEndDate).toISOString();
+  } else {
+    // @ts-ignore
+    startISO = getReportStartDate(timeframe, now).toISOString();
+  }
+
+  let [txs, categories, incomeSources] = await Promise.all([
+    UnifiedDB.getTransactions(userId, { startDate: startISO, endDate: endISO }),
     UnifiedDB.getCategories(userId),
     UnifiedDB.getIncomeSources(userId),
   ]);
 
-  return computeReports(txs, categories, incomeSources, timeframe, now);
+  if (scopeFilter !== "ALL") {
+    txs = txs.filter(t => t.scope === scopeFilter);
+  }
+  
+  if (typeFilter !== "ALL") {
+    txs = txs.filter(t => t.type === typeFilter);
+  }
+
+  // @ts-ignore
+  return computeReports(txs, categories, incomeSources, timeframe === "custom" ? "monthly" : timeframe, now);
 }
 
 // Helper to get active session user or redirect if unauthenticated
@@ -296,19 +349,24 @@ export async function getSettingsPageData() {
 }
 
 export async function getReportsPageData(
-  timeframe: "weekly" | "monthly" | "quarterly" | "yearly" = "monthly"
+  timeframe: "weekly" | "monthly" | "quarterly" | "yearly" | "custom" = "monthly",
+  scopeFilter: "ALL" | "PERSONAL" | "GROUP" = "ALL",
+  typeFilter: "ALL" | "INCOME" | "EXPENSE" = "ALL",
+  customStartDate?: string,
+  customEndDate?: string
 ) {
   const user = await getCurrentUser();
+  const cacheKey = `reports-${timeframe}-${scopeFilter}-${typeFilter}-${customStartDate}-${customEndDate}`;
   return getOrSetPageCache(
     user.id,
-    "reports",
+    cacheKey,
     async () => {
-      const reports = await getReportsForUser(user.id, timeframe);
+      const reports = await getReportsForUser(user.id, timeframe, scopeFilter, typeFilter, customStartDate, customEndDate);
       const accounts = await UnifiedDB.getAccounts(user.id);
       const netWorth = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
-      return { reports, timeframe, netWorth };
+      return { reports, timeframe, scopeFilter, typeFilter, customStartDate, customEndDate, netWorth };
     },
-    timeframe
+    cacheKey
   );
 }
 
@@ -796,7 +854,7 @@ export async function getBudgets() {
   return await UnifiedDB.getBudgets(user.id);
 }
 
-export async function createBudget(data: { categoryId: string | null; amount: number; period: string; startDate: string; endDate: string; groupId?: string }) {
+export async function createBudget(data: { categoryId: string | null; amount: number; period: string; startDate: string; endDate: string; groupId?: string; rollover?: boolean; customAlerts?: number[] }) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "createBudget", 30, 60);
   const user = await getCurrentUser();
@@ -804,9 +862,11 @@ export async function createBudget(data: { categoryId: string | null; amount: nu
     categoryId: data.categoryId,
     groupId: data.groupId || null,
     amount: data.amount,
-    period: data.period,
+    period: data.period as any,
     startDate: data.startDate,
     endDate: data.endDate,
+    rollover: data.rollover || false,
+    customAlerts: data.customAlerts || [80, 100],
   });
   await bustPageCache(user.id);
   return budget;
@@ -836,27 +896,21 @@ async function checkBudgetsForCategory(userId: string, categoryId: string) {
     const limit = Number(b.amount);
     const ratio = totalSpent / limit;
 
-    if (ratio >= 1.0) {
-      await UnifiedDB.createNotification(
-        userId,
-        "🚨 Budget Exceeded!",
-        `You have exceeded your budget of ₹${limit} for ${categoryName}. Current spending: ₹${totalSpent}.`,
-        "BUDGET_EXCEEDED"
-      );
-    } else if (ratio >= 0.9) {
-      await UnifiedDB.createNotification(
-        userId,
-        "⚠️ Budget Warning (90%)",
-        `You have used 90% of your budget (₹${limit}) for ${categoryName}. Current spending: ₹${totalSpent}.`,
-        "BUDGET_WARNING"
-      );
-    } else if (ratio >= 0.8) {
-      await UnifiedDB.createNotification(
-        userId,
-        "⚠️ Budget Warning (80%)",
-        `You have used 80% of your budget (₹${limit}) for ${categoryName}. Current spending: ₹${totalSpent}.`,
-        "BUDGET_WARNING"
-      );
+    const percentage = ratio * 100;
+    const sortedAlerts = [...(b.customAlerts || [80, 90, 100])].sort((a, x) => x - a);
+
+    for (const alertPct of sortedAlerts) {
+      if (percentage >= alertPct) {
+        // Find if this alert was already triggered for this budget (for advanced deduplication later, 
+        // but for now we just fire it like the old logic did)
+        await UnifiedDB.createNotification(
+          userId,
+          alertPct >= 100 ? "🚨 Budget Exceeded!" : `⚠️ Budget Warning (${alertPct}%)`,
+          `You have used ${Math.round(percentage)}% (₹${totalSpent}) of your budget (₹${limit}) for ${categoryName}. Threshold crossed: ${alertPct}%.`,
+          alertPct >= 100 ? "BUDGET_EXCEEDED" : "BUDGET_WARNING"
+        );
+        break; // Only fire the highest triggered alert
+      }
     }
   }
 }
@@ -1334,9 +1388,15 @@ export async function clearAllNotifications() {
 }
 
 // Reports & Analytics actions
-export async function getReports(timeframe: "weekly" | "monthly" | "quarterly" | "yearly") {
+export async function getReports(
+  timeframe: "weekly" | "monthly" | "quarterly" | "yearly" | "custom",
+  scopeFilter: "ALL" | "PERSONAL" | "GROUP" = "ALL",
+  typeFilter: "ALL" | "INCOME" | "EXPENSE" = "ALL",
+  customStartDate?: string,
+  customEndDate?: string
+) {
   const user = await getCurrentUser();
-  return getReportsForUser(user.id, timeframe);
+  return getReportsForUser(user.id, timeframe, scopeFilter, typeFilter, customStartDate, customEndDate);
 }
 
 export async function uploadReceipt(formData: FormData) {
@@ -1444,6 +1504,33 @@ export async function deleteBudget(budgetId: string) {
   await bustPageCache(user.id);
 }
 
+export async function updateBudget(id: string, data: Partial<Omit<UnifiedBudget, "id" | "userId">>) {
+  const user = await getCurrentUser();
+  await UnifiedDB.updateBudget(id, user.id, data);
+  await bustPageCache(user.id);
+}
+
+export async function suggestBudgetLimit(categoryId: string | null, groupId: string | undefined): Promise<number> {
+  const user = await getCurrentUser();
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  const transactions = await UnifiedDB.getTransactions(user.id, {
+    type: "EXPENSE",
+    categoryId: categoryId || undefined,
+    groupId: groupId || undefined,
+    startDate: ninetyDaysAgo.toISOString(),
+  });
+
+  if (transactions.length === 0) return 10000;
+
+  const totalSpent = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+  const avgMonthly = totalSpent / 3;
+
+  const suggested = Math.round(avgMonthly / 100) * 100;
+  return suggested > 0 ? suggested : 10000;
+}
+
 export async function deleteGoal(goalId: string) {
   const user = await getCurrentUser();
   await UnifiedDB.deleteGoal(user.id, goalId);
@@ -1539,3 +1626,5 @@ export async function getCalendarPageData() {
     return { transactions, categories: catalog.categories, incomeSources: catalog.incomeSources, accounts };
   });
 }
+
+

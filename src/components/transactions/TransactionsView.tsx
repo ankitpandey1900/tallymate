@@ -607,15 +607,15 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                     </div>
                     <div className="flex items-center gap-3">
                       {yNode.totalIncome > 0 && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                          <span className="text-[10px] font-bold tracking-wider opacity-80 uppercase">In</span>
-                          <span className="text-xs font-semibold">+₹{yNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          <span className="hidden sm:inline text-[10px] font-bold tracking-wider opacity-80 uppercase">In</span>
+                          <span className="text-[10px] sm:text-xs font-semibold">+₹{yNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                         </div>
                       )}
                       {yNode.totalExpense > 0 && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                          <span className="text-[10px] font-bold tracking-wider opacity-80 uppercase">Out</span>
-                          <span className="text-xs font-semibold">−₹{yNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                          <span className="hidden sm:inline text-[10px] font-bold tracking-wider opacity-80 uppercase">Out</span>
+                          <span className="text-[10px] sm:text-xs font-semibold">−₹{yNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                         </div>
                       )}
                     </div>
@@ -636,15 +636,15 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                             </div>
                             <div className="flex items-center gap-2">
                               {mNode.totalIncome > 0 && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 backdrop-blur-sm shadow-sm">
-                                  <span className="text-[10px] font-bold tracking-widest opacity-70 uppercase">IN</span>
-                                  <span className="text-xs font-bold">+₹{mNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 backdrop-blur-sm shadow-sm">
+                                  <span className="hidden sm:inline text-[10px] font-bold tracking-widest opacity-70 uppercase">IN</span>
+                                  <span className="text-[10px] sm:text-xs font-bold">+₹{mNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                 </div>
                               )}
                               {mNode.totalExpense > 0 && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-500/10 border border-neutral-500/20 text-neutral-700 dark:text-neutral-300 backdrop-blur-sm shadow-sm">
-                                  <span className="text-[10px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
-                                  <span className="text-xs font-bold">−₹{mNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-neutral-500/10 border border-neutral-500/20 text-neutral-700 dark:text-neutral-300 backdrop-blur-sm shadow-sm">
+                                  <span className="hidden sm:inline text-[10px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
+                                  <span className="text-[10px] sm:text-xs font-bold">−₹{mNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                 </div>
                               )}
                             </div>
@@ -663,17 +663,17 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                       <ChevronRight size={12} className={cn("text-neutral-400 transition-transform duration-200", expandedWeeks[wNode.weekKey] && "rotate-90")} />
                                       <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">{wNode.label}</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
                                       {wNode.totalIncome > 0 && (
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-                                          <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">IN</span>
-                                          <span className="text-[11px] font-bold">+₹{wNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                        <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                          <span className="hidden sm:inline text-[9px] font-bold tracking-widest opacity-70 uppercase">IN</span>
+                                          <span className="text-[10px] sm:text-[11px] font-bold">+₹{wNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                         </div>
                                       )}
                                       {wNode.totalExpense > 0 && (
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-500/10 border border-neutral-500/20 text-neutral-600 dark:text-neutral-300">
-                                          <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
-                                          <span className="text-[11px] font-bold">−₹{wNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                        <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-neutral-500/10 text-neutral-600 dark:text-neutral-400">
+                                          <span className="hidden sm:inline text-[9px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
+                                          <span className="text-[10px] sm:text-[11px] font-bold">−₹{wNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                         </div>
                                       )}
                                       <Button
@@ -704,17 +704,17 @@ export default function TransactionsView({ initialData }: { initialData: Transac
                                                   {dNode.label}
                                                 </span>
                                               </div>
-                                              <div className="flex items-center gap-2">
+                                              <div className="flex items-center gap-1">
                                                 {dNode.totalIncome > 0 && (
-                                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/5 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                                                    <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">IN</span>
-                                                    <span className="text-[11px] font-bold">+₹{dNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                                  <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                                    <span className="hidden sm:inline text-[9px] font-bold tracking-widest opacity-70 uppercase">IN</span>
+                                                    <span className="text-[10px] sm:text-[11px] font-semibold">+₹{dNode.totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                                   </div>
                                                 )}
                                                 {dNode.totalExpense > 0 && (
-                                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-500/5 border border-neutral-500/10 text-neutral-600 dark:text-neutral-400">
-                                                    <span className="text-[9px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
-                                                    <span className="text-[11px] font-bold">−₹{dNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                                  <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                                                    <span className="hidden sm:inline text-[9px] font-bold tracking-widest opacity-70 uppercase">OUT</span>
+                                                    <span className="text-[10px] sm:text-[11px] font-semibold">−₹{dNode.totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                                   </div>
                                                 )}
                                               </div>

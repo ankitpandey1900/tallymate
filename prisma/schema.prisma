@@ -8,10 +8,16 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id            String          @id @default(uuid())
   email         String          @unique
   name          String?
+  role          UserRole        @default(USER)
   emailVerified Boolean         @default(false)
   image         String?
   passwordHash  String?         // Custom hash or fallback
@@ -200,6 +206,8 @@ model Budget {
   group       Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
   amount      Decimal
   period      String           @default("MONTHLY") // MONTHLY, WEEKLY, QUARTERLY, YEARLY
+  rollover    Boolean          @default(false)
+  customAlerts Int[]           @default([80, 100])
   startDate   DateTime
   endDate     DateTime
   createdAt   DateTime         @default(now())

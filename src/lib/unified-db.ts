@@ -64,7 +64,9 @@ export interface UnifiedBudget {
   categoryId: string | null;
   groupId: string | null;
   amount: number;
-  period: string;
+  period: "MONTHLY" | "WEEKLY" | "QUARTERLY" | "YEARLY";
+  rollover: boolean;
+  customAlerts: number[];
   startDate: string;
   endDate: string;
 }
@@ -391,7 +393,7 @@ export class UnifiedDB {
 
   static async getTransactions(
     userId: string,
-    filters?: { groupId?: string; type?: string; limit?: number; startDate?: string; endDate?: string }
+    filters?: { groupId?: string; type?: string; categoryId?: string; limit?: number; startDate?: string; endDate?: string }
   ): Promise<UnifiedTransaction[]> {
     // Prisma expects enums for `type`; for this unified layer we accept string
     // values coming from the UI and pass them through as-is.
@@ -399,6 +401,7 @@ export class UnifiedDB {
     const where: any = { userId };
 
     if (filters?.groupId) where.groupId = filters.groupId;
+    if (filters?.categoryId) where.categoryId = filters.categoryId;
     if (filters?.type) where.type = filters.type;
     if (filters?.startDate || filters?.endDate) {
       where.date = {};
@@ -578,7 +581,9 @@ export class UnifiedDB {
       categoryId: b.categoryId,
       groupId: b.groupId,
       amount: Number(b.amount),
-      period: b.period,
+      period: b.period as any,
+      rollover: (b as any).rollover || false,
+      customAlerts: (b as any).customAlerts || [80, 100],
       startDate: b.startDate.toISOString(),
       endDate: b.endDate.toISOString(),
     }));
@@ -592,6 +597,10 @@ export class UnifiedDB {
         groupId: data.groupId,
         amount: data.amount,
         period: data.period,
+        // @ts-ignore
+        rollover: data.rollover ?? false,
+        // @ts-ignore
+        customAlerts: data.customAlerts ?? [80, 100],
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
       },
@@ -602,7 +611,9 @@ export class UnifiedDB {
       categoryId: b.categoryId,
       groupId: b.groupId,
       amount: Number(b.amount),
-      period: b.period,
+      period: b.period as any,
+      rollover: (b as any).rollover || false,
+      customAlerts: (b as any).customAlerts || [80, 100],
       startDate: b.startDate.toISOString(),
       endDate: b.endDate.toISOString(),
     };
@@ -1189,6 +1200,37 @@ export class UnifiedDB {
       },
     });
     return mapTransaction(tx);
+  }
+
+  static async updateBudget(id: string, userId: string, data: Partial<Omit<UnifiedBudget, "id" | "userId">>): Promise<UnifiedBudget> {
+    const updateData: any = {};
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.groupId !== undefined) updateData.groupId = data.groupId;
+    if (data.amount !== undefined) updateData.amount = data.amount;
+    if (data.period !== undefined) updateData.period = data.period;
+    // @ts-ignore
+    if (data.rollover !== undefined) updateData.rollover = data.rollover;
+    // @ts-ignore
+    if (data.customAlerts !== undefined) updateData.customAlerts = data.customAlerts;
+    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
+    if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
+
+    const b = await prisma.budget.update({
+      where: { id, userId },
+      data: updateData,
+    });
+    return {
+      id: b.id,
+      userId: b.userId,
+      categoryId: b.categoryId,
+      groupId: b.groupId,
+      amount: Number(b.amount),
+      period: b.period as any,
+      rollover: (b as any).rollover || false,
+      customAlerts: (b as any).customAlerts || [80, 100],
+      startDate: b.startDate.toISOString(),
+      endDate: b.endDate.toISOString(),
+    };
   }
 
   static async leaveGroup(userId: string, groupId: string): Promise<void> {

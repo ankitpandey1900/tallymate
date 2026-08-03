@@ -98,8 +98,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <head>
         <script suppressHydrationWarning nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="min-h-full flex flex-col">
         <NextTopLoader color="#10B981" showSpinner={false} height={3} shadow="0 0 10px #10B981,0 0 5px #10B981" />
         {children}
         <Toaster />
