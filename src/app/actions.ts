@@ -591,7 +591,7 @@ export async function getPersonalDebtPayments(debtId: string) {
 
 export async function updatePersonalDebtDetails(
   debtId: string,
-  data: { title?: string; counterpartyName?: string; notes?: string | null; dueDate?: string | null; startedAt?: string | null }
+  data: { title?: string; counterpartyName?: string; notes?: string | null; dueDate?: string | null; startedAt?: string | null; totalAmount?: number }
 ) {
   const reqHeaders = await headers();
   await enforceActionRateLimit(reqHeaders, "updatePersonalDebtDetails", 30, 60);
@@ -604,7 +604,26 @@ export async function updatePersonalDebtDetails(
     throw new Error("Person or bank name cannot be empty.");
   }
 
-  const debt = await UnifiedDB.updatePersonalDebt(user.id, debtId, data);
+  const existingDebts = await UnifiedDB.getPersonalDebts(user.id);
+  const existingDebt = existingDebts.find(d => d.id === debtId);
+  if (!existingDebt) {
+    throw new Error("Debt not found.");
+  }
+
+  let remainingAmount = existingDebt.remainingAmount;
+  if (data.totalAmount !== undefined) {
+    const paidAmount = existingDebt.totalAmount - existingDebt.remainingAmount;
+    remainingAmount = data.totalAmount - paidAmount;
+    if (remainingAmount < 0) {
+      throw new Error(`Total amount cannot be less than what has already been paid (₹${paidAmount}).`);
+    }
+  }
+
+  const debt = await UnifiedDB.updatePersonalDebt(user.id, debtId, {
+    ...data,
+    startedAt: data.startedAt || new Date().toISOString(),
+    remainingAmount: data.totalAmount !== undefined ? remainingAmount : undefined,
+  });
   await bustPageCache(user.id);
   return debt;
 }

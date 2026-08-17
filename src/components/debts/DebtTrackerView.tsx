@@ -22,6 +22,13 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowUpDown,
+  GraduationCap,
+  Home,
+  Landmark,
+  CreditCard,
+  Calendar,
+  ArrowLeftRight,
+  GripHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -98,12 +105,15 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
   const [settledPage, setSettledPage] = useState(1);
   const SETTLED_PER_PAGE = 15;
   const [activeEditDebtId, setActiveEditDebtId] = useState<string | null>(null);
-  const [activeEditForm, setActiveEditForm] = useState<{ title: string; counterpartyName: string; category: string; dueDate: string; startedAt: string; notes: string }>({ title: "", counterpartyName: "", category: "LOAN", dueDate: "", startedAt: "", notes: "" });
+  const [activeEditForm, setActiveEditForm] = useState<{ title: string; counterpartyName: string; category: string; dueDate: string; startedAt: string; notes: string; totalAmount: string }>({ title: "", counterpartyName: "", category: "LOAN", dueDate: "", startedAt: "", notes: "", totalAmount: "" });
 
   // Detailed view: sorting + pagination
   type SortKey = "startedAt" | "dueDate" | "remainingAmount" | "totalAmount";
   const [sortKey, setSortKey] = useState<SortKey>("startedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [directionFilter, setDirectionFilter] = useState("ALL");
   const [activePage, setActivePage] = useState(1);
   const ACTIVE_PER_PAGE = 10;
 
@@ -175,7 +185,29 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
   }, [settledPersonal]);
 
   const sortedActivePersonal = useMemo(() => {
-    const sorted = [...activePersonal].sort((a, b) => {
+    let filtered = [...activePersonal];
+    
+    // Apply Direction Filter
+    if (directionFilter !== "ALL") {
+      filtered = filtered.filter(d => d.direction === directionFilter);
+    }
+    
+    // Apply Category Filter
+    if (categoryFilter !== "ALL") {
+      filtered = filtered.filter(d => d.category === categoryFilter);
+    }
+    
+    // Apply Search
+    if (activeSearchQuery.trim()) {
+      const q = activeSearchQuery.toLowerCase();
+      filtered = filtered.filter(d => 
+        d.counterpartyName.toLowerCase().includes(q) || 
+        d.title.toLowerCase().includes(q) ||
+        (d.notes && d.notes.toLowerCase().includes(q))
+      );
+    }
+
+    const sorted = filtered.sort((a, b) => {
       let aVal: number, bVal: number;
       if (sortKey === "startedAt") {
         aVal = a.startedAt ? new Date(a.startedAt).getTime() : 0;
@@ -193,7 +225,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
       return sortDir === "asc" ? aVal - bVal : bVal - aVal;
     });
     return sorted;
-  }, [activePersonal, sortKey, sortDir]);
+  }, [activePersonal, sortKey, sortDir, activeSearchQuery, categoryFilter, directionFilter]);
 
   const activeTotalPages = Math.ceil(sortedActivePersonal.length / ACTIVE_PER_PAGE);
   const paginatedActive = sortedActivePersonal.slice((activePage - 1) * ACTIVE_PER_PAGE, activePage * ACTIVE_PER_PAGE);
@@ -349,6 +381,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
       dueDate: debt.dueDate ? debt.dueDate.slice(0, 10) : "",
       startedAt: debt.startedAt ? debt.startedAt.slice(0, 10) : todayStr(),
       notes: debt.notes ?? "",
+      totalAmount: String(debt.totalAmount),
     });
   };
 
@@ -362,6 +395,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
         startedAt: activeEditForm.startedAt || null,
         dueDate: activeEditForm.dueDate || null,
         notes: activeEditForm.notes.trim() || null,
+        totalAmount: activeEditForm.totalAmount ? Number(activeEditForm.totalAmount) : undefined,
       });
       toast.success("Updated");
       setActiveEditDebtId(null);
@@ -492,36 +526,85 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
             </Button>
           </div>
         ) : viewMode === "DETAILED" ? (
-          <div className="space-y-3">
-            {/* Sort controls */}
-            <div className="flex flex-wrap items-center gap-2 pb-1">
-              <span className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider flex items-center gap-1"><ArrowUpDown size={11} />Sort:</span>
-              {([
-                { key: "startedAt" as const, label: "Taken Date" },
-                { key: "dueDate" as const, label: "Due Date" },
-                { key: "remainingAmount" as const, label: "Remaining" },
-                { key: "totalAmount" as const, label: "Total" },
-              ]).map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleSortChange(key)}
-                  className={cn(
-                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors",
-                    sortKey === key
-                      ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30"
-                      : "bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-700 hover:border-indigo-200 dark:hover:border-indigo-500/30"
-                  )}
-                >
-                  {label}
-                  {sortKey === key && (
-                    sortDir === "asc" ? <ChevronUp size={10} /> : <ChevronDown size={10} />
-                  )}
-                </button>
-              ))}
-              <span className="ml-auto text-[11px] text-neutral-400">
-                {sortedActivePersonal.length} debt{sortedActivePersonal.length !== 1 ? "s" : ""}
-              </span>
+          <div className="space-y-4">
+            {/* Filter and Sort controls */}
+            <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between bg-white dark:bg-[#1a1a1c] p-3 border border-neutral-100 dark:border-white/[0.05] rounded-xl shadow-sm">
+              <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-neutral-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search debts..."
+                    value={activeSearchQuery}
+                    onChange={(e) => setActiveSearchQuery(e.target.value)}
+                    className="block w-full pl-9 pr-3 py-2 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <select
+                    value={directionFilter}
+                    onChange={(e) => setDirectionFilter(e.target.value)}
+                    className="block w-full py-2 pl-3 pr-8 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors cursor-pointer appearance-none"
+                  >
+                    <option value="ALL">All Types</option>
+                    <option value="I_OWE">I Owe</option>
+                    <option value="OWED_TO_ME">Owed to Me</option>
+                  </select>
+
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="block w-full py-2 pl-3 pr-8 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors cursor-pointer appearance-none"
+                  >
+                    <option value="ALL">All Categories</option>
+                    <option value="BANK">Bank</option>
+                    <option value="LOAN">Loan</option>
+                    <option value="FAMILY">Family</option>
+                    <option value="FRIEND">Friend</option>
+                    <option value="CREDIT_CARD">Credit Card</option>
+                    <option value="EMI">EMI</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto xl:ml-auto">
+                <span className="text-[13px] text-neutral-800 dark:text-neutral-200 font-semibold">Sort by:</span>
+                {([
+                  { key: "startedAt" as const, label: "Taken Date" },
+                  { key: "dueDate" as const, label: "Due Date" },
+                  { key: "remainingAmount" as const, label: "Remaining" },
+                  { key: "totalAmount" as const, label: "Total" },
+                ]).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleSortChange(key)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors",
+                      sortKey === key
+                        ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                        : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
+                    )}
+                  >
+                    {sortKey === key && <GripHorizontal size={13} className="opacity-70" />}
+                    {label}
+                    {sortKey === key && (
+                      sortDir === "asc" ? <ChevronUp size={12} className="opacity-70" /> : <ChevronDown size={12} className="opacity-70" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white dark:bg-neutral-900 shadow-sm border border-neutral-100 dark:border-neutral-800 self-start sm:self-auto">
+                <span className="text-[12px] font-medium text-neutral-500">Total Remaining</span>
+                <span className="text-[16px] font-bold text-rose-600 dark:text-rose-500">
+                  ₹{sortedActivePersonal.reduce((acc, d) => acc + (d.direction === "I_OWE" ? Number(d.remainingAmount) : -Number(d.remainingAmount)), 0).toLocaleString('en-IN')}
+                </span>
+              </div>
             </div>
 
             {/* Debt cards */}
@@ -532,60 +615,75 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                 d.totalAmount > 0
                   ? Math.min(100, Math.round(((d.totalAmount - d.remainingAmount) / d.totalAmount) * 100))
                   : 0;
+
+              let theme = { iconBg: "bg-indigo-50 dark:bg-indigo-500/20", iconText: "text-indigo-600 dark:text-indigo-400", btnBg: "bg-indigo-600 hover:bg-indigo-700" as string, icon: <Wallet size={20} strokeWidth={1.5} /> };
+              if (d.category === "BANK" || d.category === "LOAN") {
+                theme = { iconBg: "bg-blue-50 dark:bg-blue-500/20", iconText: "text-blue-600 dark:text-blue-400", btnBg: "bg-blue-600 hover:bg-blue-700", icon: <Landmark size={20} strokeWidth={1.5} /> };
+                // Exception for scholarship to use graduation cap
+                if (d.title.toLowerCase().includes("scholarship")) {
+                  theme.icon = <GraduationCap size={20} strokeWidth={1.5} />;
+                }
+              } else if (d.category === "FAMILY") {
+                theme = { iconBg: "bg-emerald-50 dark:bg-emerald-500/20", iconText: "text-emerald-600 dark:text-emerald-400", btnBg: "bg-emerald-600 hover:bg-emerald-700", icon: <Home size={20} strokeWidth={1.5} /> };
+              } else if (d.category === "FRIEND") {
+                theme = { iconBg: "bg-teal-50 dark:bg-teal-500/20", iconText: "text-teal-600 dark:text-teal-400", btnBg: "bg-teal-600 hover:bg-teal-700", icon: <Users size={20} strokeWidth={1.5} /> };
+              } else if (d.category === "CREDIT_CARD") {
+                theme = { iconBg: "bg-purple-50 dark:bg-purple-500/20", iconText: "text-purple-600 dark:text-purple-400", btnBg: "bg-purple-600 hover:bg-purple-700", icon: <CreditCard size={20} strokeWidth={1.5} /> };
+              } else if (d.category === "EMI") {
+                theme = { iconBg: "bg-orange-50 dark:bg-orange-500/20", iconText: "text-orange-600 dark:text-orange-400", btnBg: "bg-orange-600 hover:bg-orange-700", icon: <Calendar size={20} strokeWidth={1.5} /> };
+              }
+
+              // The user's screenshot uses orange border for a third item, we can just stick to category colors.
+
               return (
                 <div
                   key={d.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-none"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-neutral-900 shadow-sm border border-neutral-100 dark:border-neutral-800"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <p className="text-[15px] font-semibold text-neutral-900 dark:text-white">{d.title}</p>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium tracking-wide bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
-                        {formatPersonalDebtCategory(d.category)}
-                      </span>
+                  <div className="flex gap-4 min-w-0 flex-1">
+                    <div className={cn("w-12 h-12 rounded-full shrink-0 flex items-center justify-center mt-1", theme.iconBg, theme.iconText)}>
+                      {theme.icon}
                     </div>
                     
-                    <div className="flex flex-col gap-1 mt-1.5 mb-2.5">
-                      <p className="text-[12px] text-neutral-600 dark:text-neutral-400">
-                        {isOwe ? "You owe" : "Owes you"}: <span className="font-semibold text-neutral-900 dark:text-neutral-200">{d.counterpartyName}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <p className="text-[15px] font-semibold text-neutral-900 dark:text-white truncate">{d.title}</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium tracking-wide ${theme.iconBg} ${theme.iconText}`}>
+                          {formatPersonalDebtCategory(d.category)}
+                        </span>
+                      </div>
+                      
+                      <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mb-2">
+                        {d.direction === "I_OWE" ? "You owe: " : "Owes you: "} 
+                        <span className={theme.iconText}>{d.counterpartyName}</span>
                       </p>
                       
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-neutral-500 dark:text-neutral-500">
-                        {d.startedAt && (
-                          <span className="flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-600"></span>
-                            Taken: {new Date(d.startedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                          </span>
-                        )}
-                        {d.dueDate && (
-                          <span className="flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500"></span>
-                            Due: <span className="font-medium text-amber-700 dark:text-amber-500">{new Date(d.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
-                          </span>
-                        )}
+                      {d.startedAt && (
+                        <div className="flex items-center gap-1.5 text-[12px] text-neutral-500 dark:text-neutral-400 mb-3">
+                          <Calendar size={13} className="text-neutral-400" />
+                          <span>Taken: {new Date(d.startedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                          Paid: ₹{(d.totalAmount - d.remainingAmount).toLocaleString('en-IN')} of ₹{d.totalAmount.toLocaleString('en-IN')}
+                        </span>
+                        <div className="h-1 w-full max-w-[200px] bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-500", theme.btnBg)}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">{progress}%</span>
                       </div>
                     </div>
-
-                    <div className="mt-1 h-1.5 w-full max-w-xs bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                      <div
-                        className={cn("h-full rounded-full transition-all duration-500", isOwe ? "bg-rose-500" : "bg-emerald-500")}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-neutral-400 mt-1.5 font-medium">
-                      ₹{(d.totalAmount - d.remainingAmount).toLocaleString('en-IN')} of ₹{d.totalAmount.toLocaleString('en-IN')} paid
-                    </p>
                   </div>
                   
                   <div className="flex flex-col sm:items-end justify-center gap-3 shrink-0 mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-neutral-100 dark:border-neutral-800 sm:border-0 w-full sm:w-auto">
-                    <div className="flex items-center gap-1.5 justify-between sm:justify-end w-full sm:w-auto">
-                      <span className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider">Remaining</span>
-                      <span
-                        className={cn(
-                          "font-bold font-mono text-lg",
-                          isOwe ? "text-rose-600 dark:text-rose-500" : "text-emerald-600 dark:text-emerald-500"
-                        )}
-                      >
+                    <div className="flex flex-col items-start sm:items-end w-full sm:w-auto text-right">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-0.5">Remaining</span>
+                      <span className={cn("font-bold text-xl", isOwe ? "text-rose-600 dark:text-rose-500" : "text-emerald-600 dark:text-emerald-500")}>
                         ₹{d.remainingAmount.toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -599,24 +697,24 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                           setPaymentAmount(String(d.remainingAmount));
                           setPaymentNotes("");
                         }}
-                        className="text-[11px] font-semibold px-3 py-1.5 h-auto rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors shadow-sm"
+                        className="text-[12px] font-medium px-3.5 py-1.5 h-auto rounded-md border border-neutral-200 dark:border-neutral-700 text-indigo-600 dark:text-indigo-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors bg-white dark:bg-transparent shadow-sm flex items-center gap-2"
                       >
-                        Record Pay
+                        <ArrowLeftRight size={14} />
+                        Record Payment
                       </Button>
                       <Button
                         type="button"
                         variant="unstyled"
                         onClick={() => handleMarkSettled(d.id)}
-                        className="text-[11px] font-semibold px-3 py-1.5 h-auto rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors shadow-sm flex items-center gap-1.5"
+                        className={cn("text-[12px] font-medium px-4 py-1.5 h-auto rounded-md text-white transition-colors shadow-sm", theme.btnBg)}
                       >
-                        <Check size={12} strokeWidth={3} />
                         Settle
                       </Button>
                       <Button
                         type="button"
                         variant="unstyled"
                         onClick={() => openActiveEditModal(d)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md bg-white dark:bg-[#1a1a1c] border border-black/[0.06] dark:border-white/[0.06] text-neutral-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors shadow-sm"
+                        className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-transparent border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-indigo-500 hover:border-indigo-300 transition-colors shadow-sm"
                         title="Edit"
                       >
                         <Pencil size={13} />
@@ -625,7 +723,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                         type="button"
                         variant="unstyled"
                         onClick={() => handleDeleteDebt(d.id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md bg-white dark:bg-[#1a1a1c] border border-black/[0.06] dark:border-white/[0.06] text-neutral-400 hover:text-rose-500 hover:border-rose-200 transition-colors shadow-sm"
+                        className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-transparent border border-neutral-200 dark:border-neutral-700 text-rose-400 hover:text-rose-500 hover:border-rose-300 transition-colors shadow-sm"
                         title="Delete"
                       >
                         <Trash2 size={13} />
@@ -750,7 +848,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                             "py-3 px-3 rounded-lg",
                             i % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-50/50 dark:bg-neutral-800/30"
                           )}>
-                            <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 mb-1.5">
                                   <span className={cn(
@@ -777,13 +875,18 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                                 </div>
                               </div>
 
-                              <div className="shrink-0 text-right">
-                                <p className={cn("text-sm font-semibold font-mono", isOwe ? "text-rose-600 dark:text-rose-500" : "text-emerald-600 dark:text-emerald-500")}>
-                                  ₹{d.remainingAmount.toLocaleString("en-IN")}
-                                </p>
-                                <p className="text-[10px] text-neutral-400 mb-2">left</p>
+                              <div className="shrink-0 text-left sm:text-right mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-neutral-100 dark:border-neutral-800 sm:border-0 w-full sm:w-auto">
+                                <div className="flex items-center justify-between sm:justify-end mb-3 sm:mb-2 w-full sm:w-auto">
+                                  <span className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider sm:hidden">Remaining</span>
+                                  <div className="text-right">
+                                    <p className={cn("text-lg sm:text-sm font-semibold font-mono", isOwe ? "text-rose-600 dark:text-rose-500" : "text-emerald-600 dark:text-emerald-500")}>
+                                      ₹{d.remainingAmount.toLocaleString("en-IN")}
+                                    </p>
+                                    <p className="hidden sm:block text-[10px] text-neutral-400">left</p>
+                                  </div>
+                                </div>
 
-                                <div className="flex flex-wrap items-center gap-1.5 justify-end mt-2">
+                                <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end w-full sm:w-auto">
                                   <button
                                     type="button"
                                     onClick={() => { setPaymentDebtId(d.id); setPaymentAmount(String(d.remainingAmount)); setPaymentNotes(""); }}
@@ -801,14 +904,14 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                                   <button
                                     type="button"
                                     onClick={() => openActiveEditModal(d)}
-                                    className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors bg-white dark:bg-neutral-900"
+                                    className="p-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors bg-white dark:bg-neutral-900 shadow-sm ml-auto sm:ml-0"
                                   >
                                     <Pencil size={11} />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteDebt(d.id)}
-                                    className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-rose-500 hover:border-rose-300 transition-colors bg-white dark:bg-neutral-900"
+                                    className="p-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-rose-500 hover:border-rose-300 transition-colors bg-white dark:bg-neutral-900 shadow-sm"
                                   >
                                     <Trash2 size={11} />
                                   </button>
@@ -1349,9 +1452,19 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <FieldLabel>Amount (₹)</FieldLabel>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={activeEditForm.totalAmount}
+                  onChange={(e) => setActiveEditForm(p => ({ ...p, totalAmount: e.target.value }))}
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <FieldLabel>Date taken</FieldLabel>
+                  <FieldLabel>Date taken (Optional)</FieldLabel>
                   <Input
                     type="date"
                     value={activeEditForm.startedAt}
@@ -1377,7 +1490,7 @@ export default function DebtTrackerView({ initialData }: { initialData: DebtData
               </div>
             </div>
 
-            <p className="text-[11px] text-neutral-400 mb-4">Amount and direction cannot be changed after creation to protect payment history.</p>
+            <p className="text-[11px] text-neutral-400 mb-4">Direction cannot be changed after creation to protect payment history.</p>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="cancel" onClick={() => setActiveEditDebtId(null)}>Cancel</Button>
